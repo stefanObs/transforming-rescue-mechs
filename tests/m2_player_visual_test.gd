@@ -72,7 +72,7 @@ func _test_facing() -> void:
 	_assert(robot.flip_h == true, "left move → robot flip_h")
 	_assert(vehicle.flip_h == true, "left move → vehicle flip_h")
 	_assert(xform.flip_h == true, "left move → transform flip_h")
-	_assert(is_equal_approx(robot.rotation, 0.0), "robot stays upright")
+	_assert(is_equal_approx(robot.rotation, 0.0), "no turn → robot lean 0")
 
 	player.call("update_facing_from_velocity", Vector2(1, 0))
 	_assert(robot.flip_h == false, "right move → robot flip_h false")
@@ -81,7 +81,7 @@ func _test_facing() -> void:
 	player.call("set_form", 1) # Form.VEHICLE
 	player.call("update_facing_from_velocity", Vector2(-0.5, 0.5))
 	_assert(vehicle.flip_h == true, "vehicle leftish move → flip_h")
-	_assert(is_equal_approx(vehicle.rotation, 0.0), "vehicle stays upright (¾ art)")
+	_assert(is_equal_approx(vehicle.rotation, 0.0), "no turn → vehicle lean 0")
 
 	player.call("update_facing_from_velocity", Vector2.ZERO)
 	_assert(vehicle.flip_h == true, "facing kept when stopped")
@@ -89,7 +89,7 @@ func _test_facing() -> void:
 	player.call("set_form", 0) # Form.ROBOT
 	player.call("update_facing_from_velocity", Vector2(0, -1))
 	_assert(robot.flip_h == true, "pure vertical keeps last facing (was left)")
-	_assert(is_equal_approx(robot.rotation, 0.0), "robot rotation stays 0")
+	_assert(is_equal_approx(robot.rotation, 0.0), "no turn → robot lean still 0")
 
 	player.queue_free()
 
