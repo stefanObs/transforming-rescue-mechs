@@ -10,6 +10,7 @@ Kindgerechtes 2D-Isometrie-Rettungsspiel: Mechs transformieren sich in Fahrzeuge
 ## Konzept & Design
 
 - Spielkonzept: **[docs/KONZEPT.md](docs/KONZEPT.md)**
+- MVP-Umsetzungsplan: **[docs/plans/mvp.md](docs/plans/mvp.md)**
 - Entwicklungsablauf (Subagenten): **[docs/ENTWICKLUNGSABLAUF.md](docs/ENTWICKLUNGSABLAUF.md)**
 - Design-Vorschläge: **[docs/DESIGN-VORSCHLAEGE.md](docs/DESIGN-VORSCHLAEGE.md)**
 - Style-Bible C: **[docs/STYLE-BIBLE-C.md](docs/STYLE-BIBLE-C.md)**
