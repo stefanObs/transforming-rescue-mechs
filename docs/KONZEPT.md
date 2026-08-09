@@ -343,3 +343,4 @@ Online-Multiplayer, Monetarisierung, realistische Physik, PvP-Arena, Gewalt gege
 |-------|----------|
 | 2026-08-09 | Erstes Konzept dokumentiert (Open World Seuzach, Godot 4, lokaler Co-op) |
 | 2026-08-09 | Design-Vorschläge A/B/C ergänzt (Link) |
+| 2026-08-09 | Moodboard-Bilder für A/B/C (Umgebung, Basis, Mech, Fahrzeug) |

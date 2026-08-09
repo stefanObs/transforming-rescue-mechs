@@ -10,6 +10,7 @@ Kindgerechtes 2D-Isometrie-Rettungsspiel: Mechs transformieren sich in Fahrzeuge
 
 - Spielkonzept: **[docs/KONZEPT.md](docs/KONZEPT.md)**
 - Design-Vorschläge (3 Stile, Godot-tauglich): **[docs/DESIGN-VORSCHLAEGE.md](docs/DESIGN-VORSCHLAEGE.md)**
+- Moodboards: **[docs/design-refs/](docs/design-refs/)**
 
 ## Status
 

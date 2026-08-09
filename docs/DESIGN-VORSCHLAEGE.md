@@ -4,6 +4,8 @@ Drei visuelle Richtungen für **Transformierende Rettungsmechs**. Alle sind mit 
 
 **Zielgruppe:** 6–8 · **Welt:** isometrische Kacheln, Start Seuzach · **Lesbarkeit:** große Silhouetten, klare Farben
 
+Moodboard-Bilder: [`design-refs/`](design-refs/) (Umgebung, Basis, Mech-Form, Fahrzeug-Form je Stil).
+
 | # | Kurzname | Gefühl | Aufwand (Kunst) |
 |---|----------|--------|-----------------|
 | A | Spielzeug-Iso | Plastik-Figuren, warm, greifbar | Mittel |
@@ -16,6 +18,16 @@ Drei visuelle Richtungen für **Transformierende Rettungsmechs**. Alle sind mit 
 
 ### Pitch
 Die Welt wirkt wie ein großer Spieltisch: Mechs und Häuser sind **chunky**, abgerundet, wie lackiertes Plastik. Seuzach ist erkennbar (Kirche, Bahnhof), aber vereinfacht wie ein Modelldorf.
+
+### Moodboard
+
+| Umgebung | Basis |
+|----------|-------|
+| ![A Umgebung](design-refs/a-umgebung.png) | ![A Basis](design-refs/a-basis.png) |
+
+| Mech-Form | Fahrzeug-Form |
+|-----------|---------------|
+| ![A Mech](design-refs/a-mech.png) | ![A Fahrzeug](design-refs/a-fahrzeug.png) |
 
 ### Mood & Referenzen (Stil, nicht Lizenz)
 Playmobil-ähnliche Proportionen, freundliche Rescue-Bot-Spielzeugoptik, moderne Indie-Iso-Spiele mit weichen Formen — **ohne** dunklen Sci-Fi-Look.
@@ -66,6 +78,16 @@ Playmobil-ähnliche Proportionen, freundliche Rescue-Bot-Spielzeugoptik, moderne
 ### Pitch
 Wie ein modernes Bilderbuch: weiche Kanten, dezente Texturen, viel Licht und Luft. Seuzach fühlt sich **heimisch und real** an, die Mechs bleiben freundlich-fantastisch.
 
+### Moodboard
+
+| Umgebung | Basis |
+|----------|-------|
+| ![B Umgebung](design-refs/b-umgebung.png) | ![B Basis](design-refs/b-basis.png) |
+
+| Mech-Form | Fahrzeug-Form |
+|-----------|---------------|
+| ![B Mech](design-refs/b-mech.png) | ![B Fahrzeug](design-refs/b-fahrzeug.png) |
+
 ### Mood & Referenzen (Stil, nicht Lizenz)
 Europäische Bilderbücher, weiche Indie-Adventures, Postkarten-Farben (Himmel, Wiese, Holz) — **kein** dunkles Neon, kein Heavy-Metal-Mech.
 
@@ -115,6 +137,16 @@ Europäische Bilderbücher, weiche Indie-Adventures, Postkarten-Farben (Himmel, 
 
 ### Pitch
 Dicker Outline, flache Cel-Farben, hohe Lesbarkeit auf dem Fernseher: wie eine freundliche Action-Cartoon-Serie. Notfälle und Transformationen wirken **dynamisch und klar**.
+
+### Moodboard
+
+| Umgebung | Basis |
+|----------|-------|
+| ![C Umgebung](design-refs/c-umgebung.png) | ![C Basis](design-refs/c-basis.png) |
+
+| Mech-Form | Fahrzeug-Form |
+|-----------|---------------|
+| ![C Mech](design-refs/c-mech.png) | ![C Fahrzeug](design-refs/c-fahrzeug.png) |
 
 ### Mood & Referenzen (Stil, nicht Lizenz)
 Kinderserien-Cel-Shading, klare Hero-Farben, starke Silhouetten — nah an Rescue-Bots-TV-Feeling, aber eigenständig und weich genug für 6-Jährige.
