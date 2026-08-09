@@ -26,6 +26,7 @@ Subagent: `.cursor/agents/comic-rettung-art.md` — lädt diese Bilder vor jeder
 5. Transformationen: **snappy** Pose-zu-Pose, keine weichen Morphs
 6. **Mech ↔ Fahrzeug-Lesbarkeit:** Die Robot-Form muss das jeweilige Hauptfahrzeug klar andeuten (Kabinen, Leitern, Rumpf, Propeller, Spoiler, Reifen als Körperteile) — wie bei Rescue Bots, Stil C  
    - Bolt → Feuerwehrwagen · Marina → Boot/Hovercraft · **Rush → roter Elektro-Supercar**
+7. **Spiel-Sprites:** Transparente Hintergründe (RGBA). Keine weißen „Karten“/Platten. Nach Generierung: `python3 scripts/process_art_alpha.py`
 
 ## Palette
 

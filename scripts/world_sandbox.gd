@@ -2,9 +2,9 @@ extends Node2D
 ## Sandbox world with Style C tile/landmark probe (M2).
 
 const ART := "res://assets/art/"
-const TILE_SCALE := Vector2(0.18, 0.18)
-const PROP_SCALE := Vector2(0.22, 0.22)
-const HUB_SCALE := Vector2(0.35, 0.35)
+const TILE_SCALE := Vector2(0.28, 0.28)
+const PROP_SCALE := Vector2(0.32, 0.32)
+const HUB_SCALE := Vector2(0.42, 0.42)
 
 @onready var _player: CharacterBody2D = %Player
 @onready var _hint: Label = %HintLabel

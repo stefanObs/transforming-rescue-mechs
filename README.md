@@ -60,8 +60,12 @@ MVP-Umsetzung: **M0–M2** erledigt; spielbar: Bolt, Marina, **Rush** (roter Sup
 # Automatisierte Smoke-Tests
 ./scripts/run_tests.sh
 
-# Spiel starten (siehe auch Starter oben)
-./play-linux.sh
+# Spiel starten (aktuelle Sprites)
+godot --path .
+# oder: ./play-linux.sh
+
+# Nach neuer Art-Generierung: weiße Hintergründe entfernen
+python3 scripts/process_art_alpha.py
 ```
 
 Tests: `tests/smoke_test.gd` via `./scripts/run_tests.sh`. GdUnit4/GUT Follow-up später.

@@ -34,7 +34,8 @@ Canonical moodboard (must load and visually match):
 2. **Read** (image Read tool) at least the relevant C references above — for characters read mech + vehicle; for world/base read umgebung + basis; for anything ambiguous read all four.
 3. Draft prompts that restate: thick black outlines, flat cel fills, max 1–2 shadow tones, kid-friendly 6–8, no gore, no text/logos unless asked.
 4. Generate with `GenerateImage`, always passing matching files in `reference_image_paths` (absolute paths under the project `docs/design-refs/`).
-5. Copy finished PNGs into the requested project folder (default `docs/design-refs/` or `assets/art/` if creating game-ready set). Prefer clear names: `c-<subject>-<variant>.png`.
+5. Copy finished PNGs into the requested project folder (default `docs/design-refs/` or `assets/art/` if creating game-ready set). Prefer clear names: `c-<subject>-<variant>.png` or `assets/art/<id>_robot.png`.
+5b. **Game-ready sprites MUST have transparent backgrounds** (no solid white plates). After generation, run `python3 scripts/process_art_alpha.py` on `assets/art/` (or export with real alpha). Opaque white frames are a defect.
 6. If the user asked for animation: produce an ordered **frame sequence** (separate PNGs or one spritesheet) plus a short Godot note (`AnimatedSprite2D` / `SpriteFrames` frame order, suggested FPS).
 7. Return to the parent: file paths created, what each asset is for, and any style deviations you could not avoid.
 

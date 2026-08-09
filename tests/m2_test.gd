@@ -55,12 +55,29 @@ func _run() -> void:
 		_assert(rush_frames != null and rush_frames.has_animation("to_vehicle"), "rush transform frames")
 		player.queue_free()
 
+	_assert_transparent_corners()
 	if _failed == 0:
 		print("=== m2_test PASS ===")
 		quit(0)
 	else:
 		printerr("=== m2_test FAIL (%d) ===" % _failed)
 		quit(1)
+
+
+func _assert_transparent_corners() -> void:
+	for path in [
+		"res://assets/art/bolt_robot.png",
+		"res://assets/art/rush_vehicle.png",
+		"res://assets/art/marina_robot.png",
+	]:
+		var img := Image.new()
+		var err := img.load(path)
+		_assert(err == OK, "load image %s" % path)
+		if err != OK:
+			continue
+		_assert(img.get_format() == Image.FORMAT_RGBA8 or img.detect_alpha(), "has alpha %s" % path)
+		var c := img.get_pixel(0, 0)
+		_assert(c.a < 0.05, "top-left transparent %s (a=%s)" % [path, c.a])
 
 
 func _assert(cond: bool, msg: String) -> void:

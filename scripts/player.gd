@@ -9,7 +9,7 @@ const SPEED_ROBOT := 140.0
 const SPEED_VEHICLE := 260.0
 const SPEED_VEHICLE_RUSH := 360.0
 const TRANSFORM_LOCKOUT := 0.55
-const SPRITE_SCALE := Vector2(0.12, 0.12)
+const SPRITE_SCALE := Vector2(0.2, 0.2)
 const ART := "res://assets/art/"
 
 var form: Form = Form.ROBOT
