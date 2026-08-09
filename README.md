@@ -7,26 +7,38 @@ Kindgerechtes 2D-Isometrie-Rettungsspiel: Mechs transformieren sich in Fahrzeuge
 - **Engine:** Godot **4.4** + GDScript  
 - **Art-Style:** Comic-Rettung (Stil C)
 
-## Spiel starten (ohne Godot-Installation)
+## Spiel starten — aktuelle Sprites sehen
 
-Im Projektordner eines der Starter-Skripte ausführen. Die Skripte nutzen zuerst einen **exportierten Build** unter `build/`, sonst Godot im `PATH` / `GODOT`, sonst laden sie **einmalig** ein portables Godot 4.4.1 nach `.tools/` (Internet nötig beim ersten Mal).
+**Empfohlen während der Entwicklung** (immer der aktuelle Stand aus dem Repo):
 
-| Plattform | Starter |
-|-----------|---------|
-| Linux | `./play-linux.sh` |
-| macOS | `./play-macos.sh` oder Doppelklick auf `play-macos.command` |
-| Windows | `play-windows.bat` (Doppelklick) |
+```bash
+godot --path .
+# oder:
+./play-linux.sh
+```
 
-Optionale Argumente werden durchgereicht, z. B. `./play-linux.sh --quit-after 2`.
+Taste **1** Bolt · **2** Marina · **3** Rush · **Space** Transformieren.
 
-### Linux-Standalone exportieren (optional)
+### Warum keine neuen Sprites?
 
-Wenn Export-Templates für Godot 4.4.1 installiert sind:
+`./play-linux.sh` startete früher zuerst den Ordner `build/linux/`. Ein **alter Export** enthält noch keine neuen Art-Dateien. Die Starter überspringen veraltete Exports jetzt automatisch und nutzen den Projektmodus.
+
+Frischen Standalone-Build erzeugen:
 
 ```bash
 ./scripts/export_linux.sh
 ./play-linux.sh
 ```
+
+### Starter ohne Godot-Installation
+
+| Plattform | Starter |
+|-----------|---------|
+| Linux | `./play-linux.sh` |
+| macOS | `./play-macos.sh` oder `play-macos.command` |
+| Windows | `play-windows.bat` |
+
+Reihenfolge: frischer Export unter `build/` → Godot im `PATH`/`GODOT` → einmaliger Download nach `.tools/`.
 
 ## Konzept & Design
 
