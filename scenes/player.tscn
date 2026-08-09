@@ -3,8 +3,8 @@
 [ext_resource type="Script" path="res://scripts/player.gd" id="1_player"]
 
 [sub_resource type="CapsuleShape2D" id="CapsuleShape2D_player"]
-radius = 12.0
-height = 36.0
+radius = 14.0
+height = 40.0
 
 [node name="Player" type="CharacterBody2D"]
 collision_layer = 1
@@ -13,26 +13,33 @@ motion_mode = 1
 script = ExtResource("1_player")
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+position = Vector2(0, -12)
 shape = SubResource("CapsuleShape2D_player")
 
-[node name="RobotVisual" type="Polygon2D" parent="."]
+[node name="RobotSprite" type="Sprite2D" parent="."]
 unique_name_in_owner = true
-color = Color(1, 0.839, 0, 1)
-polygon = PackedVector2Array(-16, -40, 16, -40, 16, 0, -16, 0)
+z_index = 1
 
-[node name="VehicleVisual" type="Polygon2D" parent="."]
+[node name="VehicleSprite" type="Sprite2D" parent="."]
 unique_name_in_owner = true
 visible = false
-color = Color(1, 0.839, 0, 1)
-polygon = PackedVector2Array(-28, -20, 28, -20, 28, 8, -28, 8)
+z_index = 1
+
+[node name="TransformSprite" type="AnimatedSprite2D" parent="."]
+unique_name_in_owner = true
+visible = false
+z_index = 2
 
 [node name="FormLabel" type="Label" parent="."]
 unique_name_in_owner = true
-offset_left = -40.0
-offset_top = -58.0
-offset_right = 40.0
-offset_bottom = -42.0
+z_index = 3
+offset_left = -48.0
+offset_top = -96.0
+offset_right = 48.0
+offset_bottom = -76.0
 theme_override_colors/font_color = Color(0.102, 0.102, 0.102, 1)
-theme_override_font_sizes/font_size = 12
+theme_override_colors/font_outline_color = Color(1, 1, 1, 1)
+theme_override_constants/outline_size = 4
+theme_override_font_sizes/font_size = 14
 text = "Robot"
 horizontal_alignment = 1

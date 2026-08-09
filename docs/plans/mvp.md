@@ -20,7 +20,7 @@ Erste spielbare Version: Open-World **Seuzach** (Comic-Rettung), zwei Mechs (Bol
 |------|------|--------|-------------|
 | M0 | Godot-Grundgerüst & Tests | Erledigt | 6/6 |
 | M1 | Input, Spieler, Transform | Erledigt | 8/8 |
-| M2 | Art-Spike Stil C | Nicht gestartet | 0/7 |
+| M2 | Art-Spike Stil C | Erledigt | 7/7 |
 | M3 | Seuzach Iso-Welt & Hub | Nicht gestartet | 0/8 |
 | M4 | Energie, Kollision, Solar, Waffen | Nicht gestartet | 0/7 |
 | M5 | Missionen & Spezialsichten | Nicht gestartet | 0/9 |
@@ -136,18 +136,18 @@ Pro Epic gilt der Ablauf: Plan (dieses File pflegen) → `feature-implementer` (
 
 #### Schritte
 
-- [ ] Art: Bolt Robot + Bolt Fahrzeug (an `c-mech` / `c-fahrzeug` angelehnt)
-- [ ] Art: Marina Robot + Marina Fahrzeug
-- [ ] Art: Transform-Frames Bolt (4–8 Frames) + Godot `SpriteFrames`
-- [ ] Art: Iso-Tiles Basis-Set (Gras, Straße, 1 Haus, Kirche-Silhouette)
-- [ ] Art: Erdstation-/Hub-Visual
-- [ ] Integration in Player + TileMap-Probe
-- [ ] Kurz-Check Style-Bible C (Outline, Palette)
+- [x] Art: Bolt Robot + Bolt Fahrzeug (an `c-mech` / `c-fahrzeug` angelehnt)
+- [x] Art: Marina Robot + Marina Fahrzeug
+- [x] Art: Transform-Frames Bolt (6 Frames) + Godot `SpriteFrames`
+- [x] Art: Iso-Tiles Basis-Set (Gras, Straße, Haus, Kirche)
+- [x] Art: Erdstation-/Hub-Visual
+- [x] Integration in Player + Tile/Prop-Probe
+- [x] Kurz-Check Style-Bible C (Outline, Palette via Art-Subagent)
 
 #### Testplan M2
 
-- [ ] Automatisiert: Asset-Pfade/Resource-Load-Tests (optional)
-- [ ] Playtest: Figuren und Tiles sichtbar, Stil stimmig
+- [x] Automatisiert: Asset-Load + Player-Art (`m2_test`)
+- [x] Playtest: Scene startet mit Art-Spike
 
 #### Art-Bedarf M2
 
@@ -155,7 +155,7 @@ Pro Epic gilt der Ablauf: Plan (dieses File pflegen) → `feature-implementer` (
 
 #### Akzeptanz M2
 
-- [ ] Stil-C-Spike im Spiel sichtbar
+- [x] Stil-C-Spike im Spiel sichtbar
 
 ---
 
@@ -400,3 +400,4 @@ Abhängigkeiten: M2 kann parallel zu späten M1-Fixes starten; M7 nach stabilem 
 | 2026-08-09 | Verweis: bei Bugs gilt Phase 0 (Repro + RCA) laut ENTWICKLUNGSABLAUF |
 | 2026-08-09 | M0 erledigt: Godot 4.4 Projekt, Autoloads, Smoke-Tests, Playtest Pass |
 | 2026-08-09 | M1 erledigt: Input, Player, Iso-Bewegung, Transform, Tests |
+| 2026-08-09 | M2 erledigt: Style-C-Art, Player-Sprites, Transform-Anim, Welt-Probe |

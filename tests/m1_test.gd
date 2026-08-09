@@ -52,10 +52,15 @@ func _test_player_transform() -> void:
 	_assert(bool(player.call("can_transform")), "can_transform initially")
 	player.call("toggle_form")
 	_assert(int(player.get("form")) == 1, "after toggle VEHICLE")
+	# M2: Bolt plays transform animation; finish it for deterministic unit tests.
+	if bool(player.get("_transforming")):
+		player.call("_on_transform_finished")
 	_assert(not bool(player.call("can_transform")), "lockout active after toggle")
 	player.set("_transform_lock", 0.0)
 	_assert(bool(player.call("can_transform")), "lockout cleared")
 	player.call("toggle_form")
+	if bool(player.get("_transforming")):
+		player.call("_on_transform_finished")
 	_assert(int(player.get("form")) == 0, "toggle back to ROBOT")
 	player.queue_free()
 

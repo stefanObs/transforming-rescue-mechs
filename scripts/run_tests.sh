@@ -5,7 +5,7 @@ GODOT="${GODOT:-godot}"
 cd "$ROOT"
 
 FAILED=0
-for test_script in tests/smoke_test.gd tests/m1_test.gd; do
+for test_script in tests/smoke_test.gd tests/m1_test.gd tests/m2_test.gd; do
   echo "---- $test_script ----"
   if ! "$GODOT" --headless --path "$ROOT" -s "res://$test_script"; then
     FAILED=1
