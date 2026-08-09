@@ -12,12 +12,23 @@ collision_mask = 1
 motion_mode = 1
 script = ExtResource("1_player")
 
+[node name="Shadow" type="Polygon2D" parent="."]
+unique_name_in_owner = true
+z_index = 0
+color = Color(0.15, 0.15, 0.18, 0.4)
+polygon = PackedVector2Array(-22, -6, -16, -10, 0, -12, 16, -10, 22, -6, 16, 0, 0, 2, -16, 0)
+
 [node name="CollisionShape2D" type="CollisionShape2D" parent="."]
 position = Vector2(0, -12)
 shape = SubResource("CapsuleShape2D_player")
 
 [node name="RobotSprite" type="Sprite2D" parent="."]
 unique_name_in_owner = true
+z_index = 1
+
+[node name="WalkSprite" type="AnimatedSprite2D" parent="."]
+unique_name_in_owner = true
+visible = false
 z_index = 1
 
 [node name="VehicleSprite" type="Sprite2D" parent="."]
