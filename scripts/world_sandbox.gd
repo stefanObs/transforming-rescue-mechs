@@ -23,7 +23,6 @@ const COLOR_SKY := Color("4DA3FF")
 const COLOR_GRASS := Color("3DCC5A")
 const COLOR_GRASS_ALT := Color("36C053")
 const COLOR_ROAD := Color("6E6E6E")
-const COLOR_ROAD_EDGE := Color("1A1A1A")
 
 ## Iso diamond half-size (flat top, NOT a 3D block sprite).
 const TILE_HW := 56.0
@@ -130,7 +129,7 @@ func _build_flat_ground() -> void:
 			_add_flat_iso_diamond(cx, cy, COLOR_GRASS_ALT, -45)
 
 	_add_road_cells()
-	_add_road_outline()
+	# No per-tile Line2D outlines — adjacent diamonds would form a black grid.
 
 
 func _is_road_cell(x: int, y: int) -> bool:
@@ -161,26 +160,6 @@ func _add_road_cells() -> void:
 				continue
 			var c := _iso_center(x, y)
 			_add_flat_iso_diamond(c.x, c.y, COLOR_ROAD, -40)
-
-
-func _add_road_outline() -> void:
-	for y in range(-3, 5):
-		for x in range(-5, 6):
-			if not _is_road_cell(x, y):
-				continue
-			var c := _iso_center(x, y)
-			var edge := Line2D.new()
-			edge.width = 3.0
-			edge.default_color = COLOR_ROAD_EDGE
-			edge.z_index = -34
-			edge.closed = true
-			edge.points = PackedVector2Array([
-				Vector2(c.x, c.y - TILE_HH),
-				Vector2(c.x + TILE_HW, c.y),
-				Vector2(c.x, c.y + TILE_HH),
-				Vector2(c.x - TILE_HW, c.y),
-			])
-			_ground.add_child(edge)
 
 
 func _place_landmarks() -> void:
