@@ -7,6 +7,27 @@ Kindgerechtes 2D-Isometrie-Rettungsspiel: Mechs transformieren sich in Fahrzeuge
 - **Engine:** Godot **4.4** + GDScript  
 - **Art-Style:** Comic-Rettung (Stil C)
 
+## Spiel starten (ohne Godot-Installation)
+
+Im Projektordner eines der Starter-Skripte ausführen. Die Skripte nutzen zuerst einen **exportierten Build** unter `build/`, sonst Godot im `PATH` / `GODOT`, sonst laden sie **einmalig** ein portables Godot 4.4.1 nach `.tools/` (Internet nötig beim ersten Mal).
+
+| Plattform | Starter |
+|-----------|---------|
+| Linux | `./play-linux.sh` |
+| macOS | `./play-macos.sh` oder Doppelklick auf `play-macos.command` |
+| Windows | `play-windows.bat` (Doppelklick) |
+
+Optionale Argumente werden durchgereicht, z. B. `./play-linux.sh --quit-after 2`.
+
+### Linux-Standalone exportieren (optional)
+
+Wenn Export-Templates für Godot 4.4.1 installiert sind:
+
+```bash
+./scripts/export_linux.sh
+./play-linux.sh
+```
+
 ## Konzept & Design
 
 - Spielkonzept: **[docs/KONZEPT.md](docs/KONZEPT.md)**
@@ -23,17 +44,12 @@ MVP-Umsetzung gestartet (**M0** Godot-Grundgerüst). Noch kein voller Spiel-Prot
 
 ## Entwicklung
 
-Voraussetzungen: Godot 4.4+ im `PATH` als `godot` (oder `GODOT=/pfad/zum/binary`).
-
 ```bash
 # Automatisierte Smoke-Tests
 ./scripts/run_tests.sh
 
-# Spiel starten (Haupt-Scene)
-godot --path .
-
-# Kurzer Headless-Smoke-Start
-godot --headless --path . --quit-after 2
+# Spiel starten (siehe auch Starter oben)
+./play-linux.sh
 ```
 
-Tests nutzen vorerst einen leichten `SceneTree`-Runner (`tests/smoke_test.gd`). GdUnit4/GUT kann später nachgezogen werden.
+Tests: `tests/smoke_test.gd` via `./scripts/run_tests.sh`. GdUnit4/GUT Follow-up später.

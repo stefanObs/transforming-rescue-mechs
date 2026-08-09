@@ -11,11 +11,13 @@
 data_*/
 mono_crash.*.json
 
-# Exports
-export.cfg
-export_presets.cfg
-*.pck
-*.zip
+# Local runtime cache & builds (play scripts / exports)
+.tools/
+build/
+
+# Accidental loose packs at repo root
+/*.pck
+/*.zip
 
 # OS / editor
 .DS_Store
