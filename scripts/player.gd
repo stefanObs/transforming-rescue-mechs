@@ -9,13 +9,16 @@ const SPEED_ROBOT := 140.0
 const SPEED_VEHICLE := 260.0
 const SPEED_VEHICLE_RUSH := 360.0
 const TRANSFORM_LOCKOUT := 0.55
-const SPRITE_SCALE := Vector2(0.2, 0.2)
+## ~1000px art → ~85px on screen (readable vs ~210px houses).
+const SPRITE_SCALE := Vector2(0.085, 0.085)
 const ART := "res://assets/art/"
+const MOVE_EPS := 0.001
 
 var form: Form = Form.ROBOT
 var character_id: String = "bolt"
 var _transform_lock := 0.0
 var _transforming := false
+var _facing_left := false
 
 @onready var _robot_sprite: Sprite2D = %RobotSprite
 @onready var _vehicle_sprite: Sprite2D = %VehicleSprite
@@ -27,6 +30,7 @@ func _ready() -> void:
 	character_id = GameState.current_character_id
 	_load_character_art()
 	_apply_visuals()
+	_apply_facing_visuals()
 	if not _transform_sprite.animation_finished.is_connected(_on_transform_finished):
 		_transform_sprite.animation_finished.connect(_on_transform_finished)
 
@@ -46,11 +50,13 @@ func _physics_process(delta: float) -> void:
 	var input_vec := Input.get_vector("move_left", "move_right", "move_up", "move_down")
 	var iso := _cartesian_to_iso(input_vec)
 	var speed := _vehicle_speed() if form == Form.VEHICLE else SPEED_ROBOT
-	if iso.length() > 0.001:
+	if iso.length() > MOVE_EPS:
 		velocity = iso.normalized() * speed
 	else:
 		velocity = Vector2.ZERO
 	move_and_slide()
+	if velocity.length() > MOVE_EPS:
+		update_facing_from_velocity(velocity)
 
 
 func _vehicle_speed() -> float:
@@ -73,6 +79,7 @@ func toggle_form() -> void:
 		_play_transform(to_vehicle)
 	else:
 		_apply_visuals()
+		_apply_facing_visuals()
 		form_changed.emit(form)
 
 
@@ -80,6 +87,7 @@ func set_form(new_form: Form) -> void:
 	form = new_form
 	_transforming = false
 	_apply_visuals()
+	_apply_facing_visuals()
 	form_changed.emit(form)
 
 
@@ -88,6 +96,37 @@ func set_character(id: String) -> void:
 	GameState.current_character_id = id
 	_load_character_art()
 	_apply_visuals()
+	_apply_facing_visuals()
+
+
+func get_sprite_scale() -> Vector2:
+	return SPRITE_SCALE
+
+
+func is_facing_left() -> bool:
+	return _facing_left
+
+
+## Face move/drive direction via flip_h (¾ Style-C art — no full rotation).
+func update_facing_from_velocity(vel: Vector2) -> void:
+	if vel.length() <= MOVE_EPS:
+		return
+	# Prefer screen-x; when mostly vertical, keep last facing.
+	if absf(vel.x) > MOVE_EPS:
+		_facing_left = vel.x < 0.0
+	_apply_facing_visuals()
+
+
+func _apply_facing_visuals() -> void:
+	if _robot_sprite:
+		_robot_sprite.flip_h = _facing_left
+		_robot_sprite.rotation = 0.0
+	if _vehicle_sprite:
+		_vehicle_sprite.flip_h = _facing_left
+		_vehicle_sprite.rotation = 0.0
+	if _transform_sprite:
+		_transform_sprite.flip_h = _facing_left
+		_transform_sprite.rotation = 0.0
 
 
 func _cartesian_to_iso(input: Vector2) -> Vector2:
@@ -105,8 +144,8 @@ func _load_character_art() -> void:
 	_vehicle_sprite.scale = SPRITE_SCALE
 	_robot_sprite.centered = true
 	_vehicle_sprite.centered = true
-	_robot_sprite.offset = Vector2(0, -40)
-	_vehicle_sprite.offset = Vector2(0, -20)
+	_robot_sprite.offset = Vector2(0, -17)
+	_vehicle_sprite.offset = Vector2(0, -9)
 
 	var frames := SpriteFrames.new()
 	var forward: Array[Texture2D] = []
@@ -127,7 +166,7 @@ func _load_character_art() -> void:
 			frames.add_frame("to_robot", forward[i])
 	_transform_sprite.sprite_frames = frames
 	_transform_sprite.scale = SPRITE_SCALE
-	_transform_sprite.offset = Vector2(0, -30)
+	_transform_sprite.offset = Vector2(0, -13)
 
 
 func _play_transform(to_vehicle: bool) -> void:
@@ -135,6 +174,7 @@ func _play_transform(to_vehicle: bool) -> void:
 	_robot_sprite.visible = false
 	_vehicle_sprite.visible = false
 	_transform_sprite.visible = true
+	_apply_facing_visuals()
 	var anim := "to_vehicle" if to_vehicle else "to_robot"
 	_transform_sprite.play(anim)
 	_form_label.text = "Transform…"
@@ -145,6 +185,7 @@ func _on_transform_finished() -> void:
 	_transform_sprite.visible = false
 	_transform_sprite.stop()
 	_apply_visuals()
+	_apply_facing_visuals()
 	form_changed.emit(form)
 
 

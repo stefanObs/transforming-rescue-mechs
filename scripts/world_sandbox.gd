@@ -4,6 +4,20 @@ extends Node2D
 const ART := "res://assets/art/"
 const PROP_SCALE := Vector2(0.26, 0.26)
 const HUB_SCALE := Vector2(0.34, 0.34)
+## Ground polygons sit at z ≈ −50…−34. Actors/props share one BASE so Y-sort works
+## while staying above ground. Godot canvas z_index max is 4096.
+const ACTOR_Z_BASE := 2000
+const PROP_Z_BASE := 2000
+
+
+
+static func compute_actor_z(y: float) -> int:
+	return ACTOR_Z_BASE + int(y)
+
+
+static func compute_prop_z(y: float) -> int:
+	return PROP_Z_BASE + int(y)
+
 
 const COLOR_SKY := Color("4DA3FF")
 const COLOR_GRASS := Color("3DCC5A")
@@ -68,7 +82,8 @@ func _process(_delta: float) -> void:
 	if not _paused:
 		_refresh_status()
 		if _player:
-			_player.z_index = 10 + int(_player.global_position.y)
+			_player.z_index = compute_actor_z(_player.global_position.y)
+
 
 
 func _switch_character(id: String) -> void:
@@ -187,5 +202,5 @@ func _add_prop(file_name: String, pos: Vector2, scale: Vector2) -> void:
 	spr.position = pos
 	spr.centered = true
 	spr.offset = Vector2(0, -80)
-	spr.z_index = 5 + int(pos.y)
+	spr.z_index = compute_prop_z(pos.y)
 	_props.add_child(spr)
