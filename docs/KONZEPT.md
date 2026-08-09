@@ -345,3 +345,4 @@ Online-Multiplayer, Monetarisierung, realistische Physik, PvP-Arena, Gewalt gege
 | 2026-08-09 | Design-Vorschläge A/B/C ergänzt (Link) |
 | 2026-08-09 | Moodboard-Bilder für A/B/C (Umgebung, Basis, Mech, Fahrzeug) |
 | 2026-08-09 | Stil C gewählt; Style-Bible + Art-Subagent |
+| 2026-08-09 | Entwicklungsablauf mit Subagenten (Plan→Implement→Review→Playtest) |

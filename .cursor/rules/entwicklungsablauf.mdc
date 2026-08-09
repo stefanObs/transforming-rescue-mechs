@@ -1,0 +1,17 @@
+---
+description: Vier-Phasen-Entwicklungsablauf mit Subagenten (Plan → Implement+Tests/Art → Review → Playtest)
+alwaysApply: true
+---
+
+# Entwicklungsablauf
+
+Bei Features und größeren Änderungen strikt `docs/ENTWICKLUNGSABLAUF.md` befolgen:
+
+1. **Plan** → `docs/plans/<kurzname>.md` (Subagent `feature-planner` oder Hauptagent)
+2. **Umsetzen** → Subagent `feature-implementer` inkl. automatisierter Tests; Grafik/Animation über `comic-rettung-art`
+3. **Code Review** → Subagent `code-reviewer`; Critical/High Findings fixen und Review wiederholen
+4. **Playtest** → Subagent `godot-playtester` (Tests + Spielstart)
+
+Erst nach Phase-4-Pass: Commit, Push, Tag (`git-release`-Regel).
+
+Nicht die Phasen überspringen, außer der User fordert einen dokumentierten Hotfix.
