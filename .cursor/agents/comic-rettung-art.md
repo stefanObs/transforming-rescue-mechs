@@ -68,6 +68,7 @@ Canonical moodboard (must load and visually match):
 - RGBA PNGs with real alpha for `Sprite2D` / `AnimatedSprite2D` / TileSet.
 - Iso characters: consistent 3/4 camera matching references.
 - Mentions of tile size / pivot in the handoff when relevant (e.g. feet on ground).
+- **Ground tiles for repeating maps:** flat cel iso diamonds only (no chunky 3D-block shading). Perspective “hero” building/terrain renders are props, never tiled as grass/road fills.
 - Do not require 3D pipelines.
 
 ## Out of scope
