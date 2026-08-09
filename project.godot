@@ -7,8 +7,8 @@ config_version=5
 
 config/name="Transformierende Rettungsmechs"
 config/description="Kindgerechtes 2D-Isometrie-Rettungsspiel (Stil Comic-Rettung)."
-config/version="0.7.0"
-run/main_scene="res://scenes/main.tscn"
+config/version="0.8.0"
+run/main_scene="res://scenes/world_sandbox.tscn"
 config/features=PackedStringArray("4.4", "GL Compatibility")
 config/icon="res://icon.svg"
 
@@ -16,6 +16,8 @@ config/icon="res://icon.svg"
 
 GameState="*res://scripts/autoload/game_state.gd"
 SaveService="*res://scripts/autoload/save_service.gd"
+InputSetup="*res://scripts/autoload/input_setup.gd"
+InputGlyphs="*res://scripts/autoload/input_glyphs.gd"
 
 [display]
 
@@ -23,6 +25,10 @@ window/size/viewport_width=1280
 window/size/viewport_height=720
 window/stretch/mode="canvas_items"
 window/stretch/aspect="expand"
+
+[layer_names]
+
+2d_physics/layer_1="world"
 
 [rendering]
 

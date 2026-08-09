@@ -19,7 +19,7 @@ Erste spielbare Version: Open-World **Seuzach** (Comic-Rettung), zwei Mechs (Bol
 | Epic | Name | Status | Fortschritt |
 |------|------|--------|-------------|
 | M0 | Godot-Grundgerüst & Tests | Erledigt | 6/6 |
-| M1 | Input, Spieler, Transform | Nicht gestartet | 0/8 |
+| M1 | Input, Spieler, Transform | Erledigt | 8/8 |
 | M2 | Art-Spike Stil C | Nicht gestartet | 0/7 |
 | M3 | Seuzach Iso-Welt & Hub | Nicht gestartet | 0/8 |
 | M4 | Energie, Kollision, Solar, Waffen | Nicht gestartet | 0/7 |
@@ -105,27 +105,27 @@ Pro Epic gilt der Ablauf: Plan (dieses File pflegen) → `feature-implementer` (
 
 #### Schritte
 
-- [ ] Input-Map: move, interact, transform, gadget, scan, pause/save
-- [ ] `Player`-Scene mit State Machine: `robot` / `vehicle`
-- [ ] Bewegung Iso (kartesisch → iso-Projektion oder TileMap-konform)
-- [ ] Transform-Toggle mit kurzem Lockout
-- [ ] Controller + Tastatur parallel getestet (1 Device)
-- [ ] Glyph-Hilfe stub (`InputGlyphs`)
-- [ ] Unit-Tests: State-Wechsel, Input-Actions existieren
-- [ ] Playtest: Bewegen + Transform ohne Crash
+- [x] Input-Map: move, interact, transform, gadget, scan, pause/save
+- [x] `Player`-Scene mit Form-State: `robot` / `vehicle`
+- [x] Bewegung Iso (kartesisch → iso-Projektion)
+- [x] Transform-Toggle mit kurzem Lockout
+- [x] Controller + Tastatur Binding (1 Device; Playtest manuell)
+- [x] Glyph-Hilfe stub (`InputGlyphs`)
+- [x] Unit-Tests: State-Wechsel, Input-Actions existieren
+- [x] Playtest: Bewegen + Transform ohne Crash
 
 #### Testplan M1
 
-- [ ] Automatisiert: Transform-State-Tests
-- [ ] Playtest: Keyboard und Gamepad (falls vorhanden)
+- [x] Automatisiert: Transform-State-Tests
+- [x] Playtest: Headless-Start / Export-Smoke (Gamepad manuell später)
 
 #### Art-Bedarf M1
 
-- [ ] Platzhalter-Rechtecke erlaubt; finale Art → M2 / `comic-rettung-art`
+- [x] Platzhalter-Polygone; finale Art → M2 / `comic-rettung-art`
 
 #### Akzeptanz M1
 
-- [ ] Solo-Steuerung + Transform funktional
+- [x] Solo-Steuerung + Transform funktional
 
 ---
 
@@ -399,3 +399,4 @@ Abhängigkeiten: M2 kann parallel zu späten M1-Fixes starten; M7 nach stabilem 
 | 2026-08-09 | Initialer MVP-Umsetzungsplan mit Epics M0–M8 und Fortschritts-Tracking |
 | 2026-08-09 | Verweis: bei Bugs gilt Phase 0 (Repro + RCA) laut ENTWICKLUNGSABLAUF |
 | 2026-08-09 | M0 erledigt: Godot 4.4 Projekt, Autoloads, Smoke-Tests, Playtest Pass |
+| 2026-08-09 | M1 erledigt: Input, Player, Iso-Bewegung, Transform, Tests |

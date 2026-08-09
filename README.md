@@ -40,7 +40,7 @@ Wenn Export-Templates für Godot 4.4.1 installiert sind:
 
 ## Status
 
-MVP-Umsetzung gestartet (**M0** Godot-Grundgerüst). Noch kein voller Spiel-Prototyp.
+MVP-Umsetzung: **M0** und **M1** erledigt (Sandbox: Bewegen + Transform).
 
 ## Entwicklung
 
