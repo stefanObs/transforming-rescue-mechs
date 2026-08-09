@@ -49,7 +49,7 @@ Subagent: `.cursor/agents/comic-rettung-art.md` — lädt diese Bilder vor jeder
 - `AnimatedSprite2D` / `SpriteFrames` für Charaktere; wenige klare Frames
 - UI: weiße Panels, dicke Rahmen, versetzter Sticker-Schatten; Comic-Bubbles für Rettungs-Radio
 - TileMap isometrisch; Landmarken als klare Icon-Formen (Kirche, Bahnhof)
-- **Boden/Gras/Straße zum Kacheln:** nur **flache** Iso-Rauten (Cel-Farbe) oder eine durchgehende Fläche — **ohne** schwarze Per-Kachel-Outlines (die ergeben ein Gitter). Dicke `#1A1A1A`-Konturen gehören auf Charaktere/Props, nicht auf repeating ground. Keine perspektivischen „3D-Block“-Hero-Sprites als Boden kacheln. Haus/Kirche/Hub nur als **einzelne Props**.
+- **Boden/Gras/Straße zum Kacheln:** durchgehende Cel-Fläche + weiche organische Gras-Patches; Straßen als **durchgehende Bänder** (nicht Iso-Schachbrett / Per-Kachel-Diamanten). Keine schwarzen Per-Kachel-Outlines. Dicke `#1A1A1A`-Konturen gehören auf Charaktere/Props. Keine perspektivischen „3D-Block“-Hero-Sprites als Boden. Haus/Kirche/Hub nur als **einzelne Props**.
 
 ## Nicht C
 

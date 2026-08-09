@@ -34,6 +34,17 @@ func _run() -> void:
 		_assert(ground_sprites == 0, "ground has no Sprite2D tiles (got %d)" % ground_sprites)
 		_assert(ground_polys >= 1, "ground has flat polygons")
 		_assert(ground_lines == 0, "ground has no per-tile Line2D outlines (got %d)" % ground_lines)
+		# Organic ground: few polys (base + patches + road ribbons), not a diamond flood.
+		_assert(ground_polys <= 20, "ground poly count organic (got %d, want <=20)" % ground_polys)
+		var road_polys := 0
+		if ground:
+			for child in ground.get_children():
+				if child is Polygon2D:
+					var c: Color = (child as Polygon2D).color
+					# Road gray band (lighter than grass greens).
+					if c.r > 0.45 and c.g > 0.45 and c.b > 0.45 and absf(c.r - c.g) < 0.08:
+						road_polys += 1
+		_assert(road_polys >= 2, "continuous road ribbons present (got %d)" % road_polys)
 		var prop_sprites := 0
 		if props:
 			for child in props.get_children():

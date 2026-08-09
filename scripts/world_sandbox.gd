@@ -21,12 +21,17 @@ static func compute_prop_z(y: float) -> int:
 
 const COLOR_SKY := Color("4DA3FF")
 const COLOR_GRASS := Color("3DCC5A")
-const COLOR_GRASS_ALT := Color("36C053")
-const COLOR_ROAD := Color("6E6E6E")
+## Soft organic patches (not a checker tile pattern).
+const COLOR_GRASS_PATCH := Color("36C053")
+const COLOR_GRASS_PATCH_2 := Color("45D468")
+## Lighter than palette hex so continuous ribbons read clearly on grass (moodboard-like).
+const COLOR_ROAD := Color("8E8E8E")
+const COLOR_ROAD_STRIPE := Color("B0B0B0")
 
-## Iso diamond half-size (flat top, NOT a 3D block sprite).
+## Iso diamond half-size (used for road ribbon width in iso space).
 const TILE_HW := 56.0
 const TILE_HH := 28.0
+const ROAD_HALF_W := 78.0
 
 @onready var _player: CharacterBody2D = %Player
 @onready var _hint: Label = %HintLabel
@@ -108,7 +113,7 @@ func _build_flat_ground() -> void:
 	for child in _ground.get_children():
 		child.queue_free()
 
-	# One continuous grass fill — Style-C cel ground (no tiled 3D block sprites).
+	# Continuous grass — Style-C cel ground (no diamond checker / 3D tile sprites).
 	var base := Polygon2D.new()
 	base.color = COLOR_GRASS
 	base.z_index = -50
@@ -117,49 +122,64 @@ func _build_flat_ground() -> void:
 	])
 	_ground.add_child(base)
 
-	# Soft checker accents with correct iso packing (edge-sharing diamonds).
-	for y in range(-3, 5):
-		for x in range(-5, 6):
-			if (x + y) % 2 != 0:
-				continue
-			if _is_road_cell(x, y):
-				continue
-			var cx := (x - y) * TILE_HW
-			var cy := (x + y) * TILE_HH
-			_add_flat_iso_diamond(cx, cy, COLOR_GRASS_ALT, -45)
+	# Large soft patches for organic feel (not a grid).
+	_add_grass_patch(Vector2(-320, -40), 160.0, 110.0, COLOR_GRASS_PATCH, -48)
+	_add_grass_patch(Vector2(280, 80), 140.0, 100.0, COLOR_GRASS_PATCH_2, -48)
+	_add_grass_patch(Vector2(-80, 280), 180.0, 90.0, COLOR_GRASS_PATCH, -48)
+	_add_grass_patch(Vector2(420, -180), 120.0, 130.0, COLOR_GRASS_PATCH_2, -48)
+	_add_grass_patch(Vector2(-480, 200), 100.0, 140.0, COLOR_GRASS_PATCH, -48)
 
-	_add_road_cells()
-	# No per-tile Line2D outlines — adjacent diamonds would form a black grid.
+	_add_continuous_roads()
 
 
-func _is_road_cell(x: int, y: int) -> bool:
-	return abs(x) <= 1 or y == 2
+func _add_grass_patch(center: Vector2, rx: float, ry: float, color: Color, z: int) -> void:
+	## Irregular ellipse-like blob (organic, not iso diamonds).
+	var pts := PackedVector2Array()
+	var n := 10
+	for i in range(n):
+		var t := TAU * float(i) / float(n)
+		var jitter := 0.82 + 0.18 * sin(t * 3.0 + center.x * 0.01)
+		pts.append(center + Vector2(cos(t) * rx * jitter, sin(t) * ry * jitter))
+	var poly := Polygon2D.new()
+	poly.color = color
+	poly.z_index = z
+	poly.polygon = pts
+	_ground.add_child(poly)
+
+
+func _add_continuous_roads() -> void:
+	# Iso-aligned continuous ribbons (readable bands, not cell diamonds).
+	# Width offset uses the conjugate iso axis so edges stay lattice-aligned.
+	var v_a := _iso_center(0, -4)
+	var v_b := _iso_center(0, 5)
+	var v_n := Vector2(TILE_HW, TILE_HH).normalized()
+	_add_iso_road_ribbon(v_a, v_b, v_n, ROAD_HALF_W, COLOR_ROAD, -40)
+	_add_iso_road_ribbon(v_a, v_b, v_n, ROAD_HALF_W * 0.18, COLOR_ROAD_STRIPE, -39)
+
+	var h_a := _iso_center(-6, 2)
+	var h_b := _iso_center(6, 2)
+	var h_n := Vector2(-TILE_HW, TILE_HH).normalized()
+	_add_iso_road_ribbon(h_a, h_b, h_n, ROAD_HALF_W * 0.85, COLOR_ROAD, -40)
+	_add_iso_road_ribbon(h_a, h_b, h_n, ROAD_HALF_W * 0.16, COLOR_ROAD_STRIPE, -39)
 
 
 func _iso_center(x: int, y: int) -> Vector2:
 	return Vector2((x - y) * TILE_HW, (x + y) * TILE_HH)
 
 
-func _add_flat_iso_diamond(cx: float, cy: float, color: Color, z: int) -> void:
+func _add_iso_road_ribbon(
+	a: Vector2, b: Vector2, width_axis: Vector2, half_width: float, color: Color, z: int
+) -> void:
+	if (b - a).length() < 0.001:
+		return
+	var n := width_axis.normalized() * half_width
 	var poly := Polygon2D.new()
 	poly.color = color
 	poly.z_index = z
 	poly.polygon = PackedVector2Array([
-		Vector2(cx, cy - TILE_HH),
-		Vector2(cx + TILE_HW, cy),
-		Vector2(cx, cy + TILE_HH),
-		Vector2(cx - TILE_HW, cy),
+		a + n, b + n, b - n, a - n,
 	])
 	_ground.add_child(poly)
-
-
-func _add_road_cells() -> void:
-	for y in range(-3, 5):
-		for x in range(-5, 6):
-			if not _is_road_cell(x, y):
-				continue
-			var c := _iso_center(x, y)
-			_add_flat_iso_diamond(c.x, c.y, COLOR_ROAD, -40)
 
 
 func _place_landmarks() -> void:
