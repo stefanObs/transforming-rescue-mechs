@@ -1,17 +1,18 @@
 ---
-description: Vier-Phasen-Entwicklungsablauf mit Subagenten (Plan → Implement+Tests/Art → Review → Playtest)
+description: Entwicklungsablauf mit Subagenten; bei Fehlern zuerst Repro + Root-Cause vor dem Fix
 alwaysApply: true
 ---
 
 # Entwicklungsablauf
 
-Bei Features und größeren Änderungen strikt `docs/ENTWICKLUNGSABLAUF.md` befolgen:
+Strikt `docs/ENTWICKLUNGSABLAUF.md` befolgen:
 
-1. **Plan** → `docs/plans/<kurzname>.md` (Subagent `feature-planner` oder Hauptagent)
-2. **Umsetzen** → Subagent `feature-implementer` inkl. automatisierter Tests; Grafik/Animation über `comic-rettung-art`
-3. **Code Review** → Subagent `code-reviewer`; Critical/High Findings fixen und Review wiederholen
-4. **Playtest** → Subagent `godot-playtester` (Tests + Spielstart)
+0. **Bei Fehlern (Pflicht vor dem Fix):** reproduzieren + Root-Cause-Analyse dokumentieren (Plan-Abschnitt „Repro & RCA“)
+1. **Plan** → `docs/plans/<kurzname>.md` (`feature-planner` oder Hauptagent)
+2. **Umsetzen** → `feature-implementer` inkl. Tests (Bug: zuerst Regressionstest); Art über `comic-rettung-art`
+3. **Code Review** → `code-reviewer`; Bug-Findings erneut über Phase 0, dann fixen, Review wiederholen
+4. **Playtest** → `godot-playtester` (Tests + Spielstart); Failures mit Repro-Schritten zurück in Phase 0
 
 Erst nach Phase-4-Pass: Commit, Push, Tag (`git-release`-Regel).
 
-Nicht die Phasen überspringen, außer der User fordert einen dokumentierten Hotfix.
+Keine Blind-Fixes. Phasen nicht überspringen, außer dokumentierter Hotfix (Repro trotzdem anstreben).

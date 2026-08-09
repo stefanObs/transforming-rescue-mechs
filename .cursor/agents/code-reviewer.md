@@ -20,6 +20,7 @@ Review the current change set (and plan file if provided) for correctness, tests
 
 - Plan acceptance criteria addressed
 - Automated tests exist and match the change
+- **Bugfixes:** Repro & RCA section present; regression test exists
 - No secrets, no online multiplayer, no violence against people/animals
 - Style C only for new art references
 - Clear naming, no unnecessary complexity
@@ -43,8 +44,10 @@ Approve | Approve with fixes | Block
 
 ## Tests
 - coverage assessment
+## Bugfix process
+- RCA/repro ok: yes / no / n/a
 ## Art
 - OK / problems
 ```
 
-Only report concrete findings. Critical/High must be fixed before playtest (phase 4).
+Only report concrete findings. Critical/High must be fixed before playtest (phase 4). Bug-like findings require Phase 0 before the fix.

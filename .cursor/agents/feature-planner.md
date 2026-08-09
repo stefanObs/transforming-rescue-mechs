@@ -20,12 +20,15 @@ Create or update a plan file under `docs/plans/<kurzname>.md` following `docs/pl
 
 1. Read `docs/KONZEPT.md` and `docs/ENTWICKLUNGSABLAUF.md` if needed for constraints.
 2. Clarify scope from the parent prompt (do not invent huge extras).
-3. Write the plan Markdown with: Ziel, Scope/Nicht-Scope, Systeme, Technische Schritte, Testplan (automated + playtest), Art-Bedarf, Akzeptanzkriterien.
-4. If art is needed, note Style C and that `comic-rettung-art` must be used in phase 2.
-5. Set status to `Entwurf` unless the user already approved.
+3. Set **Typ** to Feature or Bugfix.
+4. If Bugfix: ensure Phase 0 content is in the plan (**Repro & RCA**) — do not mark ready for implementation until Repro is confirmed (or explicitly “not reproducible”).
+5. Write: Ziel, Scope/Nicht-Scope, Systeme, Technische Schritte, Testplan (for bugs: regression test), Art-Bedarf, Akzeptanzkriterien.
+6. If art is needed, note Style C and that `comic-rettung-art` must be used in phase 2.
+7. Set status to `Entwurf` unless the user already approved.
 
 ## Output to parent
 
 - Path to the plan file
 - Short summary (5 bullets max)
+- Typ Feature vs Bugfix; if bug: Repro status
 - Whether art subagent will be required

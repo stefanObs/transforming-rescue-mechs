@@ -397,3 +397,4 @@ Abhängigkeiten: M2 kann parallel zu späten M1-Fixes starten; M7 nach stabilem 
 | Datum | Änderung |
 |-------|----------|
 | 2026-08-09 | Initialer MVP-Umsetzungsplan mit Epics M0–M8 und Fortschritts-Tracking |
+| 2026-08-09 | Verweis: bei Bugs gilt Phase 0 (Repro + RCA) laut ENTWICKLUNGSABLAUF |

@@ -38,8 +38,14 @@ Pass | Fail | Blocked
 ## Game launch
 - command, result, notable log lines
 
+## On Fail — Repro for Phase 0
+- steps:
+- expected:
+- actual:
+- logs:
+
 ## Remaining manual checks
 - …
 ```
 
-On Fail/Blocked: list concrete next fixes for `feature-implementer`.
+On Fail/Blocked: list concrete repro steps for Phase 0, then next fixes for `feature-implementer` after RCA.
