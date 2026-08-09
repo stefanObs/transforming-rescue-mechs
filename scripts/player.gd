@@ -8,9 +8,13 @@ signal form_changed(new_form: Form)
 const SPEED_ROBOT := 140.0
 const SPEED_VEHICLE := 260.0
 const SPEED_VEHICLE_RUSH := 360.0
-const TRANSFORM_LOCKOUT := 0.55
+## Lockout covers full 6-frame anim at TRANSFORM_FPS plus a small buffer.
+const TRANSFORM_FPS := 8.0
+const TRANSFORM_LOCKOUT := 0.9
 ## ~1000px art → ~85px on screen (readable vs ~210px houses).
 const SPRITE_SCALE := Vector2(0.085, 0.085)
+## Slightly larger during transform so intermediate frames read clearly.
+const TRANSFORM_SPRITE_SCALE := Vector2(0.1, 0.1)
 const ART := "res://assets/art/"
 const MOVE_EPS := 0.001
 
@@ -75,7 +79,7 @@ func toggle_form() -> void:
 	var to_vehicle := form == Form.ROBOT
 	form = Form.VEHICLE if to_vehicle else Form.ROBOT
 	_transform_lock = TRANSFORM_LOCKOUT
-	if _transform_sprite.sprite_frames and _transform_sprite.sprite_frames.has_animation("to_vehicle"):
+	if _transform_sprite.sprite_frames and has_transform_animation():
 		_play_transform(to_vehicle)
 	else:
 		_apply_visuals()
@@ -101,6 +105,14 @@ func set_character(id: String) -> void:
 
 func get_sprite_scale() -> Vector2:
 	return SPRITE_SCALE
+
+
+func has_transform_animation() -> bool:
+	return (
+		_transform_sprite != null
+		and _transform_sprite.sprite_frames != null
+		and _transform_sprite.sprite_frames.has_animation("to_vehicle")
+	)
 
 
 func is_facing_left() -> bool:
@@ -155,10 +167,10 @@ func _load_character_art() -> void:
 			forward.append(load(path))
 	if not forward.is_empty():
 		frames.add_animation("to_vehicle")
-		frames.set_animation_speed("to_vehicle", 12.0)
+		frames.set_animation_speed("to_vehicle", TRANSFORM_FPS)
 		frames.set_animation_loop("to_vehicle", false)
 		frames.add_animation("to_robot")
-		frames.set_animation_speed("to_robot", 12.0)
+		frames.set_animation_speed("to_robot", TRANSFORM_FPS)
 		frames.set_animation_loop("to_robot", false)
 		for tex in forward:
 			frames.add_frame("to_vehicle", tex)
@@ -174,16 +186,22 @@ func _play_transform(to_vehicle: bool) -> void:
 	_robot_sprite.visible = false
 	_vehicle_sprite.visible = false
 	_transform_sprite.visible = true
+	_transform_sprite.scale = TRANSFORM_SPRITE_SCALE
 	_apply_facing_visuals()
 	var anim := "to_vehicle" if to_vehicle else "to_robot"
+	_transform_sprite.animation = anim
+	_transform_sprite.set_frame_and_progress(0, 0.0)
 	_transform_sprite.play(anim)
 	_form_label.text = "Transform…"
 
 
 func _on_transform_finished() -> void:
+	if not _transforming:
+		return
 	_transforming = false
 	_transform_sprite.visible = false
 	_transform_sprite.stop()
+	_transform_sprite.scale = SPRITE_SCALE
 	_apply_visuals()
 	_apply_facing_visuals()
 	form_changed.emit(form)

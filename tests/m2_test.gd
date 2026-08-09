@@ -14,6 +14,8 @@ const REQUIRED := [
 	"res://assets/art/rush_transform_06.png",
 	"res://assets/art/bolt_transform_01.png",
 	"res://assets/art/bolt_transform_06.png",
+	"res://assets/art/marina_transform_01.png",
+	"res://assets/art/marina_transform_06.png",
 	"res://assets/art/tile_grass.png",
 	"res://assets/art/tile_road.png",
 	"res://assets/art/tile_house.png",

@@ -9,25 +9,29 @@ from pathlib import Path
 from PIL import Image
 
 ART = Path(__file__).resolve().parents[1] / "assets" / "art"
-WHITE_MIN = 245
-NEAR_WHITE = 230
+## Near-white / light-gray backdrop (AI plates often land at ~238–244, not pure 255).
+BACKDROP_MIN = 230
+## Max channel spread so teal/yellow highlights are not treated as backdrop.
+BACKDROP_CHROMA_MAX = 14
 PAD = 8
 
 
-def is_white(px: tuple[int, ...], threshold: int = WHITE_MIN) -> bool:
-    r, g, b = px[0], px[1], px[2]
-    return r >= threshold and g >= threshold and b >= threshold
+def is_backdrop(px: tuple[int, ...], threshold: int = BACKDROP_MIN) -> bool:
+    r, g, b = int(px[0]), int(px[1]), int(px[2])
+    if r < threshold or g < threshold or b < threshold:
+        return False
+    return max(r, g, b) - min(r, g, b) <= BACKDROP_CHROMA_MAX
 
 
-def border_white_mask(im: Image.Image) -> set[tuple[int, int]]:
-    """Pixels that are near-white and connected to the image border."""
+def border_backdrop_mask(im: Image.Image) -> set[tuple[int, int]]:
+    """Pixels that are light-gray/white backdrop and connected to the image border."""
     w, h = im.size
     px = im.load()
     visited: set[tuple[int, int]] = set()
     q: deque[tuple[int, int]] = deque()
 
     def try_push(x: int, y: int) -> None:
-        if 0 <= x < w and 0 <= y < h and (x, y) not in visited and is_white(px[x, y]):
+        if 0 <= x < w and 0 <= y < h and (x, y) not in visited and is_backdrop(px[x, y]):
             visited.add((x, y))
             q.append((x, y))
 
@@ -50,7 +54,7 @@ def border_white_mask(im: Image.Image) -> set[tuple[int, int]]:
 
 def process(path: Path) -> None:
     im = Image.open(path).convert("RGBA")
-    bg = border_white_mask(im)
+    bg = border_backdrop_mask(im)
     px = im.load()
     w, h = im.size
 
@@ -66,7 +70,7 @@ def process(path: Path) -> None:
             if (nx, ny) in bg:
                 continue
             r, g, b, a = px[nx, ny]
-            if is_white((r, g, b), NEAR_WHITE) and a > 64:
+            if is_backdrop((r, g, b), BACKDROP_MIN) and a > 64:
                 px[nx, ny] = (r, g, b, 64)
 
     bbox = im.getbbox()
