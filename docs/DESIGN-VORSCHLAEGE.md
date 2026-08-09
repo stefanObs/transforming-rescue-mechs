@@ -2,15 +2,15 @@
 
 Drei visuelle Richtungen für **Transformierende Rettungsmechs**. Alle sind mit **Godot 4** (2D, TileMap, Sprites, leichte Shader) umsetzbar — ohne 3D-Pipeline.
 
-**Zielgruppe:** 6–8 · **Welt:** isometrische Kacheln, Start Seuzach · **Lesbarkeit:** große Silhouetten, klare Farben
+**Gewählt: Stil C — Comic-Rettung** (verbindlich). Style-Bible: [`STYLE-BIBLE-C.md`](STYLE-BIBLE-C.md). Art-Subagent: `.cursor/agents/comic-rettung-art.md`.
 
 Moodboard-Bilder: [`design-refs/`](design-refs/) (Umgebung, Basis, Mech-Form, Fahrzeug-Form je Stil).
 
-| # | Kurzname | Gefühl | Aufwand (Kunst) |
-|---|----------|--------|-----------------|
-| A | Spielzeug-Iso | Plastik-Figuren, warm, greifbar | Mittel |
-| B | Bilderbuch-Seuzach | Weich, einladend, „Vorlesen“ | Mittel–hoch |
-| C | Comic-Rettung | Knallig, TV-tauglich, klare Konturen | Mittel |
+| # | Kurzname | Gefühl | Status |
+|---|----------|--------|--------|
+| A | Spielzeug-Iso | Plastik-Figuren, warm, greifbar | Verworfen |
+| B | Bilderbuch-Seuzach | Weich, einladend, „Vorlesen“ | Verworfen |
+| C | Comic-Rettung | Knallig, TV-tauglich, klare Konturen | **Gewählt** |
 
 ---
 
@@ -228,12 +228,10 @@ Unabhängig vom gewählten Stil:
 
 ### Empfehlung (Arbeitsvorschlag)
 
-Für Zielgruppe 6–8 + lokaler Couch-Co-op + klare Mech-Silhouetten: **Vorschlag C (Comic-Rettung)** als Hauptlinie, mit **warmen Gebäudefarben aus B** für Seuzach-Heimeligkeit (Hybrid leicht möglich).  
-Wenn „Spielzeug zum Anfassen“ wichtiger ist als Serien-Look: **A**.  
-Wenn Orts-Atmosphäre Priorität 1 ist: **B**.
+**Umgesetzt:** Stil **C (Comic-Rettung)** ist projektweit festgelegt. Siehe [`STYLE-BIBLE-C.md`](STYLE-BIBLE-C.md) und Subagent `.cursor/agents/comic-rettung-art.md`.
 
 ---
 
 ## Nächster Schritt
 
-Bitte **A, B, C oder Hybrid** wählen. Danach: Style-Bibel (1 Seite) + Spike-Assets in Godot, Konzept-Abschnitt „Art-Style“ in [`KONZEPT.md`](KONZEPT.md) aktualisieren.
+Style-Bible C ist aktiv. Neue Grafiken/Animationen über den Art-Subagenten erzeugen (Referenzen: `design-refs/c-*.png`).

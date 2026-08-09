@@ -5,12 +5,15 @@ Kindgerechtes 2D-Isometrie-Rettungsspiel: Mechs transformieren sich in Fahrzeuge
 - **Zielgruppe:** 6–8 Jahre  
 - **Modi:** Solo & lokaler Co-op (Tastatur / Xbox-Controller)  
 - **Engine:** Godot 4 + GDScript  
+- **Art-Style:** Comic-Rettung (Stil C)
 
 ## Konzept & Design
 
 - Spielkonzept: **[docs/KONZEPT.md](docs/KONZEPT.md)**
-- Design-Vorschläge (3 Stile, Godot-tauglich): **[docs/DESIGN-VORSCHLAEGE.md](docs/DESIGN-VORSCHLAEGE.md)**
+- Design-Vorschläge: **[docs/DESIGN-VORSCHLAEGE.md](docs/DESIGN-VORSCHLAEGE.md)**
+- Style-Bible C: **[docs/STYLE-BIBLE-C.md](docs/STYLE-BIBLE-C.md)**
 - Moodboards: **[docs/design-refs/](docs/design-refs/)**
+- Art-Subagent: **[.cursor/agents/comic-rettung-art.md](.cursor/agents/comic-rettung-art.md)**
 
 ## Status
 

@@ -1,0 +1,16 @@
+---
+description: Grafik- und Animationsaufgaben an den Comic-Rettung-Art-Subagenten delegieren
+alwaysApply: true
+---
+
+# Art-Delegation: Comic-Rettung
+
+Der verbindliche Stil ist **C — Comic-Rettung** (`docs/STYLE-BIBLE-C.md`).
+
+Wenn der User Grafiken, Sprites, Tiles, UI-Art, Moodboards, Transformationen oder Animationsframes will:
+
+1. Den Projekt-Subagenten **comic-rettung-art** (`.cursor/agents/comic-rettung-art.md`) beauftragen / dessen Workflow befolgen
+2. Referenzbilder unter `docs/design-refs/c-*.png` verwenden (`GenerateImage` → `reference_image_paths`)
+3. Keine Assets in Stil A oder B erzeugen
+
+Nach abgeschlossener Art-Lieferung: committen, pushen, versionieren (siehe `git-release`-Regel).
