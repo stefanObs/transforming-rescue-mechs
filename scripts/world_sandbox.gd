@@ -1,6 +1,7 @@
 extends Node2D
 ## Sandbox world: flat Style-C ground (no tiled 3D tile sprites) + landmark props.
 
+const RoadKitLib := preload("res://scripts/road_kit.gd")
 const ART := "res://assets/art/"
 const PROP_SCALE := Vector2(0.26, 0.26)
 const HUB_SCALE := Vector2(0.34, 0.34)
@@ -24,11 +25,7 @@ const COLOR_GRASS := Color("3DCC5A")
 ## Soft organic patches (not a checker tile pattern).
 const COLOR_GRASS_PATCH := Color("36C053")
 const COLOR_GRASS_PATCH_2 := Color("45D468")
-## Lighter than palette hex so continuous ribbons read clearly on grass (moodboard-like).
-const COLOR_ROAD := Color("8E8E8E")
-const COLOR_ROAD_STRIPE := Color("B0B0B0")
-
-## Iso diamond half-size (used for road ribbon width in iso space).
+## Iso diamond half-size (used for road ribbon endpoints in iso space).
 const TILE_HW := 56.0
 const TILE_HH := 28.0
 const ROAD_HALF_W := 78.0
@@ -148,38 +145,39 @@ func _add_grass_patch(center: Vector2, rx: float, ry: float, color: Color, z: in
 
 
 func _add_continuous_roads() -> void:
-	# Iso-aligned continuous ribbons (readable bands, not cell diamonds).
-	# Width offset uses the conjugate iso axis so edges stay lattice-aligned.
+	# RoadKit demo: main + cross + diagonal + roundabout (away from spawn).
 	var v_a := _iso_center(0, -4)
 	var v_b := _iso_center(0, 5)
-	var v_n := Vector2(TILE_HW, TILE_HH).normalized()
-	_add_iso_road_ribbon(v_a, v_b, v_n, ROAD_HALF_W, COLOR_ROAD, -40)
-	_add_iso_road_ribbon(v_a, v_b, v_n, ROAD_HALF_W * 0.18, COLOR_ROAD_STRIPE, -39)
+	RoadKitLib.add_straight(_ground, v_a, v_b, {
+		"sidewalk": true,
+		"centerline": true,
+		"half_w": ROAD_HALF_W,
+	})
 
 	var h_a := _iso_center(-6, 2)
 	var h_b := _iso_center(6, 2)
-	var h_n := Vector2(-TILE_HW, TILE_HH).normalized()
-	_add_iso_road_ribbon(h_a, h_b, h_n, ROAD_HALF_W * 0.85, COLOR_ROAD, -40)
-	_add_iso_road_ribbon(h_a, h_b, h_n, ROAD_HALF_W * 0.16, COLOR_ROAD_STRIPE, -39)
+	RoadKitLib.add_straight(_ground, h_a, h_b, {
+		"centerline": true,
+		"half_w": ROAD_HALF_W * 0.85,
+	})
+
+	var d_a := _iso_center(3, -2)
+	var d_b := _iso_center(7, 1)
+	RoadKitLib.add_diagonal(_ground, d_a, d_b, {
+		"centerline": true,
+		"half_w": ROAD_HALF_W * 0.7,
+	})
+
+	# Off to the SW — clears player spawn at (0, 40).
+	var rb_center := _iso_center(-9, 6)
+	RoadKitLib.add_roundabout(_ground, rb_center, 95.0, 30.0, {
+		"sidewalk": true,
+		"centerline": true,
+	})
 
 
 func _iso_center(x: int, y: int) -> Vector2:
 	return Vector2((x - y) * TILE_HW, (x + y) * TILE_HH)
-
-
-func _add_iso_road_ribbon(
-	a: Vector2, b: Vector2, width_axis: Vector2, half_width: float, color: Color, z: int
-) -> void:
-	if (b - a).length() < 0.001:
-		return
-	var n := width_axis.normalized() * half_width
-	var poly := Polygon2D.new()
-	poly.color = color
-	poly.z_index = z
-	poly.polygon = PackedVector2Array([
-		a + n, b + n, b - n, a - n,
-	])
-	_ground.add_child(poly)
 
 
 func _place_landmarks() -> void:

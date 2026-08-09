@@ -70,23 +70,28 @@ func _test_turn_blend_and_lean() -> void:
 		var robot: Sprite2D = player.get_node("RobotSprite")
 		var robot_rot: float = robot.rotation
 		_assert(absf(robot_rot) > 0.0, "%s robot lean nonzero (%.4f)" % [id, robot_rot])
-		_assert(
-			absf(robot_rot) <= deg_to_rad(8.0) + 0.001,
-			"%s robot lean <= 8° (got %.4f)" % [id, robot_rot]
-		)
+		var lean_cap := deg_to_rad(8.0) + 0.001
+		_assert(absf(robot_rot) <= lean_cap, "%s robot lean <= 8° (got %.4f)" % [id, robot_rot])
+		var has_dir_art := ResourceLoader.exists(ART + "%s_robot_n.png" % id)
 		if absf(float(player.call("get_turn_blend"))) > 0.28:
-			var turn_tex: Variant = player.get("_robot_turn_tex")
-			if turn_tex != null:
-				_assert(bool(player.call("is_using_turn_pose")), "%s robot uses turn pose" % id)
-				_assert(
-					robot.texture == turn_tex,
-					"%s robot sprite shows turn texture" % id
-				)
-			else:
+			if has_dir_art:
 				_assert(
 					not bool(player.call("is_using_turn_pose")),
-					"%s no turn tex → is_using_turn_pose false" % id
+					"%s dir art → no turn pose" % id
 				)
+			else:
+				var turn_tex: Variant = player.get("_robot_turn_tex")
+				if turn_tex != null:
+					_assert(bool(player.call("is_using_turn_pose")), "%s robot uses turn pose" % id)
+					_assert(
+						robot.texture == turn_tex,
+						"%s robot sprite shows turn texture" % id
+					)
+				else:
+					_assert(
+						not bool(player.call("is_using_turn_pose")),
+						"%s no turn tex → is_using_turn_pose false" % id
+					)
 
 		# Sharp right turn from previous smear.
 		player.call("apply_turn_from_dirs", Vector2(0, -1), Vector2(1, 0))

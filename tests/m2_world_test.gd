@@ -33,9 +33,21 @@ func _run() -> void:
 					ground_lines += 1
 		_assert(ground_sprites == 0, "ground has no Sprite2D tiles (got %d)" % ground_sprites)
 		_assert(ground_polys >= 1, "ground has flat polygons")
-		_assert(ground_lines == 0, "ground has no per-tile Line2D outlines (got %d)" % ground_lines)
-		# Organic ground: few polys (base + patches + road ribbons), not a diamond flood.
-		_assert(ground_polys <= 20, "ground poly count organic (got %d, want <=20)" % ground_polys)
+		_assert(ground_lines == 0, "ground has no Line2D (got %d)" % ground_lines)
+		# Organic ground + RoadKit dashes/ring — not a diamond flood.
+		_assert(ground_polys <= 200, "ground poly count organic (got %d, want <=200)" % ground_polys)
+		var kit_roads := 0
+		var kit_stripes := 0
+		if ground:
+			for child in ground.get_children():
+				if child.has_meta("road_kit"):
+					var meta := str(child.get_meta("road_kit"))
+					if meta == "road":
+						kit_roads += 1
+					elif meta == "stripe":
+						kit_stripes += 1
+		_assert(kit_roads >= 2, "RoadKit road pieces present (got %d)" % kit_roads)
+		_assert(kit_stripes >= 2, "RoadKit stripe dashes present (got %d)" % kit_stripes)
 		var road_polys := 0
 		if ground:
 			for child in ground.get_children():

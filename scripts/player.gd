@@ -1,7 +1,8 @@
 extends CharacterBody2D
-## Player with Style C sprites, robot/vehicle forms, transform anim.
+## Player with Style C sprites, robot/vehicle forms, transform anim, 4-dir facing.
 
 enum Form { ROBOT, VEHICLE }
+enum Facing { N, E, S, W }
 
 signal form_changed(new_form: Form)
 
@@ -22,16 +23,21 @@ const TURN_FULL_ANGLE := deg_to_rad(45.0)
 const TURN_POSE_THRESHOLD := 0.28
 const LEAN_ROBOT_RAD := deg_to_rad(8.0)
 const LEAN_VEHICLE_RAD := deg_to_rad(18.0)
+## Milder lean when dedicated N/E/S/W textures are present.
+const LEAN_ROBOT_DIR_RAD := deg_to_rad(4.0)
+const LEAN_VEHICLE_DIR_RAD := deg_to_rad(10.0)
 ## How fast blend follows target while moving / decays when stopped.
 const TURN_BLEND_RESPOND := 14.0
 const TURN_BLEND_DECAY := 10.0
 ## Smear last move dir so sharp turns keep blend elevated for a few frames.
 const MOVE_DIR_SMEAR := 8.0
+const DIR_SUFFIX := ["n", "e", "s", "w"]
 
 var form: Form = Form.ROBOT
 var character_id: String = "bolt"
 var _transform_lock := 0.0
 var _transforming := false
+var _facing: Facing = Facing.S
 var _facing_left := false
 var _move_dir: Vector2 = Vector2.ZERO
 var _turn_blend: float = 0.0
@@ -39,6 +45,14 @@ var _robot_idle_tex: Texture2D
 var _vehicle_idle_tex: Texture2D
 var _robot_turn_tex: Texture2D
 var _vehicle_turn_tex: Texture2D
+## Indexed by Facing: N=0 E=1 S=2 W=3
+var _robot_dir: Array = [null, null, null, null]
+var _vehicle_dir: Array = [null, null, null, null]
+var _robot_has_dir: Array = [false, false, false, false]
+var _vehicle_has_dir: Array = [false, false, false, false]
+## Flip W when no dedicated W art (mirror E or idle).
+var _robot_flip_w := false
+var _vehicle_flip_w := false
 
 @onready var _robot_sprite: Sprite2D = %RobotSprite
 @onready var _vehicle_sprite: Sprite2D = %VehicleSprite
@@ -77,8 +91,9 @@ func _physics_process(delta: float) -> void:
 		velocity = Vector2.ZERO
 	move_and_slide()
 	_update_turn_blend(delta)
-	if velocity.length() > MOVE_EPS:
-		update_facing_from_velocity(velocity)
+	# Facing from pre-iso input so keyboard up → N (heck), not post-iso E.
+	if input_vec.length() > MOVE_EPS:
+		update_facing_from_velocity(input_vec)
 	else:
 		_apply_turn_visuals()
 
@@ -142,11 +157,40 @@ func is_facing_left() -> bool:
 	return _facing_left
 
 
+func get_facing() -> int:
+	return int(_facing)
+
+
+## Dominant-axis facing from screen velocity: −y=N, +y=S, +x=E, −x=W.
+static func facing_from_velocity(vel: Vector2) -> Facing:
+	if absf(vel.x) < MOVE_EPS and absf(vel.y) < MOVE_EPS:
+		return Facing.S
+	if absf(vel.x) >= absf(vel.y):
+		return Facing.E if vel.x > 0.0 else Facing.W
+	return Facing.N if vel.y < 0.0 else Facing.S
+
+
 func get_turn_blend() -> float:
 	return _turn_blend
 
 
+func uses_dir_textures() -> bool:
+	return _form_has_dir_art(form)
+
+
+func _form_has_dir_art(which: Form) -> bool:
+	var has: Array = _vehicle_has_dir if which == Form.VEHICLE else _robot_has_dir
+	return (
+		bool(has[Facing.N])
+		or bool(has[Facing.E])
+		or bool(has[Facing.S])
+		or bool(has[Facing.W])
+	)
+
+
 func is_using_turn_pose() -> bool:
+	if uses_dir_textures():
+		return false
 	if absf(_turn_blend) <= TURN_POSE_THRESHOLD:
 		return false
 	if form == Form.VEHICLE:
@@ -164,8 +208,8 @@ func apply_turn_from_dirs(from: Vector2, to: Vector2) -> void:
 	_turn_blend = clampf(ang / TURN_FULL_ANGLE, -1.0, 1.0)
 	# Partial smear so consecutive calls can stack / reverse.
 	_move_dir = _move_dir.lerp(vel_dir, 0.35).normalized()
-	if absf(vel_dir.x) > MOVE_EPS:
-		_facing_left = vel_dir.x < 0.0
+	_facing = facing_from_velocity(vel_dir)
+	_facing_left = _facing == Facing.W
 	_apply_facing_visuals()
 
 
@@ -192,23 +236,27 @@ func _update_turn_blend(delta: float) -> void:
 			_move_dir = Vector2.ZERO
 
 
-## Face move/drive direction via flip_h (¾ Style-C art — lean from turn blend only).
+## Face move/drive direction via Facing enum + dir textures (flip_h only as W fallback).
 func update_facing_from_velocity(vel: Vector2) -> void:
 	if vel.length() <= MOVE_EPS:
 		return
-	# Prefer screen-x; when mostly vertical, keep last facing.
-	if absf(vel.x) > MOVE_EPS:
-		_facing_left = vel.x < 0.0
+	_facing = facing_from_velocity(vel)
+	_facing_left = _facing == Facing.W
 	_apply_facing_visuals()
 
 
 func _apply_facing_visuals() -> void:
+	var flip_robot := _facing == Facing.W and _robot_flip_w
+	var flip_vehicle := _facing == Facing.W and _vehicle_flip_w
+	_facing_left = flip_robot if form == Form.ROBOT else flip_vehicle
+	# Keep transform sprite mirroring consistent with active form fallback.
+	var flip_xform := flip_vehicle if form == Form.VEHICLE else flip_robot
 	if _robot_sprite:
-		_robot_sprite.flip_h = _facing_left
+		_robot_sprite.flip_h = flip_robot
 	if _vehicle_sprite:
-		_vehicle_sprite.flip_h = _facing_left
+		_vehicle_sprite.flip_h = flip_vehicle
 	if _transform_sprite:
-		_transform_sprite.flip_h = _facing_left
+		_transform_sprite.flip_h = flip_xform
 		_transform_sprite.rotation = 0.0
 	if _transforming:
 		if _robot_sprite:
@@ -222,24 +270,37 @@ func _apply_facing_visuals() -> void:
 func _apply_turn_visuals() -> void:
 	if _transforming:
 		return
-	var lean_scale := LEAN_VEHICLE_RAD if form == Form.VEHICLE else LEAN_ROBOT_RAD
+	var lean_scale: float
+	if uses_dir_textures():
+		lean_scale = LEAN_VEHICLE_DIR_RAD if form == Form.VEHICLE else LEAN_ROBOT_DIR_RAD
+	else:
+		lean_scale = LEAN_VEHICLE_RAD if form == Form.VEHICLE else LEAN_ROBOT_RAD
 	var lean := _turn_blend * lean_scale
 	if _robot_sprite:
 		_robot_sprite.rotation = lean if form == Form.ROBOT else 0.0
-		_robot_sprite.texture = _turn_texture_for(Form.ROBOT)
+		_robot_sprite.texture = _texture_for(Form.ROBOT)
 	if _vehicle_sprite:
 		_vehicle_sprite.rotation = lean if form == Form.VEHICLE else 0.0
-		_vehicle_sprite.texture = _turn_texture_for(Form.VEHICLE)
+		_vehicle_sprite.texture = _texture_for(Form.VEHICLE)
 
 
-func _turn_texture_for(which: Form) -> Texture2D:
+func _texture_for(which: Form) -> Texture2D:
+	var dirs: Array = _vehicle_dir if which == Form.VEHICLE else _robot_dir
+	var facing_tex: Texture2D = dirs[_facing] as Texture2D
+	if _form_has_dir_art(which) and facing_tex != null:
+		return facing_tex
+	# Legacy turn-pose swap when no dedicated dir art.
 	var use_turn := absf(_turn_blend) > TURN_POSE_THRESHOLD
 	if which == Form.VEHICLE:
 		if use_turn and _vehicle_turn_tex != null:
 			return _vehicle_turn_tex
+		if facing_tex != null:
+			return facing_tex
 		return _vehicle_idle_tex
 	if use_turn and _robot_turn_tex != null:
 		return _robot_turn_tex
+	if facing_tex != null:
+		return facing_tex
 	return _robot_idle_tex
 
 
@@ -256,6 +317,12 @@ func _load_character_art() -> void:
 	_vehicle_idle_tex = null
 	_robot_turn_tex = null
 	_vehicle_turn_tex = null
+	_robot_dir = [null, null, null, null]
+	_vehicle_dir = [null, null, null, null]
+	_robot_has_dir = [false, false, false, false]
+	_vehicle_has_dir = [false, false, false, false]
+	_robot_flip_w = false
+	_vehicle_flip_w = false
 	if ResourceLoader.exists(robot_path):
 		_robot_idle_tex = load(robot_path)
 		_robot_sprite.texture = _robot_idle_tex
@@ -266,6 +333,21 @@ func _load_character_art() -> void:
 		_robot_turn_tex = load(robot_turn_path)
 	if ResourceLoader.exists(vehicle_turn_path):
 		_vehicle_turn_tex = load(vehicle_turn_path)
+	_load_dir_textures("robot", _robot_idle_tex, _robot_dir, _robot_has_dir)
+	_load_dir_textures("vehicle", _vehicle_idle_tex, _vehicle_dir, _vehicle_has_dir)
+	# W fallback: mirror E if present, else mirror idle.
+	_robot_flip_w = not bool(_robot_has_dir[Facing.W])
+	if _robot_flip_w:
+		if bool(_robot_has_dir[Facing.E]) and _robot_dir[Facing.E] != null:
+			_robot_dir[Facing.W] = _robot_dir[Facing.E]
+		else:
+			_robot_dir[Facing.W] = _robot_idle_tex
+	_vehicle_flip_w = not bool(_vehicle_has_dir[Facing.W])
+	if _vehicle_flip_w:
+		if bool(_vehicle_has_dir[Facing.E]) and _vehicle_dir[Facing.E] != null:
+			_vehicle_dir[Facing.W] = _vehicle_dir[Facing.E]
+		else:
+			_vehicle_dir[Facing.W] = _vehicle_idle_tex
 	_robot_sprite.scale = SPRITE_SCALE
 	_vehicle_sprite.scale = SPRITE_SCALE
 	_robot_sprite.centered = true
@@ -293,6 +375,23 @@ func _load_character_art() -> void:
 	_transform_sprite.sprite_frames = frames
 	_transform_sprite.scale = SPRITE_SCALE
 	_transform_sprite.offset = Vector2(0, -13)
+
+
+func _load_dir_textures(
+	form_name: String,
+	idle: Texture2D,
+	out_dirs: Array,
+	out_has: Array
+) -> void:
+	for i in range(4):
+		var path := ART + "%s_%s_%s.png" % [character_id, form_name, DIR_SUFFIX[i]]
+		if ResourceLoader.exists(path):
+			out_dirs[i] = load(path)
+			out_has[i] = true
+		else:
+			# Fallbacks: s/e/n ← idle; w handled by caller (flip).
+			out_dirs[i] = idle
+			out_has[i] = false
 
 
 func _play_transform(to_vehicle: bool) -> void:

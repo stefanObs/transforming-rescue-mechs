@@ -66,29 +66,29 @@ func _test_facing() -> void:
 	root.add_child(player)
 	var robot: Sprite2D = player.get_node("RobotSprite")
 	var vehicle: Sprite2D = player.get_node("VehicleSprite")
-	var xform: AnimatedSprite2D = player.get_node("TransformSprite")
 
 	player.call("update_facing_from_velocity", Vector2(-1, 0))
-	_assert(robot.flip_h == true, "left move → robot flip_h")
-	_assert(vehicle.flip_h == true, "left move → vehicle flip_h")
-	_assert(xform.flip_h == true, "left move → transform flip_h")
+	_assert(int(player.call("get_facing")) == 3, "left move → facing W")
 	_assert(is_equal_approx(robot.rotation, 0.0), "no turn → robot lean 0")
 
 	player.call("update_facing_from_velocity", Vector2(1, 0))
+	_assert(int(player.call("get_facing")) == 1, "right move → facing E")
 	_assert(robot.flip_h == false, "right move → robot flip_h false")
 	_assert(vehicle.flip_h == false, "right move → vehicle flip_h false")
 
 	player.call("set_form", 1) # Form.VEHICLE
 	player.call("update_facing_from_velocity", Vector2(-0.5, 0.5))
-	_assert(vehicle.flip_h == true, "vehicle leftish move → flip_h")
+	# Dominant axis is x → W
+	_assert(int(player.call("get_facing")) == 3, "vehicle leftish → facing W")
 	_assert(is_equal_approx(vehicle.rotation, 0.0), "no turn → vehicle lean 0")
 
+	var facing_before := int(player.call("get_facing"))
 	player.call("update_facing_from_velocity", Vector2.ZERO)
-	_assert(vehicle.flip_h == true, "facing kept when stopped")
+	_assert(int(player.call("get_facing")) == facing_before, "facing kept when stopped")
 
 	player.call("set_form", 0) # Form.ROBOT
 	player.call("update_facing_from_velocity", Vector2(0, -1))
-	_assert(robot.flip_h == true, "pure vertical keeps last facing (was left)")
+	_assert(int(player.call("get_facing")) == 0, "pure up → facing N")
 	_assert(is_equal_approx(robot.rotation, 0.0), "no turn → robot lean still 0")
 
 	player.queue_free()
