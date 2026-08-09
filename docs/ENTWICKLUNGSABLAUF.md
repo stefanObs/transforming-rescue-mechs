@@ -83,6 +83,7 @@ Ohne freigegebenen bzw. geschriebenen Plan-File **keine** Implementierung starte
 - Bei Bugs: Fix erst starten, wenn Plan „Repro bestätigt“ + RCA ausgefüllt ist; zuerst **Regressionstest**, der die Repro rot macht, dann Fix bis grün
 - **Automatisierte Tests** mitliefern (Godot-Test-Framework des Repos, z. B. GdUnit4/GUT sobald eingerichtet; bis dahin `*.gd`-Tests / CI-fähige Runner-Scripts)
 - Bei Grafiken oder Animationen **immer** Subagent `comic-rettung-art` hinzuziehen (Referenzen `docs/design-refs/c-*.png`, Style-Bible C)
+- Art unter `assets/art/`: `process_art_alpha.py` + `verify_art_alpha.py` (Pflicht, keine weißen Sprite-Platten)
 - Keine Stil-A/B-Assets
 - Am Ende: kurze Handoff-Liste (geänderte Dateien, wie Tests starten)
 
@@ -112,6 +113,7 @@ Prüft u. a.:
 **Wer:** Subagent `godot-playtester`
 
 - Godot-Projekt starten (Editor-frei: `godot4`/`godot` mit `--path`)
+- **Art:** `python3 scripts/verify_art_alpha.py` muss grün sein (keine weißen Hintergründe)
 - Automatisierte Tests ausführen
 - Spiel kurz laufen lassen (Smoke: Haupt-Scene lädt, keine Fatal Errors)
 - Bei GUI/Display-Problemen: Headless-Tests + Log-Analyse; Blocker klar melden

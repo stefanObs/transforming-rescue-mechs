@@ -23,6 +23,7 @@ Review the current change set (and plan file if provided) for correctness, tests
 - **Bugfixes:** Repro & RCA section present; regression test exists
 - No secrets, no online multiplayer, no violence against people/animals
 - Style C only for new art references
+- **New/changed `assets/art/`:** must be RGBA without white corner backdrops (`verify_art_alpha.py` / `m2_test` corner checks)
 - Clear naming, no unnecessary complexity
 - Save/input/controller concerns if touched
 

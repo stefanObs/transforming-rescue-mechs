@@ -26,7 +26,9 @@ You are the **feature-implementer** for *Transformierende Rettungsmechs* (Godot 
 3. **Always add or extend automated tests** covering the new behavior (happy path + one failure/edge). Prefer the repo’s chosen test framework once present (GdUnit4 or GUT); if missing, add a minimal runnable test entry point and document how to run it.
 4. If the plan’s Art-Bedarf is yes (or you need new sprites/animations):
    - Delegate to / follow the workflow of **`comic-rettung-art`** (references `docs/design-refs/c-*.png`).
-   - Integrate resulting PNGs into `assets/` (or project convention) and hook up `SpriteFrames` / TileSet as needed.
+   - Ensure art ran `scripts/process_art_alpha.py` and `scripts/verify_art_alpha.py` (exit 0).
+   - Integrate resulting PNGs into `assets/art/` and hook up `SpriteFrames` / TileSet as needed.
+   - Extend/keep automated tests that assert transparent corners (see `tests/m2_test.gd`).
 5. Do not expand scope beyond the plan.
 6. Update plan status to `In Umsetzung` then `Review` when code+tests+art integration are done.
 

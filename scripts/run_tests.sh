@@ -4,6 +4,9 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 GODOT="${GODOT:-godot}"
 cd "$ROOT"
 
+echo "---- scripts/verify_art_alpha.py ----"
+python3 scripts/verify_art_alpha.py
+
 FAILED=0
 for test_script in tests/smoke_test.gd tests/m1_test.gd tests/m2_test.gd; do
   echo "---- $test_script ----"

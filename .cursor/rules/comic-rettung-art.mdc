@@ -12,5 +12,7 @@ Wenn der User Grafiken, Sprites, Tiles, UI-Art, Moodboards, Transformationen ode
 1. Den Projekt-Subagenten **comic-rettung-art** (`.cursor/agents/comic-rettung-art.md`) beauftragen / dessen Workflow befolgen
 2. Referenzbilder unter `docs/design-refs/c-*.png` verwenden (`GenerateImage` → `reference_image_paths`)
 3. Keine Assets in Stil A oder B erzeugen
+4. Nach Art unter `assets/art/`: immer `python3 scripts/process_art_alpha.py` und `python3 scripts/verify_art_alpha.py` (muss grün sein)
+5. Playtest (`godot-playtester`) prüft ebenfalls fehlende Transparenz / weiße Rahmen
 
 Nach abgeschlossener Art-Lieferung: committen, pushen, versionieren (siehe `git-release`-Regel).
