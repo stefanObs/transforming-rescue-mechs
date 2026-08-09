@@ -1,0 +1,27 @@
+---
+description: Nach abgeschlossenen Änderungen immer committen, pushen und versionieren
+alwaysApply: true
+---
+
+# Git: Commit, Push, Tag
+
+Wenn eine Aufgabe inhaltlich fertig ist (Konzept, Feature, Fix, Docs):
+
+1. **Commit** mit klarer Message (why), relevante Dateien stagen
+2. **Push** auf `origin` der aktuellen Branch
+3. **Version taggen** und Tag mitpushen (`git push origin <tag>`)
+
+## Versionierung
+
+- SemVer: `vMAJOR.MINOR.PATCH` (z. B. `v0.1.0`)
+- Konzept-/Prototyp-Phase: `v0.x.y` erhöhen
+- Erste spielbare Version: Richtung `v1.0.0`
+- Bei rein dokumentarischen Konzept-Updates: meist MINOR oder PATCH (z. B. `v0.1.0` → `v0.2.0` bei größerem Konzept-Update, PATCH bei Korrekturen)
+- Tags annotiert bevorzugen: `git tag -a vX.Y.Z -m "..."` 
+
+## Hinweise
+
+- Keine Secrets committen
+- `GIT_EXEC_PATH` setzen falls lokal nötig (`~/.local/opt/git/usr/lib/git-core`)
+- Author-Env nur setzen wenn keine git user identity konfiguriert ist (kein `git config` ändern)
+- Nicht warten bis der User an Commit/Push/Tag erinnert — das ist Standard für dieses Repo
