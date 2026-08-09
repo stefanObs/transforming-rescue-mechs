@@ -6,9 +6,10 @@ Kindgerechtes 2D-Isometrie-Rettungsspiel: Mechs transformieren sich in Fahrzeuge
 - **Modi:** Solo & lokaler Co-op (Tastatur / Xbox-Controller)  
 - **Engine:** Godot 4 + GDScript  
 
-## Konzept
+## Konzept & Design
 
-Das aktuelle Spielkonzept steht in **[docs/KONZEPT.md](docs/KONZEPT.md)**.
+- Spielkonzept: **[docs/KONZEPT.md](docs/KONZEPT.md)**
+- Design-Vorschläge (3 Stile, Godot-tauglich): **[docs/DESIGN-VORSCHLAEGE.md](docs/DESIGN-VORSCHLAEGE.md)**
 
 ## Status
 

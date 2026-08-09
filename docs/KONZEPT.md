@@ -329,7 +329,7 @@ Online-Multiplayer, Monetarisierung, realistische Physik, PvP-Arena, Gewalt gege
 
 ## 16. Offene Produktionsfragen
 
-- Finaler Art-Style (Farben, Proportionen der Mechs)
+- Finaler Art-Style — drei Vorschläge in [`DESIGN-VORSCHLAEGE.md`](DESIGN-VORSCHLAEGE.md) (A Spielzeug-Iso / B Bilderbuch / C Comic-Rettung)
 - Audio-Richtung und ggf. Sprecher für Dispatcher
 - Exakte Münz-Balance (wie viele Missionen bis 100)
 - Anzahl Save-Slots und Cloud-Save (vorerst nur lokal)
@@ -342,3 +342,4 @@ Online-Multiplayer, Monetarisierung, realistische Physik, PvP-Arena, Gewalt gege
 | Datum | Änderung |
 |-------|----------|
 | 2026-08-09 | Erstes Konzept dokumentiert (Open World Seuzach, Godot 4, lokaler Co-op) |
+| 2026-08-09 | Design-Vorschläge A/B/C ergänzt (Link) |
