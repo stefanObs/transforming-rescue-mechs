@@ -1,0 +1,29 @@
+# Godot 4+ specific ignores
+.godot/
+*.translation
+*.import
+
+# Import artifacts
+.import/
+
+# Mono / C#
+.mono/
+data_*/
+mono_crash.*.json
+
+# Exports
+export.cfg
+export_presets.cfg
+*.pck
+*.zip
+
+# OS / editor
+.DS_Store
+*~
+*.swp
+.vscode/
+.idea/
+
+# Local test / crash dumps
+*.log
+core

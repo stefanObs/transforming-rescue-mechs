@@ -18,7 +18,7 @@ Erste spielbare Version: Open-World **Seuzach** (Comic-Rettung), zwei Mechs (Bol
 
 | Epic | Name | Status | Fortschritt |
 |------|------|--------|-------------|
-| M0 | Godot-Grundgerüst & Tests | Nicht gestartet | 0/6 |
+| M0 | Godot-Grundgerüst & Tests | Erledigt | 6/6 |
 | M1 | Input, Spieler, Transform | Nicht gestartet | 0/8 |
 | M2 | Art-Spike Stil C | Nicht gestartet | 0/7 |
 | M3 | Seuzach Iso-Welt & Hub | Nicht gestartet | 0/8 |
@@ -75,17 +75,17 @@ Pro Epic gilt der Ablauf: Plan (dieses File pflegen) → `feature-implementer` (
 
 #### Schritte
 
-- [ ] Godot 4 Projekt anlegen (`project.godot`), Ordnerstruktur (`scenes/`, `scripts/`, `assets/`, `tests/`)
-- [ ] `.gitignore` für Godot
-- [ ] Boot-/Main-Scene (Platzhalter-UI „Transformierende Rettungsmechs“)
-- [ ] Autoload-Stubs: `GameState`, `SaveService`
-- [ ] Test-Framework einrichten (GdUnit4 **oder** GUT) + 1 Smoke-Test „project loads“
-- [ ] Playtest: Editor/CLI startet ohne Parse-Error
+- [x] Godot 4 Projekt anlegen (`project.godot`), Ordnerstruktur (`scenes/`, `scripts/`, `assets/`, `tests/`)
+- [x] `.gitignore` für Godot
+- [x] Boot-/Main-Scene (Platzhalter-UI „Transformierende Rettungsmechs“)
+- [x] Autoload-Stubs: `GameState`, `SaveService`
+- [x] Smoke-Tests: Interim-`SceneTree`-Runner (`tests/smoke_test.gd` / `scripts/run_tests.sh`); GdUnit4/GUT Follow-up später
+- [x] Playtest: Editor/CLI startet ohne Parse-Error
 
 #### Testplan M0
 
-- [ ] Automatisiert: Smoke-Test grün
-- [ ] Playtest: Haupt-Scene startet
+- [x] Automatisiert: Smoke-Test grün
+- [x] Playtest: Haupt-Scene startet
 
 #### Art-Bedarf M0
 
@@ -93,7 +93,7 @@ Pro Epic gilt der Ablauf: Plan (dieses File pflegen) → `feature-implementer` (
 
 #### Akzeptanz M0
 
-- [ ] Projekt im Repo, Tests laufen, Playtest Pass
+- [x] Projekt im Repo, Tests laufen, Playtest Pass
 
 ---
 
@@ -398,3 +398,4 @@ Abhängigkeiten: M2 kann parallel zu späten M1-Fixes starten; M7 nach stabilem 
 |-------|----------|
 | 2026-08-09 | Initialer MVP-Umsetzungsplan mit Epics M0–M8 und Fortschritts-Tracking |
 | 2026-08-09 | Verweis: bei Bugs gilt Phase 0 (Repro + RCA) laut ENTWICKLUNGSABLAUF |
+| 2026-08-09 | M0 erledigt: Godot 4.4 Projekt, Autoloads, Smoke-Tests, Playtest Pass |
