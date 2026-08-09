@@ -8,6 +8,10 @@ const REQUIRED := [
 	"res://assets/art/bolt_vehicle.png",
 	"res://assets/art/marina_robot.png",
 	"res://assets/art/marina_vehicle.png",
+	"res://assets/art/rush_robot.png",
+	"res://assets/art/rush_vehicle.png",
+	"res://assets/art/rush_transform_01.png",
+	"res://assets/art/rush_transform_06.png",
 	"res://assets/art/bolt_transform_01.png",
 	"res://assets/art/bolt_transform_06.png",
 	"res://assets/art/tile_grass.png",
@@ -43,6 +47,12 @@ func _run() -> void:
 		_assert(frames.get_frame_count("to_vehicle") >= 4, "transform has >=4 frames")
 		player.call("set_character", "marina")
 		_assert(player.get_node("RobotSprite").texture != null, "marina robot texture")
+		player.call("set_character", "rush")
+		_assert(player.get_node("RobotSprite").texture != null, "rush robot texture")
+		_assert(player.get_node("VehicleSprite").texture != null, "rush vehicle texture")
+		_assert(is_equal_approx(float(player.call("_vehicle_speed")), 360.0), "rush vehicle speed bonus")
+		var rush_frames: SpriteFrames = player.get_node("TransformSprite").sprite_frames
+		_assert(rush_frames != null and rush_frames.has_animation("to_vehicle"), "rush transform frames")
 		player.queue_free()
 
 	if _failed == 0:

@@ -42,7 +42,8 @@ Canonical moodboard (must load and visually match):
 
 - **Mech-Form muss das Hauptfahrzeug erkennen lassen** (Rescue-Bots-Prinzip): Fahrzeugteile am Roboter ablesbar (Bolt: Kabine/Leiter/Reifen; Marina: Rumpf/Schürze/Propeller)
 - Outline: strong black `#1A1A1A` in the artwork (not only a shader).
-- Palette anchors: sky `#4DA3FF`, grass `#3DCC5A`, Bolt yellow `#FFD600`+black, Marina `#00BFA5`+white, alarm `#FF5252` for icons only.
+- Palette anchors: sky `#4DA3FF`, grass `#3DCC5A`, Bolt yellow `#FFD600`+black, Marina `#00BFA5`+white, **Rush red `#E53935`+black** (friendly comic red, not gore), alarm `#FF5252` for icons only.
+- Mech forms must echo their main vehicle (Bolt=fire truck, Marina=hovercraft, Rush=red EV supercar).
 - Silhouettes readable at small isometric size; chunky clear shapes.
 - Tone: friendly rescue cartoon / kids TV — heroic, never scary or gritty.
 - No purple-neon UI chrome; Aero purple only as a character accent later.

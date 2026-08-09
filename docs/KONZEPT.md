@@ -131,12 +131,15 @@ Spezialmissionen wechseln die Sicht und das Spielgefühl:
 
 ### Starter-Crew
 
-| Name | Rolle | Standard-Fahrzeug |
-|------|--------|-------------------|
-| Bolt | Feuerwehr | Löschfahrzeug |
-| Marina | Wasserrettung | Boot / Hovercraft |
-| Aero | Luftrettung | Rettungshelikopter |
-| Diggs | Bergung | Bagger / Truck |
+| Name | Rolle | Standard-Fahrzeug | Farbe |
+|------|--------|-------------------|-------|
+| Bolt | Feuerwehr | Löschfahrzeug | Gelb `#FFD600` |
+| Marina | Wasserrettung | Boot / Hovercraft | Türkis `#00BFA5` |
+| **Rush** | Verfolgung / Tempo | Roter Elektro-Supercar | Rot `#E53935` |
+| Aero | Luftrettung | Rettungshelikopter | Lila (sparsam) |
+| Diggs | Bergung | Bagger / Truck | — |
+
+**Rush (MVP-Abweichung, spielbar):** Spezialist für Verfolgungsjagden und schnelle Missionen. Hauptfahrzeug: tiefer Elektro-Supersportwagen (Comic, keine Marke) — Inspiration: dynamische Heck-/Seitenansicht eines roten E-Sportwagens. Stärken: Höchstgeschwindigkeit in Fahrzeugform, schnelles Erreichen von Notfällen, Chase-Missionen. Mech-Form muss den Supercar klar erkennen lassen (Kabine, Spoiler, Reifen).
 
 Jeder Mech: **Robot-Form** (laufen, klettern, fein interagieren) + Standard-Fahrzeugform + später gescannte Extraformen.
 
@@ -308,8 +311,8 @@ Unity/Unreal (zu viel Overhead für dieses 2D-Design), Web-first (schlechter fü
 
 - Open-World-Karte **Seuzach** (stilisiert)
 - Hub: Erdstation nahe Kirchgasse / Dorfkern
-- 2 Charaktere: Bolt, Marina (Team-Link vorbereitet)
-- Robot + je 1 Standardform + 2 Scans
+- 3 Charaktere spielbar: Bolt, Marina, **Rush** (Team-Link vorbereitet)
+- Robot + je 1 Standardform + 2 Scans (Rush: Supercar; Chase-/Tempo-Einsätze)
 - Zufallsmissionen: Alltag + mindestens ein ausgefallener Typ (Stromausfall oder Alien-Hilfe)
 - 3 Sichten: Iso-Rettung, Feuer-Minispiel, Flug-Sidescroller
 - Sonnenenergie-Aufladung und Kollisions-Stop
@@ -345,5 +348,6 @@ Online-Multiplayer, Monetarisierung, realistische Physik, PvP-Arena, Gewalt gege
 | 2026-08-09 | Design-Vorschläge A/B/C ergänzt (Link) |
 | 2026-08-09 | Moodboard-Bilder für A/B/C (Umgebung, Basis, Mech, Fahrzeug) |
 | 2026-08-09 | Stil C gewählt; Style-Bible + Art-Subagent |
+| 2026-08-09 | Rush (roter Supercar) als dritte spielbare Figur (MVP-Abweichung) |
 | 2026-08-09 | Entwicklungsablauf mit Subagenten (Plan→Implement→Review→Playtest) |
 | 2026-08-09 | MVP-Umsetzungsplan (`docs/plans/mvp.md`) |

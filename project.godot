@@ -7,7 +7,7 @@ config_version=5
 
 config/name="Transformierende Rettungsmechs"
 config/description="Kindgerechtes 2D-Isometrie-Rettungsspiel (Stil Comic-Rettung)."
-config/version="0.10.0"
+config/version="0.11.0"
 run/main_scene="res://scenes/world_sandbox.tscn"
 config/features=PackedStringArray("4.4", "GL Compatibility")
 config/icon="res://icon.svg"

@@ -1,5 +1,5 @@
 extends CharacterBody2D
-## Player with Style C sprites, robot/vehicle forms, transform anim (M2).
+## Player with Style C sprites, robot/vehicle forms, transform anim.
 
 enum Form { ROBOT, VEHICLE }
 
@@ -7,6 +7,7 @@ signal form_changed(new_form: Form)
 
 const SPEED_ROBOT := 140.0
 const SPEED_VEHICLE := 260.0
+const SPEED_VEHICLE_RUSH := 360.0
 const TRANSFORM_LOCKOUT := 0.55
 const SPRITE_SCALE := Vector2(0.12, 0.12)
 const ART := "res://assets/art/"
@@ -44,12 +45,18 @@ func _physics_process(delta: float) -> void:
 
 	var input_vec := Input.get_vector("move_left", "move_right", "move_up", "move_down")
 	var iso := _cartesian_to_iso(input_vec)
-	var speed := SPEED_VEHICLE if form == Form.VEHICLE else SPEED_ROBOT
+	var speed := _vehicle_speed() if form == Form.VEHICLE else SPEED_ROBOT
 	if iso.length() > 0.001:
 		velocity = iso.normalized() * speed
 	else:
 		velocity = Vector2.ZERO
 	move_and_slide()
+
+
+func _vehicle_speed() -> float:
+	if character_id == "rush":
+		return SPEED_VEHICLE_RUSH
+	return SPEED_VEHICLE
 
 
 func can_transform() -> bool:
@@ -62,7 +69,7 @@ func toggle_form() -> void:
 	var to_vehicle := form == Form.ROBOT
 	form = Form.VEHICLE if to_vehicle else Form.ROBOT
 	_transform_lock = TRANSFORM_LOCKOUT
-	if character_id == "bolt" and _transform_sprite.sprite_frames and _transform_sprite.sprite_frames.has_animation("to_vehicle"):
+	if _transform_sprite.sprite_frames and _transform_sprite.sprite_frames.has_animation("to_vehicle"):
 		_play_transform(to_vehicle)
 	else:
 		_apply_visuals()
@@ -102,18 +109,18 @@ func _load_character_art() -> void:
 	_vehicle_sprite.offset = Vector2(0, -20)
 
 	var frames := SpriteFrames.new()
-	if character_id == "bolt":
+	var forward: Array[Texture2D] = []
+	for i in range(1, 7):
+		var path := ART + "%s_transform_%02d.png" % [character_id, i]
+		if ResourceLoader.exists(path):
+			forward.append(load(path))
+	if not forward.is_empty():
 		frames.add_animation("to_vehicle")
 		frames.set_animation_speed("to_vehicle", 12.0)
 		frames.set_animation_loop("to_vehicle", false)
 		frames.add_animation("to_robot")
 		frames.set_animation_speed("to_robot", 12.0)
 		frames.set_animation_loop("to_robot", false)
-		var forward: Array[Texture2D] = []
-		for i in range(1, 7):
-			var path := ART + "bolt_transform_%02d.png" % i
-			if ResourceLoader.exists(path):
-				forward.append(load(path))
 		for tex in forward:
 			frames.add_frame("to_vehicle", tex)
 		for i in range(forward.size() - 1, -1, -1):

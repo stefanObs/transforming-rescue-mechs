@@ -18,7 +18,7 @@ func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	_build_art_probe()
 	_hint.text = (
-		"Bewegen: %s | Transform: %s/Q | Char: 1=Bolt 2=Marina | Pause: %s"
+		"Bewegen: %s | Transform: %s/Q | Char: 1=Bolt 2=Marina 3=Rush | Pause: %s"
 		% [
 			InputGlyphs.glyph_for("move_left"),
 			InputGlyphs.glyph_for("transform"),
@@ -39,6 +39,8 @@ func _unhandled_input(event: InputEvent) -> void:
 				_switch_character("bolt")
 			KEY_2:
 				_switch_character("marina")
+			KEY_3:
+				_switch_character("rush")
 
 
 func _process(_delta: float) -> void:

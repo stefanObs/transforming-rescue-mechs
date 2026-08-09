@@ -40,7 +40,7 @@ Wenn Export-Templates für Godot 4.4.1 installiert sind:
 
 ## Status
 
-MVP-Umsetzung: **M0–M2** erledigt (Style-C-Art, Bewegen, Transform).
+MVP-Umsetzung: **M0–M2** erledigt; spielbar: Bolt, Marina, **Rush** (roter Supercar).
 
 ## Entwicklung
 

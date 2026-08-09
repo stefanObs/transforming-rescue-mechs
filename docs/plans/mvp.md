@@ -10,7 +10,7 @@
 
 ## Ziel
 
-Erste spielbare Version: Open-World **Seuzach** (Comic-Rettung), zwei Mechs (Bolt/Marina), Basen-Hub, Zufallsmissionen inkl. Spezialsichten, Speichern, Münzen-Pfad zu 100, Solo + lokaler 2P/Helfer — Godot 4.
+Erste spielbare Version: Open-World **Seuzach** (Comic-Rettung), Mechs **Bolt / Marina / Rush**, Basen-Hub, Zufallsmissionen inkl. Spezialsichten, Speichern, Münzen-Pfad zu 100, Solo + lokaler 2P/Helfer — Godot 4.
 
 ---
 
@@ -40,7 +40,7 @@ Erste spielbare Version: Open-World **Seuzach** (Comic-Rettung), zwei Mechs (Bol
 
 - Open-World-Karte Seuzach (stilisiert, Kacheln)
 - Erdstation-Hub (Kirchgasse/Dorfkern)
-- Bolt + Marina; Robot + je 1 Standardform + 2 Scans
+- Bolt + Marina + **Rush** (roter Supercar, Chase/Tempo); Robot + je 1 Standardform + 2 Scans
 - Zufallsmissionen: Alltag + mind. 1 ausgefallen (Strom **oder** Alien)
 - 3 Sichten: Iso-Rettung, Feuer, Flug-Sidescroller
 - Sonnenenergie, Kollisions-Stop, Energie-Schwert/-Axt (Ziel-Filter)
@@ -369,7 +369,7 @@ Pro Epic gilt der Ablauf: Plan (dieses File pflegen) → `feature-implementer` (
 ## Akzeptanzkriterien (MVP gesamt)
 
 - [ ] Seuzach-Open-World + Erdstation spielbar (Stil C)
-- [ ] Bolt & Marina mit Robot + Standardform + Scans
+- [ ] Bolt, Marina & Rush mit Robot + Standardform + Scans
 - [ ] Zufallsmissionen inkl. Alltag + 1 ausgefallen
 - [ ] Iso-, Feuer- und Flug-Mission spielbar
 - [ ] Kollisions-Stop, Solar, Energie-Waffe mit Filter
@@ -402,3 +402,4 @@ Abhängigkeiten: M2 kann parallel zu späten M1-Fixes starten; M7 nach stabilem 
 | 2026-08-09 | M1 erledigt: Input, Player, Iso-Bewegung, Transform, Tests |
 | 2026-08-09 | M2 erledigt: Style-C-Art, Player-Sprites, Transform-Anim, Welt-Probe |
 | 2026-08-09 | Mech-Formen an Hauptfahrzeug angeglichen (Bolt/Marina) |
+| 2026-08-09 | Rush (roter Supercar) ergänzt — Konzept + Art + Sandbox |
