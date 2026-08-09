@@ -168,6 +168,7 @@ Kinderserien-Cel-Shading, klare Hero-Farben, starke Silhouetten — nah an Rescu
 ### Charaktere & Fahrzeuge
 - Starke **schwarze Kontur** (2–4 px bei Zielauflösung)
 - 1–2 Cel-Schattenstufen max.
+- **Mech-Form muss das Hauptfahrzeug erkennen lassen** (Rescue-Bots-Prinzip): z. B. Bolt = Kabine/Leiter/Reifen am Roboter; Marina = Rumpf/Schürze/Propeller
 - Transformation: snappy Pose-zu-Pose (weniger Soft-Morph als B)
 - Team-Link: kurzer „Comic-Boom“-Impact-Frame
 

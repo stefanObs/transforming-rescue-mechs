@@ -40,6 +40,7 @@ Canonical moodboard (must load and visually match):
 
 ## Visual rules (quick)
 
+- **Mech-Form muss das Hauptfahrzeug erkennen lassen** (Rescue-Bots-Prinzip): Fahrzeugteile am Roboter ablesbar (Bolt: Kabine/Leiter/Reifen; Marina: Rumpf/Schürze/Propeller)
 - Outline: strong black `#1A1A1A` in the artwork (not only a shader).
 - Palette anchors: sky `#4DA3FF`, grass `#3DCC5A`, Bolt yellow `#FFD600`+black, Marina `#00BFA5`+white, alarm `#FF5252` for icons only.
 - Silhouettes readable at small isometric size; chunky clear shapes.

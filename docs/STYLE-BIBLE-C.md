@@ -24,6 +24,7 @@ Subagent: `.cursor/agents/comic-rettung-art.md` — lädt diese Bilder vor jeder
 3. **Starke Silhouetten**, wenig Textur, hohe TV-/Couch-Lesbarkeit
 4. Freundlich, energetisch, kinderserienhaft — nie gruselig, nie fotorealistisch
 5. Transformationen: **snappy** Pose-zu-Pose, keine weichen Morphs
+6. **Mech ↔ Fahrzeug-Lesbarkeit:** Die Robot-Form muss das jeweilige Hauptfahrzeug klar andeuten (Kabinen, Leitern, Rumpf, Propeller, Reifen als Körperteile) — wie bei Rescue Bots, Stil C
 
 ## Palette
 

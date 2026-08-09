@@ -401,3 +401,4 @@ Abhängigkeiten: M2 kann parallel zu späten M1-Fixes starten; M7 nach stabilem 
 | 2026-08-09 | M0 erledigt: Godot 4.4 Projekt, Autoloads, Smoke-Tests, Playtest Pass |
 | 2026-08-09 | M1 erledigt: Input, Player, Iso-Bewegung, Transform, Tests |
 | 2026-08-09 | M2 erledigt: Style-C-Art, Player-Sprites, Transform-Anim, Welt-Probe |
+| 2026-08-09 | Mech-Formen an Hauptfahrzeug angeglichen (Bolt/Marina) |
