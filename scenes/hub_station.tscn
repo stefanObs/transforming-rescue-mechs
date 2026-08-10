@@ -1,0 +1,80 @@
+[gd_scene load_steps=5 format=3 uid="uid://hubstation0001"]
+
+[ext_resource type="Script" path="res://scripts/hub_station.gd" id="1_hub"]
+[ext_resource type="PackedScene" uid="uid://playerbolt0001" path="res://scenes/player.tscn" id="2_player"]
+[ext_resource type="Texture2D" path="res://assets/art/hub_station.png" id="3_hub_tex"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_exit"]
+size = Vector2(160, 80)
+
+[node name="HubStation" type="Node2D"]
+script = ExtResource("1_hub")
+
+[node name="Sky" type="Polygon2D" parent="."]
+z_index = -100
+color = Color(0.302, 0.639, 1, 1)
+polygon = PackedVector2Array(-1200, -800, 1200, -800, 1200, 800, -1200, 800)
+
+[node name="Yard" type="Polygon2D" parent="."]
+z_index = -50
+color = Color(0.784, 0.784, 0.784, 1)
+polygon = PackedVector2Array(-500, -100, 500, -100, 500, 400, -500, 400)
+
+[node name="Grass" type="Polygon2D" parent="."]
+z_index = -49
+color = Color(0.239, 0.8, 0.353, 1)
+polygon = PackedVector2Array(-500, -350, 500, -350, 500, -100, -500, -100)
+
+[node name="HubSprite" type="Sprite2D" parent="."]
+z_index = 2100
+position = Vector2(0, 40)
+scale = Vector2(0.42, 0.42)
+texture = ExtResource("3_hub_tex")
+offset = Vector2(0, -80)
+
+[node name="Player" parent="." instance=ExtResource("2_player")]
+unique_name_in_owner = true
+z_index = 2200
+position = Vector2(0, 220)
+
+[node name="Camera2D" type="Camera2D" parent="Player"]
+position_smoothing_enabled = true
+zoom = Vector2(0.95, 0.95)
+
+[node name="HubExit" type="Area2D" parent="."]
+unique_name_in_owner = true
+position = Vector2(0, 300)
+collision_layer = 1
+collision_mask = 1
+monitoring = true
+monitorable = true
+metadata/hub_exit = true
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="HubExit"]
+shape = SubResource("RectangleShape2D_exit")
+
+[node name="HUD" type="CanvasLayer" parent="."]
+
+[node name="HintLabel" type="Label" parent="HUD"]
+unique_name_in_owner = true
+offset_left = 16.0
+offset_top = 16.0
+offset_right = 1100.0
+offset_bottom = 48.0
+theme_override_colors/font_color = Color(0.102, 0.102, 0.102, 1)
+theme_override_colors/font_outline_color = Color(1, 1, 1, 1)
+theme_override_constants/outline_size = 6
+theme_override_font_sizes/font_size = 18
+text = "…"
+
+[node name="StatusLabel" type="Label" parent="HUD"]
+unique_name_in_owner = true
+offset_left = 16.0
+offset_top = 52.0
+offset_right = 1100.0
+offset_bottom = 84.0
+theme_override_colors/font_color = Color(0.102, 0.102, 0.102, 1)
+theme_override_colors/font_outline_color = Color(1, 1, 1, 1)
+theme_override_constants/outline_size = 6
+theme_override_font_sizes/font_size = 16
+text = "…"

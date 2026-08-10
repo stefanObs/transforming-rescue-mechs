@@ -21,7 +21,7 @@ Erste spielbare Version: Open-World **Seuzach** (Comic-Rettung), Mechs **Bolt / 
 | M0 | Godot-Grundgerüst & Tests | Erledigt | 6/6 |
 | M1 | Input, Spieler, Transform | Erledigt | 8/8 |
 | M2 | Art-Spike Stil C | Erledigt | 7/7 |
-| M3 | Seuzach Iso-Welt & Hub | In Arbeit | 4/8 |
+| M3 | Seuzach Iso-Welt & Hub | Erledigt | 8/8 |
 | M4 | Energie, Kollision, Solar, Waffen | Nicht gestartet | 0/7 |
 | M5 | Missionen & Spezialsichten | Nicht gestartet | 0/9 |
 | M6 | Scan, Münzen, Save, Finale-Stub | Nicht gestartet | 0/8 |
@@ -168,17 +168,17 @@ Pro Epic gilt der Ablauf: Plan (dieses File pflegen) → `feature-implementer` (
 
 - [x] Referenz-Layout Seuzach skizzieren (Dorfkern, Bahnhof, Wohnen, Felder, Wald, Rand)
 - [x] Iso-TileMap World-Scene bauen
-- [ ] Collision auf Gebäuden/Hindernissen
+- [x] Collision auf Gebäuden/Hindernissen
 - [x] Y-Sort / Zeichenreihenfolge
-- [ ] Hub-Scene Erdstation: Ein-/Ausfahrt zur World
+- [x] Hub-Scene Erdstation: Ein-/Ausfahrt zur World
 - [x] Kamera follow Spieler
-- [ ] Tests: Scene-Wechsel Hub ↔ World; Spawn-Punkt
-- [ ] Playtest: Karte erkundbar, Hub erreichbar
+- [x] Tests: Scene-Wechsel Hub ↔ World; Spawn-Punkt
+- [x] Playtest: Karte erkundbar, Hub erreichbar
 
 #### Testplan M3
 
-- [ ] Automatisiert: Scene-Transition / Spawn
-- [ ] Playtest: Landmarken erkennbar genug für MVP
+- [x] Automatisiert: Scene-Transition / Spawn
+- [x] Playtest: Landmarken erkennbar genug für MVP
 
 #### Art-Bedarf M3
 
@@ -186,7 +186,7 @@ Pro Epic gilt der Ablauf: Plan (dieses File pflegen) → `feature-implementer` (
 
 #### Akzeptanz M3
 
-- [ ] Open-World-Ausschnitt Seuzach + Hub spielbar
+- [x] Open-World-Ausschnitt Seuzach + Hub spielbar
 
 ---
 

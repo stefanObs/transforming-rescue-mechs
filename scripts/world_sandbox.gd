@@ -4,6 +4,7 @@ extends Node2D
 
 const RoadKitLib := preload("res://scripts/road_kit.gd")
 const ART := "res://assets/art/"
+const HUB_SCENE := "res://scenes/hub_station.tscn"
 const PROP_SCALE := Vector2(0.26, 0.26)
 const LANDMARK_SCALE := Vector2(0.30, 0.30)
 const HUB_SCALE := Vector2(0.34, 0.34)
@@ -12,6 +13,9 @@ const SCHOOL_SCALE := Vector2(0.28, 0.28)
 ## while staying above ground. Godot canvas z_index max is 4096.
 const ACTOR_Z_BASE := 2000
 const PROP_Z_BASE := 2000
+## South of hub BuildingCollision so player capsule (r=14,h=40,offset y=-12) stays clear.
+const HUB_ENTER_POS := Vector2(40, 430)
+const DEFAULT_WORLD_SPAWN := Vector2(40, 420)
 
 
 
@@ -39,6 +43,8 @@ const ROAD_HALF_W := 78.0
 
 var _paused: bool = false
 var _prop_parent: Node2D = null
+var _hub_enter: Area2D = null
+var _player_in_hub_enter: bool = false
 
 
 func _ready() -> void:
@@ -56,6 +62,8 @@ func _ready() -> void:
 	)
 	if _player and _player.has_signal("form_changed"):
 		_player.form_changed.connect(_on_form_changed)
+	if GameState.has_world_spawn and _player:
+		_player.global_position = GameState.consume_world_spawn()
 	_sync_actor_z()
 	_refresh_status()
 
@@ -87,9 +95,13 @@ func _process(_delta: float) -> void:
 		else:
 			_refresh_status()
 		return
-	if not _paused:
-		_refresh_status()
-		_sync_actor_z()
+	if _paused:
+		return
+	if _player_in_hub_enter and Input.is_action_just_pressed("interact"):
+		enter_hub_for_test()
+		return
+	_refresh_status()
+	_sync_actor_z()
 
 
 
@@ -109,7 +121,12 @@ func _refresh_status() -> void:
 		return
 	var form_name := "Fahrzeug" if int(_player.get("form")) == 1 else "Robot"
 	var char_id := str(_player.get("character_id"))
-	_status.text = "M3 Seuzach | %s | Form: %s | Münzen: %d" % [char_id.capitalize(), form_name, GameState.coins]
+	var hub_hint := ""
+	if _player_in_hub_enter:
+		hub_hint = " | %s — Erdstation betreten" % InputGlyphs.glyph_for("interact")
+	_status.text = "M3 Seuzach | %s | Form: %s | Münzen: %d%s" % [
+		char_id.capitalize(), form_name, GameState.coins, hub_hint
+	]
 
 
 func _build_flat_ground() -> void:
@@ -209,6 +226,7 @@ func _place_landmarks() -> void:
 		{"landmark_id": "hub_station", "district": "dorfkern"},
 		"hub_station"
 	)
+	_add_hub_enter_zone()
 	var church := _add_prop(
 		"landmark_kirche_seuzach.png",
 		Vector2(220, -40),
@@ -468,6 +486,83 @@ func _place_landmarks() -> void:
 	_prop_parent = _props
 
 
+func _add_hub_enter_zone() -> void:
+	var area := Area2D.new()
+	area.name = "HubEnter"
+	area.position = HUB_ENTER_POS
+	area.collision_layer = 1
+	area.collision_mask = 1
+	area.monitoring = true
+	area.monitorable = true
+	area.set_meta("hub_enter", true)
+	var shape := RectangleShape2D.new()
+	shape.size = Vector2(120, 70)
+	var col := CollisionShape2D.new()
+	col.shape = shape
+	area.add_child(col)
+	area.body_entered.connect(_on_hub_enter_body_entered)
+	area.body_exited.connect(_on_hub_enter_body_exited)
+	var parent: Node2D = _prop_parent if _prop_parent != null else _props
+	parent.add_child(area)
+	_hub_enter = area
+
+
+func _on_hub_enter_body_entered(body: Node) -> void:
+	if body == _player:
+		_player_in_hub_enter = true
+		_refresh_status()
+
+
+func _on_hub_enter_body_exited(body: Node) -> void:
+	if body == _player:
+		_player_in_hub_enter = false
+		_refresh_status()
+
+
+## Headless-friendly: save spawn and switch to hub scene.
+func enter_hub_for_test() -> void:
+	var spawn := DEFAULT_WORLD_SPAWN
+	if _player:
+		spawn = _player.global_position
+	GameState.set_world_spawn(spawn)
+	get_tree().change_scene_to_file(HUB_SCENE)
+
+
+func is_player_in_hub_enter_for_test() -> bool:
+	return _player_in_hub_enter
+
+
+func get_hub_enter_for_test() -> Area2D:
+	return _hub_enter
+
+
+func _attach_building_collision(spr: Sprite2D, is_hub: bool = false) -> void:
+	if spr.texture == null:
+		return
+	var tex_w := float(spr.texture.get_width()) * absf(spr.scale.x)
+	var tex_h := float(spr.texture.get_height()) * absf(spr.scale.y)
+	# Hub footprint kept tighter so enter zone south of the building stays walkable.
+	var footprint_w := tex_w * (0.28 if is_hub else 0.45)
+	var footprint_h := tex_h * (0.12 if is_hub else 0.25)
+	var body := StaticBody2D.new()
+	body.name = "BuildingCollision"
+	body.collision_layer = 1
+	body.collision_mask = 1
+	body.set_meta("has_building_collision", true)
+	# Sprite offset pulls visual up; place footprint near feet (below sprite origin).
+	var feet_y := spr.offset.y * absf(spr.scale.y) * 0.15 + footprint_h * 0.35
+	if is_hub:
+		feet_y -= footprint_h * 0.25
+	body.position = Vector2(0, feet_y)
+	var rect := RectangleShape2D.new()
+	rect.size = Vector2(maxf(24.0, footprint_w), maxf(16.0, footprint_h))
+	var col := CollisionShape2D.new()
+	col.shape = rect
+	body.add_child(col)
+	spr.add_child(body)
+	spr.set_meta("has_building_collision", true)
+
+
 func _add_prop(
 	file_name: String,
 	pos: Vector2,
@@ -491,4 +586,6 @@ func _add_prop(
 		spr.set_meta(str(key), metas[key])
 	var parent: Node2D = _prop_parent if _prop_parent != null else _props
 	parent.add_child(spr)
+	var is_hub := node_name == "hub_station" or str(metas.get("landmark_id", "")) == "hub_station"
+	_attach_building_collision(spr, is_hub)
 	return spr
