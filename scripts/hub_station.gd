@@ -45,7 +45,8 @@ func _setup_exit_area() -> void:
 
 func _sync_actor_z() -> void:
 	if _player:
-		_player.z_index = ACTOR_Z_BASE + int(_player.global_position.y)
+		_player.z_as_relative = false
+		_player.z_index = ACTOR_Z_BASE + int(_player.global_position.y) + 1
 
 
 func _unhandled_input(event: InputEvent) -> void:

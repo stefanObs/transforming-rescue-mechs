@@ -5,10 +5,10 @@ extends Node2D
 const RoadKitLib := preload("res://scripts/road_kit.gd")
 const ART := "res://assets/art/"
 const HUB_SCENE := "res://scenes/hub_station.tscn"
-const PROP_SCALE := Vector2(0.26, 0.26)
-const LANDMARK_SCALE := Vector2(0.30, 0.30)
-const HUB_SCALE := Vector2(0.34, 0.34)
-const SCHOOL_SCALE := Vector2(0.28, 0.28)
+const PROP_SCALE := Vector2(0.22, 0.22)
+const LANDMARK_SCALE := Vector2(0.24, 0.24)
+const HUB_SCALE := Vector2(0.28, 0.28)
+const SCHOOL_SCALE := Vector2(0.22, 0.22)
 ## Ground polygons sit at z ≈ −50…−34. Actors/props share one BASE so Y-sort works
 ## while staying above ground. Godot canvas z_index max is 4096.
 const ACTOR_Z_BASE := 2000
@@ -24,11 +24,19 @@ const COLOR_FOREST_FLOOR := Color("2F9A45")
 
 
 static func compute_actor_z(y: float) -> int:
-	return ACTOR_Z_BASE + int(y)
+	## +1 so the player wins same-row draw ties against props (tree order alone is fragile).
+	return ACTOR_Z_BASE + int(y) + 1
 
 
 static func compute_prop_z(y: float) -> int:
 	return PROP_Z_BASE + int(y)
+
+
+## Texture-pixel Y offset so a centered sprite's bottom (feet) sits on the node origin.
+static func feet_offset_y(texture: Texture2D) -> float:
+	if texture == null:
+		return -80.0
+	return -float(texture.get_height()) * 0.5
 
 
 const COLOR_SKY := Color("4DA3FF")
@@ -74,6 +82,7 @@ func _ready() -> void:
 
 func _sync_actor_z() -> void:
 	if _player:
+		_player.z_as_relative = false
 		_player.z_index = compute_actor_z(_player.global_position.y)
 
 
@@ -268,15 +277,15 @@ func _place_landmarks() -> void:
 	_add_hub_enter_zone()
 	_add_prop(
 		"landmark_tankstelle_seuzach.png",
-		Vector2(680, 600),
+		Vector2(780, 680),
 		LANDMARK_SCALE,
 		{"landmark_id": "tankstelle", "district": "forrenberg", "poi_type": "fuel"},
 		"landmark_tankstelle"
 	)
-	# Sportanlage Rolli — north of A1 / near Forrenberg (Maps).
+	# Sportanlage Rolli — north of A1 / near Forrenberg (Maps); kept clear of hub footprint.
 	_add_prop(
 		"landmark_sportplatz.png",
-		Vector2(420, 480),
+		Vector2(300, 420),
 		LANDMARK_SCALE,
 		{"landmark_id": "sportplatz_rolli", "district": "forrenberg", "poi_type": "sport"},
 		"landmark_sportplatz_rolli"
@@ -335,28 +344,28 @@ func _place_landmarks() -> void:
 	)
 	_add_prop(
 		"house_a.png",
-		Vector2(-140, -60),
+		Vector2(-200, -100),
 		PROP_SCALE,
 		{"house_variant": "a", "district": "dorfkern"},
 		"house_kern_a"
 	)
 	_add_prop(
 		"house_b.png",
-		Vector2(160, 100),
+		Vector2(220, 140),
 		PROP_SCALE,
 		{"house_variant": "b", "district": "dorfkern"},
 		"house_kern_b"
 	)
 	_add_prop(
 		"house_c.png",
-		Vector2(-80, 140),
+		Vector2(-160, 220),
 		PROP_SCALE,
 		{"house_variant": "c", "district": "dorfkern"},
 		"house_kern_c"
 	)
 	_add_prop(
 		"house_d.png",
-		Vector2(280, 140),
+		Vector2(340, 200),
 		PROP_SCALE,
 		{"house_variant": "d", "district": "dorfkern"},
 		"house_kern_d"
@@ -467,24 +476,24 @@ func _place_landmarks() -> void:
 		"landmark_spielplatz_schneckenwiese"
 	)
 
-	# --- Schule Birch (east, near Bahnhof) ---
+	# --- Schule Birch (east, near Bahnhof) — spaced so facades do not stack ---
 	_add_prop(
 		"landmark_schulhaus_birch_a.png",
-		Vector2(620, -180),
+		Vector2(520, -240),
 		SCHOOL_SCALE,
 		{"landmark_id": "schulhaus_birch", "school_cluster": "birch", "district": "birch"},
 		"schulhaus_birch_a"
 	)
 	_add_prop(
 		"landmark_schulhaus_birch_b.png",
-		Vector2(700, -160),
+		Vector2(780, -120),
 		SCHOOL_SCALE,
 		{"landmark_id": "schulhaus_birch", "school_cluster": "birch", "district": "birch"},
 		"schulhaus_birch_b"
 	)
 	_add_prop(
 		"landmark_turnhalle_birch.png",
-		Vector2(660, -100),
+		Vector2(650, 40),
 		SCHOOL_SCALE,
 		{"landmark_id": "turnhalle_birch", "school_cluster": "birch", "district": "birch", "poi_type": "gym"},
 		"turnhalle_birch"
@@ -493,21 +502,21 @@ func _place_landmarks() -> void:
 	# --- Schule Rietacker + Sporthalle (north of Kirchhügel) ---
 	_add_prop(
 		"landmark_schulhaus_rietacker_a.png",
-		Vector2(40, -260),
+		Vector2(-100, -320),
 		SCHOOL_SCALE,
 		{"landmark_id": "schulhaus_rietacker", "school_cluster": "rietacker", "district": "rietacker"},
 		"schulhaus_rietacker_a"
 	)
 	_add_prop(
 		"landmark_schulhaus_rietacker_b.png",
-		Vector2(120, -250),
+		Vector2(200, -200),
 		SCHOOL_SCALE,
 		{"landmark_id": "schulhaus_rietacker", "school_cluster": "rietacker", "district": "rietacker"},
 		"schulhaus_rietacker_b"
 	)
 	_add_prop(
 		"landmark_turnhalle_rietacker.png",
-		Vector2(10, -220),
+		Vector2(40, -80),
 		SCHOOL_SCALE,
 		{
 			"landmark_id": "turnhalle_rietacker",
@@ -565,21 +574,21 @@ func _place_landmarks() -> void:
 
 	_add_prop(
 		"landmark_schulhaus_ohringen_a.png",
-		Vector2(-900, 500),
+		Vector2(-1040, 400),
 		SCHOOL_SCALE,
 		{"landmark_id": "schulhaus_ohringen", "school_cluster": "ohringen", "district": "ohringen"},
 		"schulhaus_ohringen_a"
 	)
 	_add_prop(
 		"landmark_schulhaus_ohringen_b.png",
-		Vector2(-820, 520),
+		Vector2(-740, 580),
 		SCHOOL_SCALE,
 		{"landmark_id": "schulhaus_ohringen", "school_cluster": "ohringen", "district": "ohringen"},
 		"schulhaus_ohringen_b"
 	)
 	_add_prop(
 		"landmark_turnhalle_ohringen.png",
-		Vector2(-860, 560),
+		Vector2(-900, 720),
 		SCHOOL_SCALE,
 		{
 			"landmark_id": "turnhalle_ohringen",
@@ -591,7 +600,7 @@ func _place_landmarks() -> void:
 	)
 	_add_prop(
 		"landmark_kiga_ohringen.png",
-		Vector2(-860, 460),
+		Vector2(-920, 360),
 		PROP_SCALE,
 		{
 			"landmark_id": "kiga_ohringen",
@@ -602,7 +611,7 @@ func _place_landmarks() -> void:
 	)
 	_add_prop(
 		"landmark_spielplatz.png",
-		Vector2(-800, 480),
+		Vector2(-740, 500),
 		PROP_SCALE,
 		{"landmark_id": "spielplatz_ohringen", "district": "ohringen", "poi_type": "playground"},
 		"landmark_spielplatz_ohringen"
@@ -696,16 +705,14 @@ func _attach_building_collision(spr: Sprite2D, is_hub: bool = false) -> void:
 	var tex_h := float(spr.texture.get_height()) * absf(spr.scale.y)
 	# Hub footprint kept tighter so enter zone south of the building stays walkable.
 	var footprint_w := tex_w * (0.28 if is_hub else 0.45)
-	var footprint_h := tex_h * (0.12 if is_hub else 0.25)
+	var footprint_h := tex_h * (0.12 if is_hub else 0.22)
 	var body := StaticBody2D.new()
 	body.name = "BuildingCollision"
 	body.collision_layer = 1
 	body.collision_mask = 1
 	body.set_meta("has_building_collision", true)
-	# Sprite offset pulls visual up; place footprint near feet (below sprite origin).
-	var feet_y := spr.offset.y * absf(spr.scale.y) * 0.15 + footprint_h * 0.35
-	if is_hub:
-		feet_y -= footprint_h * 0.25
+	# Feet pivot is at sprite origin; keep a shallow footprint just above the ground line.
+	var feet_y := -footprint_h * (0.35 if is_hub else 0.25)
 	body.position = Vector2(0, feet_y)
 	var rect := RectangleShape2D.new()
 	rect.size = Vector2(maxf(24.0, footprint_w), maxf(16.0, footprint_h))
@@ -733,7 +740,9 @@ func _add_prop(
 	spr.scale = scale
 	spr.position = pos
 	spr.centered = true
-	spr.offset = Vector2(0, -80)
+	# Feet on origin so Y-sort matches visual front/back (no south-hanging facade).
+	spr.offset = Vector2(0.0, feet_offset_y(spr.texture))
+	spr.z_as_relative = false
 	spr.z_index = compute_prop_z(pos.y)
 	for key in metas.keys():
 		spr.set_meta(str(key), metas[key])

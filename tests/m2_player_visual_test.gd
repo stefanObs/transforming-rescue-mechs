@@ -77,7 +77,7 @@ func _test_actor_z_above_ground() -> void:
 	_assert(base >= 100, "ACTOR_Z_BASE high enough above ground")
 	for y in [-500, -40, -1, 0, 100, 700]:
 		var z: int = world_script.compute_actor_z(float(y))
-		_assert(z == base + y, "actor_z(%d) == %d+%d (got %d)" % [y, base, y, z])
+		_assert(z == base + y + 1, "actor_z(%d) == %d+%d+1 (got %d)" % [y, base, y, z])
 		_assert(z > -30, "actor_z(%d)=%d always above ground max (-30)" % [y, z])
 		_assert(z <= 4096, "actor_z(%d)=%d within Godot canvas z max" % [y, z])
 	var prop_base: int = int(world_script.PROP_Z_BASE)
@@ -89,6 +89,10 @@ func _test_actor_z_above_ground() -> void:
 	_assert(
 		world_script.compute_actor_z(-10.0) < world_script.compute_prop_z(0.0),
 		"actor north of prop draws behind"
+	)
+	_assert(
+		world_script.compute_actor_z(0.0) > world_script.compute_prop_z(0.0),
+		"actor wins same-row draw tie vs prop"
 	)
 
 

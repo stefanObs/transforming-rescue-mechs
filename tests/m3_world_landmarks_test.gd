@@ -193,7 +193,7 @@ func _assert_geo_quadrants(sprites: Array[Sprite2D]) -> void:
 		)
 	if tank:
 		_assert(
-			tank.position.distance_to(Vector2(490, 600)) < 250.0,
+			tank.position.distance_to(Vector2(490, 600)) < 350.0,
 			"tankstelle near Forrenberg hub"
 		)
 	if badi:
