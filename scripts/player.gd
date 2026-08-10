@@ -25,9 +25,6 @@ const TURN_FULL_ANGLE := deg_to_rad(45.0)
 const TURN_POSE_THRESHOLD := 0.28
 const LEAN_ROBOT_RAD := deg_to_rad(8.0)
 const LEAN_VEHICLE_RAD := deg_to_rad(18.0)
-## Milder lean when dedicated N/E/S/W textures are present.
-const LEAN_ROBOT_DIR_RAD := deg_to_rad(4.0)
-const LEAN_VEHICLE_DIR_RAD := deg_to_rad(10.0)
 ## How fast blend follows target while moving / decays when stopped.
 const TURN_BLEND_RESPOND := 14.0
 const TURN_BLEND_DECAY := 10.0
@@ -246,6 +243,24 @@ func _form_has_dir_art(which: Form) -> bool:
 	return false
 
 
+func _facing_has_dir_art(which: Form) -> bool:
+	var has: Array = _vehicle_has_dir if which == Form.VEHICLE else _robot_has_dir
+	return bool(has[_facing])
+
+
+## True for N/E/S/W; false for NE/SE/SW/NW.
+func _facing_is_cardinal(facing: Facing = _facing) -> bool:
+	return facing == Facing.N or facing == Facing.E or facing == Facing.S or facing == Facing.W
+
+
+## resource_path of the texture `_texture_for` would show for `which` at current facing.
+func get_facing_texture_path(which: Form) -> String:
+	var tex := _texture_for(which)
+	if tex == null:
+		return ""
+	return tex.resource_path
+
+
 func is_using_turn_pose() -> bool:
 	if uses_dir_textures():
 		return false
@@ -334,12 +349,11 @@ func _apply_facing_visuals() -> void:
 func _apply_turn_visuals() -> void:
 	if _transforming:
 		return
-	var lean_scale: float
-	if uses_dir_textures():
-		lean_scale = LEAN_VEHICLE_DIR_RAD if form == Form.VEHICLE else LEAN_ROBOT_DIR_RAD
-	else:
-		lean_scale = LEAN_VEHICLE_RAD if form == Form.VEHICLE else LEAN_ROBOT_RAD
-	var lean := _turn_blend * lean_scale
+	# Dedicated dir art: no lean — show the static facing sprite as authored.
+	var lean := 0.0
+	if not uses_dir_textures():
+		var lean_scale := LEAN_VEHICLE_RAD if form == Form.VEHICLE else LEAN_ROBOT_RAD
+		lean = _turn_blend * lean_scale
 	if _robot_sprite:
 		_robot_sprite.rotation = lean if form == Form.ROBOT else 0.0
 		_robot_sprite.texture = _texture_for(Form.ROBOT)
@@ -360,10 +374,11 @@ func _apply_turn_visuals() -> void:
 func _texture_for(which: Form) -> Texture2D:
 	var dirs: Array = _vehicle_dir if which == Form.VEHICLE else _robot_dir
 	var facing_tex: Texture2D = dirs[_facing] as Texture2D
-	if _form_has_dir_art(which) and facing_tex != null:
+	# Prefer facing slot texture whenever set (dedicated or cardinal fallback).
+	if facing_tex != null and (_facing_has_dir_art(which) or _form_has_dir_art(which)):
 		return facing_tex
-	# Legacy turn-pose swap when no dedicated dir art.
-	var use_turn := absf(_turn_blend) > TURN_POSE_THRESHOLD
+	# Legacy turn-pose swap only when this form has no dir art at all.
+	var use_turn := (not _form_has_dir_art(which)) and absf(_turn_blend) > TURN_POSE_THRESHOLD
 	if which == Form.VEHICLE:
 		if use_turn and _vehicle_turn_tex != null:
 			return _vehicle_turn_tex
@@ -400,8 +415,8 @@ func _update_locomotion_visuals() -> void:
 				bob = sin(Time.get_ticks_msec() / 1000.0 * TAU * VEHICLE_BOB_HZ) * VEHICLE_BOB_AMP
 			_vehicle_sprite.offset.y = _vehicle_ground_oy + bob
 		return
-	# Robot form
-	if _has_walk and _is_moving():
+	# Robot form: walk cycles only for cardinals; diagonals stay on static dir art.
+	if _has_walk and _is_moving() and _facing_is_cardinal():
 		_start_walk()
 	else:
 		_stop_walk()
@@ -412,6 +427,9 @@ func _update_locomotion_visuals() -> void:
 
 func _start_walk() -> void:
 	if not _has_walk or _walk_sprite == null:
+		return
+	if not _facing_is_cardinal():
+		_stop_walk()
 		return
 	var anim := _walk_anim_name(_facing)
 	if not _walk_sprite.sprite_frames.has_animation(anim):
@@ -453,10 +471,11 @@ func _stop_walk() -> void:
 
 
 func _walk_anim_name(facing: Facing) -> String:
+	# Only called for cardinals; diagonals use static RobotSprite dir art.
 	match facing:
-		Facing.N, Facing.NE, Facing.NW:
+		Facing.N:
 			return "walk_n"
-		Facing.S, Facing.SE, Facing.SW:
+		Facing.S:
 			return "walk_s"
 		_:
 			# E and W share east frames; W flips via flip_h.

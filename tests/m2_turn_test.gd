@@ -69,10 +69,13 @@ func _test_turn_blend_and_lean() -> void:
 		player.call("apply_turn_from_dirs", Vector2(1, 0), Vector2(0, -1))
 		var robot: Sprite2D = player.get_node("RobotSprite")
 		var robot_rot: float = robot.rotation
-		_assert(absf(robot_rot) > 0.0, "%s robot lean nonzero (%.4f)" % [id, robot_rot])
-		var lean_cap := deg_to_rad(8.0) + 0.001
-		_assert(absf(robot_rot) <= lean_cap, "%s robot lean <= 8° (got %.4f)" % [id, robot_rot])
-		var has_dir_art := ResourceLoader.exists(ART + "%s_robot_n.png" % id)
+		var has_dir_art := bool(player.call("uses_dir_textures"))
+		if has_dir_art:
+			_assert(is_equal_approx(robot_rot, 0.0), "%s dir art → robot lean 0 (got %.4f)" % [id, robot_rot])
+		else:
+			_assert(absf(robot_rot) > 0.0, "%s robot lean nonzero (%.4f)" % [id, robot_rot])
+			var lean_cap := deg_to_rad(8.0) + 0.001
+			_assert(absf(robot_rot) <= lean_cap, "%s robot lean <= 8° (got %.4f)" % [id, robot_rot])
 		if absf(float(player.call("get_turn_blend"))) > 0.28:
 			if has_dir_art:
 				_assert(
@@ -103,7 +106,7 @@ func _test_turn_blend_and_lean() -> void:
 			"%s left/right blends differ (L=%.3f R=%.3f)" % [id, blend_left, blend_right]
 		)
 
-		# Same dirs → same |blend|; vehicle lean must exceed robot lean.
+		# Same dirs → same |blend|; with dir art both forms stay rotation 0.
 		player.call("set_form", 0) # ROBOT
 		player.call("apply_turn_from_dirs", Vector2(1, 0), Vector2(0, 1))
 		var robot_blend: float = float(player.call("get_turn_blend"))
@@ -117,18 +120,22 @@ func _test_turn_blend_and_lean() -> void:
 			is_equal_approx(robot_blend, vehicle_blend),
 			"%s same dirs → equal blend (R=%.3f V=%.3f)" % [id, robot_blend, vehicle_blend]
 		)
-		_assert(
-			vehicle_abs > robot_abs,
-			"%s vehicle |rot|=%.4f > robot |rot|=%.4f" % [id, vehicle_abs, robot_abs]
-		)
-		_assert(
-			absf(vehicle.rotation) <= deg_to_rad(18.0) + 0.001,
-			"%s vehicle lean <= 18° (got %.4f)" % [id, vehicle.rotation]
-		)
-		_assert(
-			signf(vehicle.rotation) == signf(vehicle_blend) or is_zero_approx(vehicle.rotation),
-			"%s vehicle lean sign matches blend" % id
-		)
+		if has_dir_art:
+			_assert(is_equal_approx(robot_abs, 0.0), "%s dir art → robot rot 0" % id)
+			_assert(is_equal_approx(vehicle_abs, 0.0), "%s dir art → vehicle rot 0" % id)
+		else:
+			_assert(
+				vehicle_abs > robot_abs,
+				"%s vehicle |rot|=%.4f > robot |rot|=%.4f" % [id, vehicle_abs, robot_abs]
+			)
+			_assert(
+				absf(vehicle.rotation) <= deg_to_rad(18.0) + 0.001,
+				"%s vehicle lean <= 18° (got %.4f)" % [id, vehicle.rotation]
+			)
+			_assert(
+				signf(vehicle.rotation) == signf(vehicle_blend) or is_zero_approx(vehicle.rotation),
+				"%s vehicle lean sign matches blend" % id
+			)
 
 	player.queue_free()
 

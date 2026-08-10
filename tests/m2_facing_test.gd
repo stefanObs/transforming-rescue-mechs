@@ -1,16 +1,14 @@
 extends SceneTree
-## 8-dir facing_from_velocity + screen vectors + vehicle se/sw/ne/nw art.
+## 8-dir facing_from_velocity + screen vectors + robot/vehicle dir art match.
 
 var _failed: int = 0
 
 const CHAR_IDS := ["bolt", "marina", "rush"]
 const ART := "res://assets/art/"
-## Cardinals required for robot+vehicle; diagonals required for vehicles.
-const CARDINAL_SUFFIX := ["n", "e", "s", "w"]
-const VEHICLE_DIAG_SUFFIX := ["se", "sw", "ne", "nw"]
+const DIR_SUFFIX := ["n", "ne", "e", "se", "s", "sw", "w", "nw"]
+const DIAG_SUFFIX := ["ne", "se", "sw", "nw"]
 const FORMS := ["robot", "vehicle"]
-
-# Facing enum: N=0 NE=1 E=2 SE=3 S=4 SW=5 W=6 NW=7
+## Facing enum: N=0 NE=1 E=2 SE=3 S=4 SW=5 W=6 NW=7
 const FACING_N := 0
 const FACING_NE := 1
 const FACING_E := 2
@@ -19,6 +17,20 @@ const FACING_S := 4
 const FACING_SW := 5
 const FACING_W := 6
 const FACING_NW := 7
+## Form enum
+const FORM_ROBOT := 0
+const FORM_VEHICLE := 1
+## Input vector per facing suffix order.
+const FACING_INPUTS := [
+	Vector2(0, -1), # N
+	Vector2(1, -1), # NE
+	Vector2(1, 0), # E
+	Vector2(1, 1), # SE
+	Vector2(0, 1), # S
+	Vector2(-1, 1), # SW
+	Vector2(-1, 0), # W
+	Vector2(-1, -1), # NW
+]
 
 
 func _init() -> void:
@@ -30,6 +42,8 @@ func _run() -> void:
 	_test_facing_from_velocity()
 	_test_dir_assets_exist()
 	_test_facing_applies_texture()
+	_test_dir_art_no_lean()
+	_test_diagonal_no_walk()
 	_test_screen_move_identity()
 	if _failed == 0:
 		print("=== m2_facing_test PASS ===")
@@ -75,16 +89,14 @@ func _test_facing_from_velocity() -> void:
 func _test_dir_assets_exist() -> void:
 	for id in CHAR_IDS:
 		for form_name in FORMS:
-			for d in CARDINAL_SUFFIX:
+			for d in DIR_SUFFIX:
 				var path := ART + "%s_%s_%s.png" % [id, form_name, d]
 				_assert(ResourceLoader.exists(path), "exists %s" % path)
 				if ResourceLoader.exists(path):
 					_assert_corners_transparent(path)
-		for d in VEHICLE_DIAG_SUFFIX:
-			var vpath := ART + "%s_vehicle_%s.png" % [id, d]
-			_assert(ResourceLoader.exists(vpath), "exists %s" % vpath)
-			if ResourceLoader.exists(vpath):
-				_assert_corners_transparent(vpath)
+		for d in DIAG_SUFFIX:
+			var rpath := ART + "%s_robot_%s.png" % [id, d]
+			_assert(ResourceLoader.exists(rpath), "robot diagonal required %s" % rpath)
 
 
 func _assert_corners_transparent(path: String) -> void:
@@ -110,50 +122,79 @@ func _test_facing_applies_texture() -> void:
 		return
 	var player: Node = (packed as PackedScene).instantiate()
 	root.add_child(player)
+
+	for id in CHAR_IDS:
+		player.call("set_character", id)
+		for form_enum in [FORM_ROBOT, FORM_VEHICLE]:
+			var form_name: String = FORMS[form_enum]
+			player.call("set_form", form_enum)
+			for i in range(DIR_SUFFIX.size()):
+				var suffix: String = DIR_SUFFIX[i]
+				var expected_end := "_%s.png" % suffix
+				player.call("update_facing_from_velocity", FACING_INPUTS[i])
+				_assert(
+					int(player.call("get_facing")) == i,
+					"%s %s facing %s" % [id, form_name, suffix]
+				)
+				var tex_path: String = str(player.call("get_facing_texture_path", form_enum))
+				_assert(
+					tex_path.ends_with(expected_end),
+					"%s %s texture path ends with %s (got %s)" % [id, form_name, expected_end, tex_path]
+				)
+				var expected_path := ART + "%s_%s_%s.png" % [id, form_name, suffix]
+				_assert(
+					tex_path == expected_path or tex_path.ends_with("%s_%s_%s.png" % [id, form_name, suffix]),
+					"%s %s facing %s → %s" % [id, form_name, suffix, expected_path]
+				)
+
+	player.queue_free()
+
+
+func _test_dir_art_no_lean() -> void:
+	var packed: Variant = load("res://scenes/player.tscn")
+	if packed is not PackedScene:
+		return
+	var player: Node = (packed as PackedScene).instantiate()
+	root.add_child(player)
 	var robot: Sprite2D = player.get_node("RobotSprite")
 	var vehicle: Sprite2D = player.get_node("VehicleSprite")
 
 	for id in CHAR_IDS:
 		player.call("set_character", id)
-		player.call("set_form", 0) # ROBOT
-		var n_path := ART + "%s_robot_n.png" % id
-		var e_path := ART + "%s_robot_e.png" % id
-		if not ResourceLoader.exists(n_path) or not ResourceLoader.exists(e_path):
-			_assert(false, "%s dir art required for texture apply test" % id)
-			continue
-		var n_tex: Texture2D = load(n_path)
-		var e_tex: Texture2D = load(e_path)
+		_assert(bool(player.call("uses_dir_textures")), "%s uses_dir_textures" % id)
 
-		player.call("update_facing_from_velocity", Vector2(0, -1))
-		_assert(int(player.call("get_facing")) == FACING_N, "%s facing N" % id)
-		_assert(robot.texture == n_tex, "%s robot texture is N art" % id)
+		player.call("set_form", FORM_ROBOT)
+		player.call("apply_turn_from_dirs", Vector2(1, 0), Vector2(0, -1))
+		_assert(absf(float(player.call("get_turn_blend"))) > 0.2, "%s robot turn blend nonzero" % id)
+		_assert(is_equal_approx(robot.rotation, 0.0), "%s robot dir art → rotation 0 while turning" % id)
 
-		player.call("update_facing_from_velocity", Vector2(1, 0))
-		_assert(int(player.call("get_facing")) == FACING_E, "%s facing E" % id)
-		_assert(robot.texture == e_tex, "%s robot texture is E art" % id)
-		_assert(robot.flip_h == false, "%s E no flip_h" % id)
+		player.call("set_form", FORM_VEHICLE)
+		player.call("apply_turn_from_dirs", Vector2(1, 0), Vector2(0, -1))
+		_assert(absf(float(player.call("get_turn_blend"))) > 0.2, "%s vehicle turn blend nonzero" % id)
+		_assert(is_equal_approx(vehicle.rotation, 0.0), "%s vehicle dir art → rotation 0 while turning" % id)
 
-		player.call("update_facing_from_velocity", Vector2(-1, 0))
-		_assert(int(player.call("get_facing")) == FACING_W, "%s facing W" % id)
-		var w_path := ART + "%s_robot_w.png" % id
-		if ResourceLoader.exists(w_path):
-			_assert(robot.flip_h == false, "%s dedicated W → flip_h false" % id)
-			_assert(robot.texture == load(w_path), "%s robot texture is W art" % id)
-		else:
-			_assert(robot.flip_h == true, "%s W fallback flip_h" % id)
+	player.queue_free()
 
-		# Vehicle diagonals (SE/SW) when art present.
-		player.call("set_form", 1) # VEHICLE
-		var se_path := ART + "%s_vehicle_se.png" % id
-		var sw_path := ART + "%s_vehicle_sw.png" % id
-		if ResourceLoader.exists(se_path):
-			player.call("update_facing_from_velocity", Vector2(1, 1))
-			_assert(int(player.call("get_facing")) == FACING_SE, "%s vehicle SE facing" % id)
-			_assert(vehicle.texture == load(se_path), "%s vehicle texture is SE art" % id)
-		if ResourceLoader.exists(sw_path):
-			player.call("update_facing_from_velocity", Vector2(-1, 1))
-			_assert(int(player.call("get_facing")) == FACING_SW, "%s vehicle SW facing" % id)
-			_assert(vehicle.texture == load(sw_path), "%s vehicle texture is SW art" % id)
+
+func _test_diagonal_no_walk() -> void:
+	var packed: Variant = load("res://scenes/player.tscn")
+	if packed is not PackedScene:
+		return
+	var player: Node = (packed as PackedScene).instantiate()
+	root.add_child(player)
+	var robot: Sprite2D = player.get_node("RobotSprite")
+
+	for id in CHAR_IDS:
+		player.call("set_character", id)
+		player.call("set_form", FORM_ROBOT)
+		player.call("update_facing_from_velocity", Vector2(1, 1)) # SE
+		_assert(int(player.call("get_facing")) == FACING_SE, "%s facing SE" % id)
+		player.call("set_moving_for_test", true)
+		_assert(not bool(player.call("is_walk_playing")), "%s SE moving → not is_walk_playing" % id)
+		_assert(robot.visible, "%s SE moving → RobotSprite visible" % id)
+		var se_path: String = str(player.call("get_facing_texture_path", FORM_ROBOT))
+		_assert(se_path.ends_with("_se.png"), "%s SE static robot texture (got %s)" % [id, se_path])
+		player.call("set_moving_for_test", false)
 
 	player.queue_free()
 
