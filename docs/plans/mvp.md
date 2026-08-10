@@ -21,7 +21,7 @@ Erste spielbare Version: Open-World **Seuzach** (Comic-Rettung), Mechs **Bolt / 
 | M0 | Godot-Grundgerüst & Tests | Erledigt | 6/6 |
 | M1 | Input, Spieler, Transform | Erledigt | 8/8 |
 | M2 | Art-Spike Stil C | Erledigt | 7/7 |
-| M3 | Seuzach Iso-Welt & Hub | Nicht gestartet | 0/8 |
+| M3 | Seuzach Iso-Welt & Hub | In Arbeit | 4/8 |
 | M4 | Energie, Kollision, Solar, Waffen | Nicht gestartet | 0/7 |
 | M5 | Missionen & Spezialsichten | Nicht gestartet | 0/9 |
 | M6 | Scan, Münzen, Save, Finale-Stub | Nicht gestartet | 0/8 |
@@ -166,12 +166,12 @@ Pro Epic gilt der Ablauf: Plan (dieses File pflegen) → `feature-implementer` (
 
 #### Schritte
 
-- [ ] Referenz-Layout Seuzach skizzieren (Dorfkern, Bahnhof, Wohnen, Felder, Wald, Rand)
-- [ ] Iso-TileMap World-Scene bauen
+- [x] Referenz-Layout Seuzach skizzieren (Dorfkern, Bahnhof, Wohnen, Felder, Wald, Rand)
+- [x] Iso-TileMap World-Scene bauen
 - [ ] Collision auf Gebäuden/Hindernissen
-- [ ] Y-Sort / Zeichenreihenfolge
+- [x] Y-Sort / Zeichenreihenfolge
 - [ ] Hub-Scene Erdstation: Ein-/Ausfahrt zur World
-- [ ] Kamera follow Spieler
+- [x] Kamera follow Spieler
 - [ ] Tests: Scene-Wechsel Hub ↔ World; Spawn-Punkt
 - [ ] Playtest: Karte erkundbar, Hub erreichbar
 
