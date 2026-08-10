@@ -11,6 +11,7 @@ func _init() -> void:
 func _run() -> void:
 	print("=== m2_player_visual_test start ===")
 	_test_sprite_scale()
+	_test_vehicle_dir_display_height()
 	_test_actor_z_above_ground()
 	_test_facing()
 	if _failed == 0:
@@ -29,10 +30,43 @@ func _test_sprite_scale() -> void:
 	var player: Node = (packed as PackedScene).instantiate()
 	root.add_child(player)
 	var scale: Vector2 = player.call("get_sprite_scale")
-	_assert(scale.x <= 0.1 and scale.y <= 0.1, "sprite scale <= 0.1 (got %s)" % scale)
-	_assert(is_equal_approx(scale.x, 0.085), "sprite scale.x == 0.085")
+	_assert(scale.x <= 0.1 and scale.y <= 0.1, "base sprite scale <= 0.1 (got %s)" % scale)
+	_assert(is_equal_approx(scale.x, 0.085), "base sprite scale.x == 0.085")
 	var robot: Sprite2D = player.get_node("RobotSprite")
-	_assert(is_equal_approx(robot.scale.x, scale.x), "RobotSprite uses SPRITE_SCALE")
+	_assert(robot.scale.x > 0.04 and robot.scale.x < 0.2, "RobotSprite scale in sane range (got %s)" % robot.scale)
+	# Height-normalized: display height ≈ ref × base scale
+	if robot.texture:
+		var disp_h: float = float(robot.texture.get_height()) * robot.scale.y
+		_assert(disp_h > 40.0 and disp_h < 120.0, "Robot display height sane (got %.1f)" % disp_h)
+	player.queue_free()
+
+
+func _test_vehicle_dir_display_height() -> void:
+	## Regression: Rush (and peers) vehicle E/W must not shrink vs S.
+	var packed: Variant = load("res://scenes/player.tscn")
+	_assert(packed is PackedScene, "player.tscn loads for vehicle height")
+	if packed is not PackedScene:
+		return
+	var player: Node = (packed as PackedScene).instantiate()
+	root.add_child(player)
+	const FORM_VEHICLE := 1
+	for id in ["rush", "bolt", "marina"]:
+		player.call("set_character", id)
+		player.call("set_form", FORM_VEHICLE)
+		player.call("update_facing_from_velocity", Vector2(0, 1)) # S
+		var h_s: float = float(player.call("get_display_height", FORM_VEHICLE))
+		player.call("update_facing_from_velocity", Vector2(1, 0)) # E
+		var h_e: float = float(player.call("get_display_height", FORM_VEHICLE))
+		player.call("update_facing_from_velocity", Vector2(-1, 0)) # W
+		var h_w: float = float(player.call("get_display_height", FORM_VEHICLE))
+		_assert(h_s > 1.0 and h_e > 1.0 and h_w > 1.0, "%s vehicle display heights > 0" % id)
+		var max_h := maxf(h_s, maxf(h_e, h_w))
+		var min_h := minf(h_s, minf(h_e, h_w))
+		var rel := (max_h - min_h) / max_h
+		_assert(
+			rel < 0.08,
+			"%s vehicle E/S/W display height stable (S=%.1f E=%.1f W=%.1f rel=%.3f)" % [id, h_s, h_e, h_w, rel]
+		)
 	player.queue_free()
 
 

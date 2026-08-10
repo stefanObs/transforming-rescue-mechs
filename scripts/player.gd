@@ -18,6 +18,9 @@ const WALK_FPS := 9.0
 const SPRITE_SCALE := Vector2(0.085, 0.085)
 ## Slightly larger during transform so intermediate frames read clearly.
 const TRANSFORM_SPRITE_SCALE := Vector2(0.1, 0.1)
+## Clamp height-normalization so tiny/huge frames cannot explode.
+const SPRITE_SCALE_MIN_MULT := 0.55
+const SPRITE_SCALE_MAX_MULT := 2.25
 const ART := "res://assets/art/"
 const MOVE_EPS := 0.001
 ## Angle that maps to full ±1 turn blend.
@@ -63,6 +66,9 @@ var _robot_ground_oy := 0.0
 var _vehicle_ground_oy := 0.0
 var _transform_ground_oy := 0.0
 var _walk_ground_oy := 0.0
+## Max texture height per form — shorter dir art scales up to match.
+var _robot_ref_h: float = 1000.0
+var _vehicle_ref_h: float = 1000.0
 var _has_walk := false
 var _moving_for_test := false
 var _walk_playing := false
@@ -163,6 +169,15 @@ func set_character(id: String) -> void:
 
 func get_sprite_scale() -> Vector2:
 	return SPRITE_SCALE
+
+
+## On-screen height in px for the active vehicle/robot texture (scale × tex height).
+func get_display_height(which: Form = form) -> float:
+	var tex: Texture2D = _texture_for(which)
+	var spr: Sprite2D = _vehicle_sprite if which == Form.VEHICLE else _robot_sprite
+	if tex == null or spr == null:
+		return 0.0
+	return float(tex.get_height()) * spr.scale.y
 
 
 func has_transform_animation() -> bool:
@@ -357,6 +372,7 @@ func _apply_turn_visuals() -> void:
 		_robot_sprite.rotation = lean if form == Form.ROBOT else 0.0
 		_robot_sprite.texture = _texture_for(Form.ROBOT)
 		if _robot_sprite.texture:
+			_apply_sprite_scale(_robot_sprite, _robot_sprite.texture, _robot_ref_h)
 			_ground_align(_robot_sprite, _robot_sprite.texture)
 			_robot_ground_oy = _robot_sprite.offset.y
 	if _walk_sprite:
@@ -365,6 +381,7 @@ func _apply_turn_visuals() -> void:
 		_vehicle_sprite.rotation = lean if form == Form.VEHICLE else 0.0
 		_vehicle_sprite.texture = _texture_for(Form.VEHICLE)
 		if _vehicle_sprite.texture:
+			_apply_sprite_scale(_vehicle_sprite, _vehicle_sprite.texture, _vehicle_ref_h)
 			_ground_align(_vehicle_sprite, _vehicle_sprite.texture)
 			_vehicle_ground_oy = _vehicle_sprite.offset.y
 	_place_form_label()
@@ -420,6 +437,7 @@ func _update_locomotion_visuals() -> void:
 	else:
 		_stop_walk()
 		if _robot_sprite and _robot_sprite.texture:
+			_apply_sprite_scale(_robot_sprite, _robot_sprite.texture, _robot_ref_h)
 			_ground_align(_robot_sprite, _robot_sprite.texture)
 			_robot_ground_oy = _robot_sprite.offset.y
 
@@ -454,6 +472,7 @@ func _align_walk_frame() -> void:
 		return
 	var tex := _walk_sprite.sprite_frames.get_frame_texture(anim, _walk_sprite.frame)
 	if tex:
+		_apply_sprite_scale(_walk_sprite, tex, _robot_ref_h)
 		_ground_align(_walk_sprite, tex)
 		_walk_ground_oy = _walk_sprite.offset.y
 
@@ -522,7 +541,14 @@ func _place_form_label() -> void:
 		tex = _robot_sprite.texture
 	var top_y := -72.0
 	if tex != null:
-		top_y = -float(tex.get_height()) * SPRITE_SCALE.y - FORM_LABEL_PAD
+		var sc := SPRITE_SCALE.y
+		if form == Form.VEHICLE and _vehicle_sprite:
+			sc = _vehicle_sprite.scale.y
+		elif _walk_playing and _walk_sprite:
+			sc = _walk_sprite.scale.y
+		elif _robot_sprite:
+			sc = _robot_sprite.scale.y
+		top_y = -float(tex.get_height()) * sc - FORM_LABEL_PAD
 	_form_label.offset_top = top_y - 20.0
 	_form_label.offset_bottom = top_y
 
@@ -562,14 +588,15 @@ func _load_character_art() -> void:
 	_apply_cardinal_flip_fallbacks()
 	_apply_diagonal_fallbacks(_robot_dir, _robot_has_dir, true)
 	_apply_diagonal_fallbacks(_vehicle_dir, _vehicle_has_dir, false)
-	_robot_sprite.scale = SPRITE_SCALE
-	_vehicle_sprite.scale = SPRITE_SCALE
+	_recompute_height_refs()
 	_robot_sprite.centered = true
 	_vehicle_sprite.centered = true
 	if _robot_sprite.texture:
+		_apply_sprite_scale(_robot_sprite, _robot_sprite.texture, _robot_ref_h)
 		_ground_align(_robot_sprite, _robot_sprite.texture)
 		_robot_ground_oy = _robot_sprite.offset.y
 	if _vehicle_sprite.texture:
+		_apply_sprite_scale(_vehicle_sprite, _vehicle_sprite.texture, _vehicle_ref_h)
 		_ground_align(_vehicle_sprite, _vehicle_sprite.texture)
 		_vehicle_ground_oy = _vehicle_sprite.offset.y
 
@@ -592,13 +619,56 @@ func _load_character_art() -> void:
 			frames.add_frame("to_robot", forward[i])
 		_transform_ground_oy = _ground_offset_y(forward[0])
 	_transform_sprite.sprite_frames = frames
-	_transform_sprite.scale = SPRITE_SCALE
 	_transform_sprite.centered = true
+	if not forward.is_empty():
+		_apply_sprite_scale(_transform_sprite, forward[0], _robot_ref_h, TRANSFORM_SPRITE_SCALE)
+	else:
+		_transform_sprite.scale = TRANSFORM_SPRITE_SCALE
 	_transform_sprite.offset = Vector2(0.0, _transform_ground_oy)
 
 	_load_walk_frames()
 	_place_form_label()
 	_update_shadow()
+
+
+func _max_tex_height(textures: Array) -> float:
+	var tallest := 0.0
+	for item in textures:
+		if item is Texture2D:
+			tallest = maxf(tallest, float((item as Texture2D).get_height()))
+	return tallest
+
+
+func _recompute_height_refs() -> void:
+	var robot_texs: Array = [_robot_idle_tex, _robot_turn_tex]
+	for tex in _robot_dir:
+		robot_texs.append(tex)
+	_robot_ref_h = _max_tex_height(robot_texs)
+	if _robot_ref_h < 1.0:
+		_robot_ref_h = 1000.0
+	var vehicle_texs: Array = [_vehicle_idle_tex, _vehicle_turn_tex]
+	for tex in _vehicle_dir:
+		vehicle_texs.append(tex)
+	_vehicle_ref_h = _max_tex_height(vehicle_texs)
+	if _vehicle_ref_h < 1.0:
+		_vehicle_ref_h = 1000.0
+
+
+func _sprite_scale_for(tex: Texture2D, ref_h: float, base: Vector2 = SPRITE_SCALE) -> Vector2:
+	if tex == null:
+		return base
+	var h := float(tex.get_height())
+	if h < 1.0 or ref_h < 1.0:
+		return base
+	var mult := ref_h / h
+	mult = clampf(mult, SPRITE_SCALE_MIN_MULT, SPRITE_SCALE_MAX_MULT)
+	return base * mult
+
+
+func _apply_sprite_scale(sprite: Node2D, tex: Texture2D, ref_h: float, base: Vector2 = SPRITE_SCALE) -> void:
+	if sprite == null:
+		return
+	sprite.scale = _sprite_scale_for(tex, ref_h, base)
 
 
 func _ground_offset_y(tex: Texture2D) -> float:
@@ -630,8 +700,13 @@ func _load_walk_frames() -> void:
 			if _walk_ground_oy == 0.0:
 				_walk_ground_oy = _ground_offset_y(frame_texs[0])
 	_walk_sprite.sprite_frames = walk_frames
-	_walk_sprite.scale = SPRITE_SCALE
 	_walk_sprite.centered = true
+	if walk_frames.has_animation("walk_s"):
+		var tex0 := walk_frames.get_frame_texture("walk_s", 0)
+		if tex0:
+			_apply_sprite_scale(_walk_sprite, tex0, _robot_ref_h)
+	else:
+		_walk_sprite.scale = SPRITE_SCALE
 	_walk_sprite.offset = Vector2(0.0, _walk_ground_oy)
 	_walk_sprite.visible = false
 	_has_walk = loaded_any and walk_frames.has_animation("walk_s")
@@ -700,11 +775,13 @@ func _play_transform(to_vehicle: bool) -> void:
 	if _walk_sprite:
 		_walk_sprite.visible = false
 	_transform_sprite.visible = true
-	_transform_sprite.scale = TRANSFORM_SPRITE_SCALE
 	if _transform_sprite.sprite_frames and _transform_sprite.sprite_frames.has_animation("to_vehicle"):
 		var tex := _transform_sprite.sprite_frames.get_frame_texture("to_vehicle", 0)
 		if tex:
+			_apply_sprite_scale(_transform_sprite, tex, _robot_ref_h, TRANSFORM_SPRITE_SCALE)
 			_ground_align(_transform_sprite, tex)
+	else:
+		_transform_sprite.scale = TRANSFORM_SPRITE_SCALE
 	_apply_facing_visuals()
 	var anim := "to_vehicle" if to_vehicle else "to_robot"
 	_transform_sprite.animation = anim
@@ -719,7 +796,6 @@ func _on_transform_finished() -> void:
 	_transforming = false
 	_transform_sprite.visible = false
 	_transform_sprite.stop()
-	_transform_sprite.scale = SPRITE_SCALE
 	_reset_turn_state()
 	_apply_visuals()
 	_apply_facing_visuals()
