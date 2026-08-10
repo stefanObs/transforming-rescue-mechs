@@ -43,7 +43,7 @@ func _run() -> void:
 	_test_dir_assets_exist()
 	_test_facing_applies_texture()
 	_test_dir_art_no_lean()
-	_test_diagonal_no_walk()
+	_test_diagonal_walk()
 	_test_screen_move_identity()
 	if _failed == 0:
 		print("=== m2_facing_test PASS ===")
@@ -176,13 +176,14 @@ func _test_dir_art_no_lean() -> void:
 	player.queue_free()
 
 
-func _test_diagonal_no_walk() -> void:
+func _test_diagonal_walk() -> void:
 	var packed: Variant = load("res://scenes/player.tscn")
 	if packed is not PackedScene:
 		return
 	var player: Node = (packed as PackedScene).instantiate()
 	root.add_child(player)
 	var robot: Sprite2D = player.get_node("RobotSprite")
+	var walk: AnimatedSprite2D = player.get_node("WalkSprite")
 
 	for id in CHAR_IDS:
 		player.call("set_character", id)
@@ -190,11 +191,14 @@ func _test_diagonal_no_walk() -> void:
 		player.call("update_facing_from_velocity", Vector2(1, 1)) # SE
 		_assert(int(player.call("get_facing")) == FACING_SE, "%s facing SE" % id)
 		player.call("set_moving_for_test", true)
-		_assert(not bool(player.call("is_walk_playing")), "%s SE moving → not is_walk_playing" % id)
-		_assert(robot.visible, "%s SE moving → RobotSprite visible" % id)
-		var se_path: String = str(player.call("get_facing_texture_path", FORM_ROBOT))
-		_assert(se_path.ends_with("_se.png"), "%s SE static robot texture (got %s)" % [id, se_path])
+		_assert(bool(player.call("is_walk_playing")), "%s SE moving → is_walk_playing" % id)
+		_assert(walk.visible, "%s SE moving → WalkSprite visible" % id)
+		_assert(not robot.visible, "%s SE moving → RobotSprite hidden" % id)
+		_assert(walk.animation == "walk_se", "%s SE walk anim walk_se (got %s)" % [id, walk.animation])
 		player.call("set_moving_for_test", false)
+		_assert(robot.visible, "%s SE stop → RobotSprite visible" % id)
+		var se_path: String = str(player.call("get_facing_texture_path", FORM_ROBOT))
+		_assert(se_path.ends_with("_se.png"), "%s SE idle robot texture (got %s)" % [id, se_path])
 
 	player.queue_free()
 

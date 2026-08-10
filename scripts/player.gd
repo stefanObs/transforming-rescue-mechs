@@ -31,7 +31,7 @@ const TURN_BLEND_DECAY := 10.0
 ## Smear last move dir so sharp turns keep blend elevated for a few frames.
 const MOVE_DIR_SMEAR := 8.0
 const DIR_SUFFIX := ["n", "ne", "e", "se", "s", "sw", "w", "nw"]
-const WALK_DIRS := ["n", "e", "s"]
+const WALK_DIRS := ["n", "e", "s", "ne", "se"]
 const DIR_COUNT := 8
 const VEHICLE_BOB_AMP := 1.5
 const VEHICLE_BOB_HZ := 8.0
@@ -330,8 +330,7 @@ func _apply_facing_visuals() -> void:
 	if _vehicle_sprite:
 		_vehicle_sprite.flip_h = flip_vehicle
 	if _walk_sprite:
-		# W walk uses east frames + flip.
-		_walk_sprite.flip_h = _facing == Facing.W
+		_walk_sprite.flip_h = _walk_flip_h(_facing)
 	if _transform_sprite:
 		_transform_sprite.flip_h = flip_xform
 		_transform_sprite.rotation = 0.0
@@ -415,8 +414,8 @@ func _update_locomotion_visuals() -> void:
 				bob = sin(Time.get_ticks_msec() / 1000.0 * TAU * VEHICLE_BOB_HZ) * VEHICLE_BOB_AMP
 			_vehicle_sprite.offset.y = _vehicle_ground_oy + bob
 		return
-	# Robot form: walk cycles only for cardinals; diagonals stay on static dir art.
-	if _has_walk and _is_moving() and _facing_is_cardinal():
+	# Robot form: walk cycle for any facing when assets exist.
+	if _has_walk and _is_moving():
 		_start_walk()
 	else:
 		_stop_walk()
@@ -428,11 +427,9 @@ func _update_locomotion_visuals() -> void:
 func _start_walk() -> void:
 	if not _has_walk or _walk_sprite == null:
 		return
-	if not _facing_is_cardinal():
-		_stop_walk()
-		return
 	var anim := _walk_anim_name(_facing)
 	if not _walk_sprite.sprite_frames.has_animation(anim):
+		_stop_walk()
 		return
 	_walk_playing = true
 	if _robot_sprite:
@@ -440,7 +437,7 @@ func _start_walk() -> void:
 	_walk_sprite.visible = true
 	if _walk_sprite.animation != anim or not _walk_sprite.is_playing():
 		_walk_sprite.play(anim)
-	_walk_sprite.flip_h = _facing == Facing.W
+	_walk_sprite.flip_h = _walk_flip_h(_facing)
 	_align_walk_frame()
 
 
@@ -471,15 +468,23 @@ func _stop_walk() -> void:
 
 
 func _walk_anim_name(facing: Facing) -> String:
-	# Only called for cardinals; diagonals use static RobotSprite dir art.
 	match facing:
 		Facing.N:
 			return "walk_n"
 		Facing.S:
 			return "walk_s"
+		Facing.NE, Facing.NW:
+			return "walk_ne"
+		Facing.SE, Facing.SW:
+			return "walk_se"
 		_:
 			# E and W share east frames; W flips via flip_h.
 			return "walk_e"
+
+
+## True for west-side facings that mirror east-side walk art.
+func _walk_flip_h(facing: Facing) -> bool:
+	return facing == Facing.W or facing == Facing.NW or facing == Facing.SW
 
 
 func _update_shadow() -> void:

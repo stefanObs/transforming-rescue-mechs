@@ -4,7 +4,7 @@ extends SceneTree
 var _failed: int = 0
 
 const CHAR_IDS := ["bolt", "marina", "rush"]
-const WALK_DIRS := ["n", "e", "s"]
+const WALK_DIRS := ["n", "e", "s", "ne", "se"]
 const ART := "res://assets/art/"
 
 
@@ -98,6 +98,30 @@ func _test_player_walk_and_shadow() -> void:
 		player.call("set_moving_for_test", true)
 		_assert(walk.animation == "walk_e", "%s W uses walk_e" % id)
 		_assert(walk.flip_h == true, "%s W flip_h" % id)
+
+		player.call("update_facing_from_velocity", Vector2(1, 1))
+		player.call("set_moving_for_test", true)
+		_assert(bool(player.call("is_walk_playing")), "%s SE moving → is_walk_playing" % id)
+		_assert(walk.animation == "walk_se", "%s SE walk anim walk_se" % id)
+		_assert(walk.flip_h == false, "%s SE flip_h false" % id)
+
+		player.call("update_facing_from_velocity", Vector2(-1, 1))
+		player.call("set_moving_for_test", true)
+		_assert(bool(player.call("is_walk_playing")), "%s SW moving → is_walk_playing" % id)
+		_assert(walk.animation == "walk_se", "%s SW uses walk_se" % id)
+		_assert(walk.flip_h == true, "%s SW flip_h" % id)
+
+		player.call("update_facing_from_velocity", Vector2(1, -1))
+		player.call("set_moving_for_test", true)
+		_assert(bool(player.call("is_walk_playing")), "%s NE moving → is_walk_playing" % id)
+		_assert(walk.animation == "walk_ne", "%s NE walk anim walk_ne" % id)
+		_assert(walk.flip_h == false, "%s NE flip_h false" % id)
+
+		player.call("update_facing_from_velocity", Vector2(-1, -1))
+		player.call("set_moving_for_test", true)
+		_assert(bool(player.call("is_walk_playing")), "%s NW moving → is_walk_playing" % id)
+		_assert(walk.animation == "walk_ne", "%s NW uses walk_ne" % id)
+		_assert(walk.flip_h == true, "%s NW flip_h" % id)
 
 		player.call("set_moving_for_test", false)
 		_assert(not bool(player.call("is_walk_playing")), "%s stop → not is_walk_playing" % id)

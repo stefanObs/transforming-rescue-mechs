@@ -8,7 +8,7 @@ from PIL import Image
 
 ART = Path(__file__).resolve().parents[1] / "assets" / "art"
 CHARS = ("bolt", "marina", "rush")
-DIRS = ("n", "e", "s")
+DIRS = ("n", "e", "s", "ne", "se")
 
 
 def pad_group(paths: list[Path]) -> None:
