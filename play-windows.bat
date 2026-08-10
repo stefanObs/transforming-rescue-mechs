@@ -1,13 +1,27 @@
 @echo off
-setlocal EnableExtensions
+setlocal EnableExtensions EnableDelayedExpansion
 REM Start Transformierende Rettungsmechs on Windows without a preinstalled Godot editor.
-REM Preference: exported build → GODOT env → portable download into .tools\
+REM Preference: fresh exported build → GODOT env → portable download into .tools\
+REM Stale exports (older than project/art) are skipped so current sprites stay visible.
 
 set "ROOT=%~dp0"
 if "%ROOT:~-1%"=="\" set "ROOT=%ROOT:~0,-1%"
 
 set "EXPORT_EXE=%ROOT%\build\windows\TransformierendeRettungsmechs.exe"
+set "USE_EXPORT=0"
+
 if exist "%EXPORT_EXE%" (
+  powershell -NoProfile -ExecutionPolicy Bypass -Command ^
+    "$exe='%EXPORT_EXE%'; $root='%ROOT%'; $et=(Get-Item -LiteralPath $exe).LastWriteTimeUtc; $pt=(Get-Item -LiteralPath (Join-Path $root 'project.godot')).LastWriteTimeUtc; $artDir=Join-Path $root 'assets\art'; $at=$pt; if (Test-Path -LiteralPath $artDir) { $latest=Get-ChildItem -LiteralPath $artDir -File -Recurse -ErrorAction SilentlyContinue | Sort-Object LastWriteTimeUtc -Descending | Select-Object -First 1; if ($null -ne $latest) { $at=$latest.LastWriteTimeUtc } }; if ($pt -gt $et -or $at -gt $et) { exit 1 } else { exit 0 }"
+  if !ERRORLEVEL! EQU 0 (
+    set "USE_EXPORT=1"
+  ) else (
+    echo Hinweis: Export unter build\windows\ ist aelter als Projekt/Art — starte Projektmodus ^(aktuelle Sprites^).
+    echo          Neu bauen: Godot Export-Preset Windows, Ziel build\windows\
+  )
+)
+
+if "%USE_EXPORT%"=="1" (
   echo Starte exportiertes Spiel...
   "%EXPORT_EXE%" %*
   exit /b %ERRORLEVEL%
@@ -39,7 +53,7 @@ if not exist "%GODOT_EXE%" (
   powershell -NoProfile -ExecutionPolicy Bypass -Command ^
     "Invoke-WebRequest -Uri '%URL%' -OutFile '%ZIP%'"
   if errorlevel 1 (
-    echo Download fehlgeschlagen. Bitte Internetpruefen oder Godot installieren.
+    echo Download fehlgeschlagen. Bitte Internet pruefen oder Godot installieren.
     exit /b 1
   )
   powershell -NoProfile -ExecutionPolicy Bypass -Command ^

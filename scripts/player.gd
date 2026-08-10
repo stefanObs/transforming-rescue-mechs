@@ -541,9 +541,13 @@ func _load_character_art() -> void:
 	if ResourceLoader.exists(robot_path):
 		_robot_idle_tex = load(robot_path)
 		_robot_sprite.texture = _robot_idle_tex
+	else:
+		push_error("Missing robot art: %s" % robot_path)
 	if ResourceLoader.exists(vehicle_path):
 		_vehicle_idle_tex = load(vehicle_path)
 		_vehicle_sprite.texture = _vehicle_idle_tex
+	else:
+		push_error("Missing vehicle art: %s" % vehicle_path)
 	if ResourceLoader.exists(robot_turn_path):
 		_robot_turn_tex = load(robot_turn_path)
 	if ResourceLoader.exists(vehicle_turn_path):

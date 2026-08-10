@@ -52,7 +52,13 @@ func _ready() -> void:
 	)
 	if _player and _player.has_signal("form_changed"):
 		_player.form_changed.connect(_on_form_changed)
+	_sync_actor_z()
 	_refresh_status()
+
+
+func _sync_actor_z() -> void:
+	if _player:
+		_player.z_index = compute_actor_z(_player.global_position.y)
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -79,8 +85,7 @@ func _process(_delta: float) -> void:
 		return
 	if not _paused:
 		_refresh_status()
-		if _player:
-			_player.z_index = compute_actor_z(_player.global_position.y)
+		_sync_actor_z()
 
 
 

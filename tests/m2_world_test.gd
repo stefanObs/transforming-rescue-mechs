@@ -68,6 +68,21 @@ func _run() -> void:
 						_assert(not path.ends_with("tile_grass.png"), "props must not use tile_grass")
 						_assert(not path.ends_with("tile_road.png"), "props must not use tile_road")
 		_assert(prop_sprites >= 1, "landmark props present")
+		var player: Node = world.get_node_or_null("%Player")
+		_assert(player != null, "Player exists")
+		if player:
+			var robot: Sprite2D = player.get_node_or_null("RobotSprite") as Sprite2D
+			_assert(robot != null, "RobotSprite exists")
+			if robot:
+				_assert(robot.visible, "RobotSprite visible at spawn")
+				_assert(robot.texture != null, "RobotSprite has texture at spawn")
+				_assert(robot.modulate.a > 0.99, "RobotSprite opaque modulate")
+			var world_script: GDScript = load("res://scripts/world_sandbox.gd")
+			var expected_z: int = int(world_script.compute_actor_z(player.global_position.y))
+			_assert(
+				player.z_index == expected_z,
+				"Player z_index set in _ready (got %d want %d)" % [player.z_index, expected_z]
+			)
 		world.queue_free()
 
 	if _failed == 0:
