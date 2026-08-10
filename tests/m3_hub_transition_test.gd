@@ -5,10 +5,11 @@ extends SceneTree
 const WORLD_SCENE := "res://scenes/world_sandbox.tscn"
 const HUB_SCENE := "res://scenes/hub_station.tscn"
 const SPAWN_TOL := 2.0
-## Must match world_sandbox / GameState / hub_station defaults (south of hub collision).
-const DEFAULT_WORLD_SPAWN := Vector2(40, 420)
-const HUB_ENTER_POS := Vector2(40, 430)
+## Must match world_sandbox / GameState / hub_station defaults (Forrenberg, south of hub).
+const DEFAULT_WORLD_SPAWN := Vector2(490, 750)
+const HUB_ENTER_POS := Vector2(490, 760)
 ## player.tscn CapsuleShape2D: radius 14, height 40, offset (0, -12)
+## Godot capsule half-height along Y is height/2 (=20) + ends; use half extents matching shape.
 const PLAYER_CAPSULE_OFFSET := Vector2(0, -12)
 const PLAYER_CAPSULE_HALF := Vector2(14, 20)
 
@@ -47,7 +48,7 @@ func _test_game_state_spawn_api() -> void:
 		"reset restores default world_spawn_position"
 	)
 
-	var marker := Vector2(55, 440)
+	var marker := Vector2(510, 770)
 	_gs.call("set_world_spawn", marker)
 	_assert(bool(_gs.get("has_world_spawn")), "set_world_spawn sets flag")
 	_assert(_gs.get("world_spawn_position") == marker, "set_world_spawn stores position")
@@ -142,6 +143,21 @@ func _assert_hub_enter_clear_of_collision(world: Node, hub_enter: Area2D) -> voi
 		"HubEnter center capsule clear of hub BuildingCollision"
 	)
 
+	# Also clear of other Forrenberg solids (tankstelle was overlapping spawn).
+	var props: Node = world.get_node_or_null("%Props")
+	for body in _forrenberg_building_bodies(props):
+		var aabb := _static_body_aabb(body)
+		if not aabb.has_area():
+			continue
+		_assert(
+			not spawn_cap.intersects(aabb),
+			"default spawn clear of %s BuildingCollision" % body.get_parent().name
+		)
+		_assert(
+			not enter_cap.intersects(aabb),
+			"HubEnter clear of %s BuildingCollision" % body.get_parent().name
+		)
+
 	if hub_enter == null:
 		return
 	var enter_aabb := _area_aabb(hub_enter)
@@ -154,6 +170,22 @@ func _assert_hub_enter_clear_of_collision(world: Node, hub_enter: Area2D) -> voi
 		not enter_aabb.intersects(hub_aabb) or _usable_enter_strip_ok(enter_aabb, hub_aabb),
 		"HubEnter has usable strip clear of hub BuildingCollision"
 	)
+
+
+func _forrenberg_building_bodies(props: Node) -> Array[StaticBody2D]:
+	var out: Array[StaticBody2D] = []
+	if props == null:
+		return out
+	for node in _collect_nodes(props):
+		if not (node is Sprite2D):
+			continue
+		var spr := node as Sprite2D
+		if not spr.has_meta("district") or str(spr.get_meta("district")) != "forrenberg":
+			continue
+		var body := spr.get_node_or_null("BuildingCollision") as StaticBody2D
+		if body:
+			out.append(body)
+	return out
 
 
 func _usable_enter_strip_ok(enter_aabb: Rect2, hub_aabb: Rect2) -> bool:
@@ -223,7 +255,7 @@ func _test_hub_scene_and_exit_api() -> void:
 
 func _test_spawn_restore_on_world_ready() -> void:
 	_gs.call("reset_for_new_game")
-	var marker := Vector2(48, 435)
+	var marker := Vector2(500, 765)
 	_gs.call("set_world_spawn", marker)
 
 	var packed: Variant = load(WORLD_SCENE)

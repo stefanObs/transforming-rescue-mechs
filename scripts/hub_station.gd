@@ -2,7 +2,7 @@ extends Node2D
 ## Erdstation hub yard: Style-C backdrop + hub sprite + exit back to world.
 
 const WORLD_SCENE := "res://scenes/world_sandbox.tscn"
-const DEFAULT_WORLD_SPAWN := Vector2(40, 420)
+const DEFAULT_WORLD_SPAWN := Vector2(490, 750) # Tankstelle Forrenberg
 const ACTOR_Z_BASE := 2000
 
 @onready var _player: CharacterBody2D = %Player

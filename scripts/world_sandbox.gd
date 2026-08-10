@@ -13,9 +13,13 @@ const SCHOOL_SCALE := Vector2(0.28, 0.28)
 ## while staying above ground. Godot canvas z_index max is 4096.
 const ACTOR_Z_BASE := 2000
 const PROP_Z_BASE := 2000
-## South of hub BuildingCollision so player capsule (r=14,h=40,offset y=-12) stays clear.
-const HUB_ENTER_POS := Vector2(40, 430)
-const DEFAULT_WORLD_SPAWN := Vector2(40, 420)
+## Geo: +X east, +Y south; origin ≈ Reformierte Kirche. Hub at Tankstelle Forrenberg (A1).
+## Enter/spawn south of hub + tankstelle BuildingCollision (capsule clear).
+const HUB_ENTER_POS := Vector2(490, 760)
+const DEFAULT_WORLD_SPAWN := Vector2(490, 750)
+const COLOR_HILL := Color("4BB85A")
+const COLOR_HILL_2 := Color("3FA050")
+const COLOR_FOREST_FLOOR := Color("2F9A45")
 
 
 
@@ -124,7 +128,7 @@ func _refresh_status() -> void:
 	var hub_hint := ""
 	if _player_in_hub_enter:
 		hub_hint = " | %s — Erdstation betreten" % InputGlyphs.glyph_for("interact")
-	_status.text = "M3 Seuzach | %s | Form: %s | Münzen: %d%s" % [
+	_status.text = "M3 Seuzach+Ohringen | Hub Forrenberg | %s | Form: %s | Münzen: %d%s" % [
 		char_id.capitalize(), form_name, GameState.coins, hub_hint
 	]
 
@@ -134,27 +138,40 @@ func _build_flat_ground() -> void:
 		child.queue_free()
 
 	# Continuous grass — Style-C cel ground (no diamond checker / 3D tile sprites).
-	# Roughly x∈[-1400,1400], y∈[-900,1100].
+	# Geo slice: Ohringen SW → Bahnhof E → Badi N → Forrenberg S.
 	var base := Polygon2D.new()
 	base.color = COLOR_GRASS
 	base.z_index = -50
 	base.polygon = PackedVector2Array([
-		Vector2(-1400, -900), Vector2(1400, -900), Vector2(1400, 1100), Vector2(-1400, 1100),
+		Vector2(-1500, -1000), Vector2(1500, -1000), Vector2(1500, 1200), Vector2(-1500, 1200),
 	])
 	_ground.add_child(base)
 
-	# Large soft patches for organic feel (not a grid).
+	# Soft patches for organic feel (not a grid).
 	_add_grass_patch(Vector2(-320, -40), 160.0, 110.0, COLOR_GRASS_PATCH, -48)
 	_add_grass_patch(Vector2(280, 80), 140.0, 100.0, COLOR_GRASS_PATCH_2, -48)
-	_add_grass_patch(Vector2(-80, 280), 180.0, 90.0, COLOR_GRASS_PATCH, -48)
+	_add_grass_patch(Vector2(80, 280), 180.0, 90.0, COLOR_GRASS_PATCH, -48)
 	_add_grass_patch(Vector2(420, -180), 120.0, 130.0, COLOR_GRASS_PATCH_2, -48)
 	_add_grass_patch(Vector2(-480, 200), 100.0, 140.0, COLOR_GRASS_PATCH, -48)
-	_add_grass_patch(Vector2(-900, -400), 150.0, 120.0, COLOR_GRASS_PATCH_2, -48)
-	_add_grass_patch(Vector2(900, 60), 130.0, 100.0, COLOR_GRASS_PATCH, -48)
-	_add_grass_patch(Vector2(500, 700), 160.0, 110.0, COLOR_GRASS_PATCH_2, -48)
-	_add_grass_patch(Vector2(-200, -520), 140.0, 100.0, COLOR_GRASS_PATCH, -48)
-	_add_grass_patch(Vector2(400, -450), 120.0, 90.0, COLOR_GRASS_PATCH_2, -48)
-	_add_grass_patch(Vector2(-700, 220), 110.0, 100.0, COLOR_GRASS_PATCH, -48)
+	_add_grass_patch(Vector2(-900, 400), 150.0, 120.0, COLOR_GRASS_PATCH_2, -48)
+	_add_grass_patch(Vector2(900, -60), 130.0, 100.0, COLOR_GRASS_PATCH, -48)
+	_add_grass_patch(Vector2(460, -520), 160.0, 110.0, COLOR_GRASS_PATCH_2, -48)
+	_add_grass_patch(Vector2(490, 580), 140.0, 100.0, COLOR_GRASS_PATCH, -48)
+	_add_grass_patch(Vector2(-700, -80), 120.0, 90.0, COLOR_GRASS_PATCH_2, -48)
+
+	# Recognizable hills (Kirchhügel, Forrenberg, Erdbühl near Badi).
+	_add_hill_mound(Vector2(0, -20), 210.0, 140.0, COLOR_HILL, -46)
+	_add_hill_mound(Vector2(20, 10), 140.0, 90.0, COLOR_HILL_2, -45)
+	_add_hill_mound(Vector2(490, 560), 260.0, 150.0, COLOR_HILL, -46)
+	_add_hill_mound(Vector2(430, -580), 180.0, 110.0, COLOR_HILL_2, -46)
+
+	# Forest floors (Buechewäldli SE, Ohringen belt, north fringe, Weiherholz S of A1).
+	_add_grass_patch(Vector2(520, 380), 220.0, 160.0, COLOR_FOREST_FLOOR, -47)
+	_add_grass_patch(Vector2(-500, 280), 200.0, 140.0, COLOR_FOREST_FLOOR, -47)
+	_add_grass_patch(Vector2(200, -720), 180.0, 120.0, COLOR_FOREST_FLOOR, -47)
+	_add_grass_patch(Vector2(400, 920), 320.0, 180.0, COLOR_FOREST_FLOOR, -47)
+	_add_grass_patch(Vector2(800, 900), 260.0, 160.0, COLOR_FOREST_FLOOR, -47)
+	_add_grass_patch(Vector2(100, 950), 240.0, 140.0, COLOR_FOREST_FLOOR, -47)
 
 	_add_continuous_roads()
 
@@ -174,8 +191,17 @@ func _add_grass_patch(center: Vector2, rx: float, ry: float, color: Color, z: in
 	_ground.add_child(poly)
 
 
+func _add_hill_mound(center: Vector2, rx: float, ry: float, color: Color, z: int) -> void:
+	_add_grass_patch(center, rx, ry, color, z)
+	var marker := Node2D.new()
+	marker.name = "Hill_%d_%d" % [int(center.x), int(center.y)]
+	marker.position = center
+	marker.set_meta("terrain", "hill")
+	_ground.add_child(marker)
+
+
 func _add_continuous_roads() -> void:
-	# Connected Seuzach network (screen-axis). Sidewalk+centerline on main straights only.
+	# Geo-aligned Seuzach network (stilisiert). Sidewalk+centerline on main straights.
 	var main_opts := {
 		"sidewalk": true,
 		"centerline": true,
@@ -186,31 +212,44 @@ func _add_continuous_roads() -> void:
 		"centerline": false,
 		"half_w": ROAD_HALF_W * 0.85,
 	}
+	var a1_opts := {
+		"sidewalk": false,
+		"centerline": true,
+		"half_w": ROAD_HALF_W * 1.25,
+	}
 
-	# Main N–S through Dorfkern (Birch north → Badi south).
-	RoadKitLib.add_straight(_ground, Vector2(0, -650), Vector2(0, 900), main_opts)
+	# Winterthurerstrasse / Dorf N–S: Badi/Halden north → Forrenberg south.
+	RoadKitLib.add_straight(_ground, Vector2(80, -750), Vector2(200, 900), main_opts)
 
-	# Main E–W: Feuerwehr west ↔ Bahnhof east.
-	RoadKitLib.add_straight(_ground, Vector2(-900, 120), Vector2(1050, 120), main_opts)
+	# Ohringerstrasse / Dorfkern E–W toward Bahnhof.
+	RoadKitLib.add_straight(_ground, Vector2(-400, -40), Vector2(1050, -80), main_opts)
 
-	# Spur south to Feuerwehr landmark.
-	RoadKitLib.add_straight(_ground, Vector2(-700, 120), Vector2(-700, 260), branch_opts)
+	# Kirchgasse stub west to Kirchhügel.
+	RoadKitLib.add_straight(_ground, Vector2(-40, -40), Vector2(-40, 40), branch_opts)
 
-	# Road north-east to Schule Rietacker.
-	RoadKitLib.add_straight(_ground, Vector2(0, -450), Vector2(450, -450), branch_opts)
+	# Spur to Feuerwehr / Gemeindehaus (N of kern).
+	RoadKitLib.add_straight(_ground, Vector2(80, -200), Vector2(260, -360), branch_opts)
 
-	# Road north-west toward Ohringen.
-	RoadKitLib.add_straight(_ground, Vector2(0, -280), Vector2(-900, -350), branch_opts)
+	# Birch / Bachtobel east-northeast.
+	RoadKitLib.add_straight(_ground, Vector2(200, -80), Vector2(700, -180), branch_opts)
 
-	# Road south-east toward Badi Weiher.
-	RoadKitLib.add_diagonal(_ground, Vector2(0, 520), Vector2(520, 720), branch_opts)
+	# Landstrasse toward Badi Weiher (north).
+	RoadKitLib.add_straight(_ground, Vector2(200, -200), Vector2(460, -520), branch_opts)
 
-	# Roundabout SW of kern — clears N–S (x=0) and E–W (y=120); no centerline.
-	RoadKitLib.add_roundabout(_ground, Vector2(-520, 380), 160.0, ROAD_HALF_W, {
+	# Ohringerstrasse west → Unter-/Oberohringen (SW).
+	RoadKitLib.add_diagonal(_ground, Vector2(-200, 0), Vector2(-900, 480), branch_opts)
+
+	# Reutlingerstrasse / Forrenbergstrasse south-east toward St. Martin + A1.
+	RoadKitLib.add_straight(_ground, Vector2(200, 80), Vector2(520, 400), branch_opts)
+	RoadKitLib.add_straight(_ground, Vector2(400, 400), Vector2(490, 600), branch_opts)
+
+	# A1 hint past Forrenberg (E–W motorway strip).
+	RoadKitLib.add_straight(_ground, Vector2(-200, 780), Vector2(1100, 780), a1_opts)
+
+	# Roundabout near Landstrasse / Badi approach (stilisiert).
+	RoadKitLib.add_roundabout(_ground, Vector2(320, -320), 140.0, ROAD_HALF_W, {
 		"sidewalk": true,
 	})
-	# Short connector from E–W into roundabout approach.
-	RoadKitLib.add_straight(_ground, Vector2(-520, 120), Vector2(-520, 220), branch_opts)
 
 
 func _place_landmarks() -> void:
@@ -218,54 +257,78 @@ func _place_landmarks() -> void:
 		child.queue_free()
 	_prop_parent = _props
 
-	# --- Dorfkern ---
+	# --- Forrenberg: Hub + Tankstelle (Basisstation) ---
 	_add_prop(
 		"hub_station.png",
-		Vector2(40, 300),
+		Vector2(490, 600),
 		HUB_SCALE,
-		{"landmark_id": "hub_station", "district": "dorfkern"},
+		{"landmark_id": "hub_station", "district": "forrenberg"},
 		"hub_station"
 	)
 	_add_hub_enter_zone()
+	_add_prop(
+		"landmark_tankstelle_seuzach.png",
+		Vector2(680, 600),
+		LANDMARK_SCALE,
+		{"landmark_id": "tankstelle", "district": "forrenberg", "poi_type": "fuel"},
+		"landmark_tankstelle"
+	)
+	# Sportanlage Rolli — north of A1 / near Forrenberg (Maps).
+	_add_prop(
+		"landmark_sportplatz.png",
+		Vector2(420, 480),
+		LANDMARK_SCALE,
+		{"landmark_id": "sportplatz_rolli", "district": "forrenberg", "poi_type": "sport"},
+		"landmark_sportplatz_rolli"
+	)
+
+	# --- Dorfkern / Kirchhügel ---
 	var church := _add_prop(
 		"landmark_kirche_seuzach.png",
-		Vector2(220, -40),
+		Vector2(0, 0),
 		PROP_SCALE,
-		{"landmark_id": "kirche_seuzach", "district": "dorfkern"},
+		{"landmark_id": "kirche_seuzach", "district": "dorfkern", "on_hill": true},
 		"landmark_kirche_seuzach"
 	)
 	if church == null:
 		_add_prop(
 			"tile_church.png",
-			Vector2(220, -40),
+			Vector2(0, 0),
 			PROP_SCALE,
-			{"landmark_id": "kirche_seuzach", "district": "dorfkern"},
+			{"landmark_id": "kirche_seuzach", "district": "dorfkern", "on_hill": true},
 			"landmark_kirche_seuzach"
 		)
 	_add_prop(
 		"landmark_gemeindehaus_seuzach.png",
-		Vector2(-80, 40),
+		Vector2(230, -320),
 		LANDMARK_SCALE,
 		{"landmark_id": "gemeindehaus", "district": "dorfkern"},
 		"landmark_gemeindehaus"
 	)
 	_add_prop(
+		"landmark_feuerwehr_seuzach.png",
+		Vector2(260, -360),
+		LANDMARK_SCALE,
+		{"landmark_id": "feuerwehr", "district": "feuerwehr"},
+		"landmark_feuerwehr"
+	)
+	_add_prop(
 		"landmark_restaurant_a.png",
-		Vector2(120, 200),
+		Vector2(120, 80),
 		PROP_SCALE,
 		{"landmark_id": "restaurant_a", "poi_type": "restaurant", "district": "dorfkern"},
 		"landmark_restaurant_a"
 	)
 	_add_prop(
 		"landmark_laden_a.png",
-		Vector2(-200, 100),
+		Vector2(-120, 60),
 		PROP_SCALE,
 		{"landmark_id": "laden_a", "poi_type": "shop", "district": "dorfkern"},
 		"landmark_laden_a"
 	)
 	_add_prop(
 		"landmark_laden_b.png",
-		Vector2(60, 60),
+		Vector2(100, -60),
 		PROP_SCALE,
 		{"landmark_id": "laden_b", "poi_type": "shop", "district": "dorfkern"},
 		"landmark_laden_b"
@@ -279,78 +342,93 @@ func _place_landmarks() -> void:
 	)
 	_add_prop(
 		"house_b.png",
-		Vector2(160, 80),
+		Vector2(160, 100),
 		PROP_SCALE,
 		{"house_variant": "b", "district": "dorfkern"},
 		"house_kern_b"
 	)
 	_add_prop(
 		"house_c.png",
-		Vector2(-100, 160),
+		Vector2(-80, 140),
 		PROP_SCALE,
 		{"house_variant": "c", "district": "dorfkern"},
 		"house_kern_c"
 	)
 	_add_prop(
 		"house_d.png",
-		Vector2(280, 180),
+		Vector2(280, 140),
 		PROP_SCALE,
 		{"house_variant": "d", "district": "dorfkern"},
 		"house_kern_d"
 	)
 
+	# St. Martin (modern) SE of Kirchhügel near Buechewäldli — not a fake Ohringen church.
+	var st_martin := _add_prop(
+		"landmark_kirche_st_martin.png",
+		Vector2(420, 320),
+		PROP_SCALE,
+		{"landmark_id": "kirche_st_martin", "district": "dorfkern"},
+		"landmark_kirche_st_martin"
+	)
+	if st_martin == null:
+		_add_prop(
+			"landmark_kirche_ohringen.png",
+			Vector2(420, 320),
+			PROP_SCALE,
+			{"landmark_id": "kirche_st_martin", "district": "dorfkern"},
+			"landmark_kirche_st_martin"
+		)
+
 	# --- Bahnhof (east) ---
 	_add_prop(
 		"landmark_bahnhof_seuzach.png",
-		Vector2(900, 80),
+		Vector2(890, -130),
 		LANDMARK_SCALE,
 		{"landmark_id": "bahnhof", "district": "bahnhof"},
 		"landmark_bahnhof"
 	)
 	_add_prop(
 		"landmark_laden_c.png",
-		Vector2(780, 40),
+		Vector2(780, -40),
 		PROP_SCALE,
 		{"landmark_id": "laden_c", "poi_type": "shop", "district": "bahnhof"},
 		"landmark_laden_c"
 	)
 	_add_prop(
-		"landmark_tankstelle_seuzach.png",
-		Vector2(650, 200),
-		LANDMARK_SCALE,
-		{"landmark_id": "tankstelle", "district": "bahnhof"},
-		"landmark_tankstelle"
-	)
-
-	# --- Feuerwehr (west-south) ---
-	_add_prop(
-		"landmark_feuerwehr_seuzach.png",
-		Vector2(-700, 200),
-		LANDMARK_SCALE,
-		{"landmark_id": "feuerwehr", "district": "feuerwehr"},
-		"landmark_feuerwehr"
-	)
-	_add_prop(
 		"landmark_restaurant_b.png",
-		Vector2(-600, 80),
+		Vector2(820, 40),
 		PROP_SCALE,
-		{"landmark_id": "restaurant_b", "poi_type": "restaurant", "district": "feuerwehr"},
+		{"landmark_id": "restaurant_b", "poi_type": "restaurant", "district": "bahnhof"},
 		"landmark_restaurant_b"
 	)
 
-	# --- Badi Weiher (south-east) ---
+	# --- Badi Weiher (north) + Sport ---
 	_add_prop(
 		"landmark_badi_weiher.png",
-		Vector2(500, 700),
+		Vector2(460, -550),
 		LANDMARK_SCALE,
 		{"landmark_id": "badi_weiher", "district": "badi"},
 		"landmark_badi_weiher"
 	)
+	_add_prop(
+		"landmark_sportplatz.png",
+		Vector2(560, -640),
+		LANDMARK_SCALE,
+		{"landmark_id": "sportplatz", "district": "badi", "poi_type": "sport"},
+		"landmark_sportplatz"
+	)
+	_add_prop(
+		"landmark_spielplatz.png",
+		Vector2(400, -480),
+		PROP_SCALE,
+		{"landmark_id": "spielplatz_badi", "district": "badi", "poi_type": "playground"},
+		"landmark_spielplatz_badi"
+	)
 
-	# --- Kindergärten ---
+	# --- Kindergärten (OSM-nahe) ---
 	_add_prop(
 		"landmark_kiga_bachtobel.png",
-		Vector2(-400, -200),
+		Vector2(760, -380),
 		PROP_SCALE,
 		{
 			"landmark_id": "kiga_bachtobel",
@@ -361,18 +439,18 @@ func _place_landmarks() -> void:
 	)
 	_add_prop(
 		"landmark_kiga_weid.png",
-		Vector2(100, -280),
+		Vector2(750, 40),
 		PROP_SCALE,
 		{
 			"landmark_id": "kiga_weid",
 			"kindergarten_id": "kiga_weid",
-			"district": "dorfkern",
+			"district": "bahnhof",
 		},
 		"landmark_kiga_weid"
 	)
 	_add_prop(
 		"landmark_kiga_schneckenwiese.png",
-		Vector2(550, -200),
+		Vector2(310, -100),
 		PROP_SCALE,
 		{
 			"landmark_id": "kiga_schneckenwiese",
@@ -381,40 +459,103 @@ func _place_landmarks() -> void:
 		},
 		"landmark_kiga_schneckenwiese"
 	)
+	_add_prop(
+		"landmark_spielplatz.png",
+		Vector2(280, -40),
+		PROP_SCALE,
+		{"landmark_id": "spielplatz_schneckenwiese", "district": "rietacker", "poi_type": "playground"},
+		"landmark_spielplatz_schneckenwiese"
+	)
 
-	# --- Schule Birch (north cluster) ---
+	# --- Schule Birch (east, near Bahnhof) ---
 	_add_prop(
 		"landmark_schulhaus_birch_a.png",
-		Vector2(-240, -500),
+		Vector2(620, -180),
 		SCHOOL_SCALE,
 		{"landmark_id": "schulhaus_birch", "school_cluster": "birch", "district": "birch"},
 		"schulhaus_birch_a"
 	)
 	_add_prop(
 		"landmark_schulhaus_birch_b.png",
-		Vector2(-140, -520),
+		Vector2(700, -160),
 		SCHOOL_SCALE,
 		{"landmark_id": "schulhaus_birch", "school_cluster": "birch", "district": "birch"},
 		"schulhaus_birch_b"
 	)
+	_add_prop(
+		"landmark_turnhalle_birch.png",
+		Vector2(660, -100),
+		SCHOOL_SCALE,
+		{"landmark_id": "turnhalle_birch", "school_cluster": "birch", "district": "birch", "poi_type": "gym"},
+		"turnhalle_birch"
+	)
 
-	# --- Schule Rietacker (north-east cluster) ---
+	# --- Schule Rietacker + Sporthalle (north of Kirchhügel) ---
 	_add_prop(
 		"landmark_schulhaus_rietacker_a.png",
-		Vector2(360, -440),
+		Vector2(40, -260),
 		SCHOOL_SCALE,
 		{"landmark_id": "schulhaus_rietacker", "school_cluster": "rietacker", "district": "rietacker"},
 		"schulhaus_rietacker_a"
 	)
 	_add_prop(
 		"landmark_schulhaus_rietacker_b.png",
-		Vector2(460, -460),
+		Vector2(120, -250),
 		SCHOOL_SCALE,
 		{"landmark_id": "schulhaus_rietacker", "school_cluster": "rietacker", "district": "rietacker"},
 		"schulhaus_rietacker_b"
 	)
+	_add_prop(
+		"landmark_turnhalle_rietacker.png",
+		Vector2(10, -220),
+		SCHOOL_SCALE,
+		{
+			"landmark_id": "turnhalle_rietacker",
+			"school_cluster": "rietacker",
+			"district": "rietacker",
+			"poi_type": "gym",
+		},
+		"turnhalle_rietacker"
+	)
 
-	# --- Ohringen district (north-west) ---
+	# --- Forests ---
+	_add_prop(
+		"landmark_wald_a.png",
+		Vector2(520, 380),
+		LANDMARK_SCALE,
+		{"landmark_id": "wald_buechewaeldli", "district": "dorfkern", "terrain": "forest"},
+		"wald_buechewaeldli"
+	)
+	_add_prop(
+		"landmark_wald_b.png",
+		Vector2(-480, 260),
+		LANDMARK_SCALE,
+		{"landmark_id": "wald_ohringen_belt", "district": "ohringen", "terrain": "forest"},
+		"wald_ohringen_belt"
+	)
+	_add_prop(
+		"landmark_wald_a.png",
+		Vector2(180, -720),
+		LANDMARK_SCALE,
+		{"landmark_id": "wald_nord", "district": "badi", "terrain": "forest"},
+		"wald_nord"
+	)
+	_add_prop(
+		"landmark_wald_b.png",
+		Vector2(450, 920),
+		LANDMARK_SCALE,
+		{"landmark_id": "wald_weiherholz", "district": "forrenberg", "terrain": "forest"},
+		"wald_weiherholz"
+	)
+	_add_prop(
+		"landmark_wald_a.png",
+		Vector2(780, 900),
+		LANDMARK_SCALE,
+		{"landmark_id": "wald_eggenzahn", "district": "forrenberg", "terrain": "forest"},
+		"wald_eggenzahn"
+	)
+
+	# --- Ohringen district (south-west) ---
 	var ohringen := Node2D.new()
 	ohringen.name = "DistrictOhringen"
 	ohringen.set_meta("district", "ohringen")
@@ -424,21 +565,33 @@ func _place_landmarks() -> void:
 
 	_add_prop(
 		"landmark_schulhaus_ohringen_a.png",
-		Vector2(-940, -360),
+		Vector2(-900, 500),
 		SCHOOL_SCALE,
 		{"landmark_id": "schulhaus_ohringen", "school_cluster": "ohringen", "district": "ohringen"},
 		"schulhaus_ohringen_a"
 	)
 	_add_prop(
 		"landmark_schulhaus_ohringen_b.png",
-		Vector2(-840, -340),
+		Vector2(-820, 520),
 		SCHOOL_SCALE,
 		{"landmark_id": "schulhaus_ohringen", "school_cluster": "ohringen", "district": "ohringen"},
 		"schulhaus_ohringen_b"
 	)
 	_add_prop(
+		"landmark_turnhalle_ohringen.png",
+		Vector2(-860, 560),
+		SCHOOL_SCALE,
+		{
+			"landmark_id": "turnhalle_ohringen",
+			"school_cluster": "ohringen",
+			"district": "ohringen",
+			"poi_type": "gym",
+		},
+		"turnhalle_ohringen"
+	)
+	_add_prop(
 		"landmark_kiga_ohringen.png",
-		Vector2(-1000, -280),
+		Vector2(-860, 460),
 		PROP_SCALE,
 		{
 			"landmark_id": "kiga_ohringen",
@@ -448,36 +601,36 @@ func _place_landmarks() -> void:
 		"landmark_kiga_ohringen"
 	)
 	_add_prop(
-		"landmark_kirche_ohringen.png",
-		Vector2(-820, -280),
+		"landmark_spielplatz.png",
+		Vector2(-800, 480),
 		PROP_SCALE,
-		{"landmark_id": "kirche_ohringen", "district": "ohringen"},
-		"landmark_kirche_ohringen"
+		{"landmark_id": "spielplatz_ohringen", "district": "ohringen", "poi_type": "playground"},
+		"landmark_spielplatz_ohringen"
 	)
 	_add_prop(
 		"house_a.png",
-		Vector2(-1100, -220),
+		Vector2(-760, -60),
 		PROP_SCALE,
 		{"house_variant": "a", "district": "ohringen"},
-		"house_ohringen_a"
+		"house_unterohringen_a"
 	)
 	_add_prop(
 		"house_b.png",
-		Vector2(-720, -320),
+		Vector2(-720, 420),
 		PROP_SCALE,
 		{"house_variant": "b", "district": "ohringen"},
 		"house_ohringen_b"
 	)
 	_add_prop(
 		"house_c.png",
-		Vector2(-880, -220),
+		Vector2(-980, 440),
 		PROP_SCALE,
 		{"house_variant": "c", "district": "ohringen"},
 		"house_ohringen_c"
 	)
 	_add_prop(
 		"house_farm.png",
-		Vector2(-1040, -400),
+		Vector2(-1040, 360),
 		PROP_SCALE,
 		{"house_variant": "farm", "district": "ohringen"},
 		"house_ohringen_farm"
