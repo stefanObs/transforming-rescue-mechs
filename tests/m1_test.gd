@@ -23,7 +23,7 @@ func _run() -> void:
 		_assert(str(glyphs.call("glyph_for", "transform", 1)) == "B", "xbox glyph transform=B")
 
 	_test_player_transform()
-	_test_iso_helper()
+	_test_screen_move_helper()
 
 	if _failed == 0:
 		print("=== m1_test PASS ===")
@@ -65,14 +65,15 @@ func _test_player_transform() -> void:
 	player.queue_free()
 
 
-func _test_iso_helper() -> void:
+func _test_screen_move_helper() -> void:
 	var packed: Variant = load("res://scenes/player.tscn")
 	if not (packed is PackedScene):
 		return
 	var player: Node = (packed as PackedScene).instantiate()
 	root.add_child(player)
+	# Locomotion is screen-aligned; _cartesian_to_iso is a deprecated identity.
 	var east: Vector2 = player.call("_cartesian_to_iso", Vector2(1, 0))
 	var south: Vector2 = player.call("_cartesian_to_iso", Vector2(0, 1))
-	_assert(is_equal_approx(east.x, 1.0) and is_equal_approx(east.y, 0.5), "iso east vector")
-	_assert(is_equal_approx(south.x, -1.0) and is_equal_approx(south.y, 0.5), "iso south vector")
+	_assert(is_equal_approx(east.x, 1.0) and is_equal_approx(east.y, 0.0), "screen east identity")
+	_assert(is_equal_approx(south.x, 0.0) and is_equal_approx(south.y, 1.0), "screen south identity")
 	player.queue_free()

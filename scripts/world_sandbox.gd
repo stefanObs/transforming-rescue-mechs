@@ -25,9 +25,6 @@ const COLOR_GRASS := Color("3DCC5A")
 ## Soft organic patches (not a checker tile pattern).
 const COLOR_GRASS_PATCH := Color("36C053")
 const COLOR_GRASS_PATCH_2 := Color("45D468")
-## Iso diamond half-size (used for road ribbon endpoints in iso space).
-const TILE_HW := 56.0
-const TILE_HH := 28.0
 const ROAD_HALF_W := 78.0
 
 @onready var _player: CharacterBody2D = %Player
@@ -145,48 +142,38 @@ func _add_grass_patch(center: Vector2, rx: float, ry: float, color: Color, z: in
 
 
 func _add_continuous_roads() -> void:
-	# RoadKit demo: main + cross + diagonal + roundabout (away from spawn).
-	var v_a := _iso_center(0, -4)
-	var v_b := _iso_center(0, 5)
-	RoadKitLib.add_straight(_ground, v_a, v_b, {
+	# Screen-axis RoadKit: vertical main, horizontal cross, one diagonal, roundabout.
+	RoadKitLib.add_straight(_ground, Vector2(0, -350), Vector2(0, 400), {
 		"sidewalk": true,
 		"centerline": true,
 		"half_w": ROAD_HALF_W,
 	})
 
-	var h_a := _iso_center(-6, 2)
-	var h_b := _iso_center(6, 2)
-	RoadKitLib.add_straight(_ground, h_a, h_b, {
+	RoadKitLib.add_straight(_ground, Vector2(-450, 80), Vector2(450, 80), {
+		"sidewalk": true,
 		"centerline": true,
 		"half_w": ROAD_HALF_W * 0.85,
 	})
 
-	var d_a := _iso_center(3, -2)
-	var d_b := _iso_center(7, 1)
-	RoadKitLib.add_diagonal(_ground, d_a, d_b, {
+	RoadKitLib.add_diagonal(_ground, Vector2(120, 120), Vector2(380, 320), {
 		"centerline": true,
 		"half_w": ROAD_HALF_W * 0.7,
 	})
 
-	# Off to the SW — clears player spawn at (0, 40).
-	var rb_center := _iso_center(-9, 6)
-	RoadKitLib.add_roundabout(_ground, rb_center, 95.0, 30.0, {
+	# SW of spawn (0, 40) — clears the crossroads.
+	RoadKitLib.add_roundabout(_ground, Vector2(-280, 280), 95.0, 30.0, {
 		"sidewalk": true,
 		"centerline": true,
 	})
 
 
-func _iso_center(x: int, y: int) -> Vector2:
-	return Vector2((x - y) * TILE_HW, (x + y) * TILE_HH)
-
-
 func _place_landmarks() -> void:
 	for child in _props.get_children():
 		child.queue_free()
-	# Spaced landmark sprites only — never used as repeating ground tiles.
-	_add_prop("tile_house.png", Vector2(-280, 20), PROP_SCALE)
-	_add_prop("tile_church.png", Vector2(300, -20), PROP_SCALE)
-	_add_prop("hub_station.png", Vector2(40, 220), HUB_SCALE)
+	# Spaced landmark sprites on/near screen-axis roads.
+	_add_prop("tile_house.png", Vector2(-140, -60), PROP_SCALE)
+	_add_prop("tile_church.png", Vector2(260, 40), PROP_SCALE)
+	_add_prop("hub_station.png", Vector2(40, 300), HUB_SCALE)
 
 
 func _add_prop(file_name: String, pos: Vector2, scale: Vector2) -> void:

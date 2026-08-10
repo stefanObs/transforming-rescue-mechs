@@ -67,19 +67,20 @@ func _test_facing() -> void:
 	var robot: Sprite2D = player.get_node("RobotSprite")
 	var vehicle: Sprite2D = player.get_node("VehicleSprite")
 
+	# Facing: N=0 NE=1 E=2 SE=3 S=4 SW=5 W=6 NW=7
 	player.call("update_facing_from_velocity", Vector2(-1, 0))
-	_assert(int(player.call("get_facing")) == 3, "left move → facing W")
+	_assert(int(player.call("get_facing")) == 6, "left move → facing W")
 	_assert(is_equal_approx(robot.rotation, 0.0), "no turn → robot lean 0")
 
 	player.call("update_facing_from_velocity", Vector2(1, 0))
-	_assert(int(player.call("get_facing")) == 1, "right move → facing E")
+	_assert(int(player.call("get_facing")) == 2, "right move → facing E")
 	_assert(robot.flip_h == false, "right move → robot flip_h false")
 	_assert(vehicle.flip_h == false, "right move → vehicle flip_h false")
 
 	player.call("set_form", 1) # Form.VEHICLE
 	player.call("update_facing_from_velocity", Vector2(-0.5, 0.5))
-	# Dominant axis is x → W
-	_assert(int(player.call("get_facing")) == 3, "vehicle leftish → facing W")
+	# 8-dir: down+left → SW
+	_assert(int(player.call("get_facing")) == 5, "vehicle leftish → facing SW")
 	_assert(is_equal_approx(vehicle.rotation, 0.0), "no turn → vehicle lean 0")
 
 	var facing_before := int(player.call("get_facing"))

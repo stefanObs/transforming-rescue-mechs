@@ -1,8 +1,9 @@
 extends CharacterBody2D
-## Player with Style C sprites, robot/vehicle forms, transform anim, 4-dir facing.
+## Player with Style C sprites, robot/vehicle forms, transform anim, 8-dir facing.
+## Locomotion is screen-aligned (arrow down = +y on screen); no iso skew.
 
 enum Form { ROBOT, VEHICLE }
-enum Facing { N, E, S, W }
+enum Facing { N, NE, E, SE, S, SW, W, NW }
 
 signal form_changed(new_form: Form)
 
@@ -32,8 +33,9 @@ const TURN_BLEND_RESPOND := 14.0
 const TURN_BLEND_DECAY := 10.0
 ## Smear last move dir so sharp turns keep blend elevated for a few frames.
 const MOVE_DIR_SMEAR := 8.0
-const DIR_SUFFIX := ["n", "e", "s", "w"]
+const DIR_SUFFIX := ["n", "ne", "e", "se", "s", "sw", "w", "nw"]
 const WALK_DIRS := ["n", "e", "s"]
+const DIR_COUNT := 8
 const VEHICLE_BOB_AMP := 1.5
 const VEHICLE_BOB_HZ := 8.0
 const SHADOW_SCALE_ROBOT := Vector2(1.0, 1.0)
@@ -52,11 +54,11 @@ var _robot_idle_tex: Texture2D
 var _vehicle_idle_tex: Texture2D
 var _robot_turn_tex: Texture2D
 var _vehicle_turn_tex: Texture2D
-## Indexed by Facing: N=0 E=1 S=2 W=3
-var _robot_dir: Array = [null, null, null, null]
-var _vehicle_dir: Array = [null, null, null, null]
-var _robot_has_dir: Array = [false, false, false, false]
-var _vehicle_has_dir: Array = [false, false, false, false]
+## Indexed by Facing: N NE E SE S SW W NW
+var _robot_dir: Array = [null, null, null, null, null, null, null, null]
+var _vehicle_dir: Array = [null, null, null, null, null, null, null, null]
+var _robot_has_dir: Array = [false, false, false, false, false, false, false, false]
+var _vehicle_has_dir: Array = [false, false, false, false, false, false, false, false]
 ## Flip W when no dedicated W art (mirror E or idle).
 var _robot_flip_w := false
 var _vehicle_flip_w := false
@@ -101,15 +103,14 @@ func _physics_process(delta: float) -> void:
 		return
 
 	var input_vec := Input.get_vector("move_left", "move_right", "move_up", "move_down")
-	var iso := _cartesian_to_iso(input_vec)
 	var speed := _vehicle_speed() if form == Form.VEHICLE else SPEED_ROBOT
-	if iso.length() > MOVE_EPS:
-		velocity = iso.normalized() * speed
+	# Screen-space locomotion: arrow down = +y (south), no iso skew.
+	if input_vec.length() > MOVE_EPS:
+		velocity = input_vec.normalized() * speed
 	else:
 		velocity = Vector2.ZERO
 	move_and_slide()
 	_update_turn_blend(delta)
-	# Facing from pre-iso input so keyboard up → N (heck), not post-iso E.
 	if input_vec.length() > MOVE_EPS:
 		update_facing_from_velocity(input_vec)
 	else:
@@ -207,13 +208,26 @@ func get_facing() -> int:
 	return int(_facing)
 
 
-## Dominant-axis facing from screen velocity: −y=N, +y=S, +x=E, −x=W.
+## 8-dir facing from screen velocity via atan2: +x=E, +y=S, −y=N.
+## Sectors are 45° each, centered on the cardinals/diagonals.
 static func facing_from_velocity(vel: Vector2) -> Facing:
 	if absf(vel.x) < MOVE_EPS and absf(vel.y) < MOVE_EPS:
 		return Facing.S
-	if absf(vel.x) >= absf(vel.y):
-		return Facing.E if vel.x > 0.0 else Facing.W
-	return Facing.N if vel.y < 0.0 else Facing.S
+	var angle := atan2(vel.y, vel.x)
+	# Sector 0 = E at angle 0; then SE, S, SW, W, NW, N, NE.
+	var sector := int(floor((angle + PI / 8.0) / (PI / 4.0)))
+	sector = ((sector % 8) + 8) % 8
+	const SECTOR_TO_FACING: Array[Facing] = [
+		Facing.E,
+		Facing.SE,
+		Facing.S,
+		Facing.SW,
+		Facing.W,
+		Facing.NW,
+		Facing.N,
+		Facing.NE,
+	]
+	return SECTOR_TO_FACING[sector]
 
 
 func get_turn_blend() -> float:
@@ -226,12 +240,10 @@ func uses_dir_textures() -> bool:
 
 func _form_has_dir_art(which: Form) -> bool:
 	var has: Array = _vehicle_has_dir if which == Form.VEHICLE else _robot_has_dir
-	return (
-		bool(has[Facing.N])
-		or bool(has[Facing.E])
-		or bool(has[Facing.S])
-		or bool(has[Facing.W])
-	)
+	for i in range(DIR_COUNT):
+		if bool(has[i]):
+			return true
+	return false
 
 
 func is_using_turn_pose() -> bool:
@@ -365,8 +377,9 @@ func _texture_for(which: Form) -> Texture2D:
 	return _robot_idle_tex
 
 
+## Deprecated identity: locomotion is screen-aligned; kept for older tests.
 func _cartesian_to_iso(input: Vector2) -> Vector2:
-	return Vector2(input.x - input.y, (input.x + input.y) * 0.5)
+	return input
 
 
 func _is_moving() -> bool:
@@ -441,9 +454,9 @@ func _stop_walk() -> void:
 
 func _walk_anim_name(facing: Facing) -> String:
 	match facing:
-		Facing.N:
+		Facing.N, Facing.NE, Facing.NW:
 			return "walk_n"
-		Facing.S:
+		Facing.S, Facing.SE, Facing.SW:
 			return "walk_s"
 		_:
 			# E and W share east frames; W flips via flip_h.
@@ -499,10 +512,10 @@ func _load_character_art() -> void:
 	_vehicle_idle_tex = null
 	_robot_turn_tex = null
 	_vehicle_turn_tex = null
-	_robot_dir = [null, null, null, null]
-	_vehicle_dir = [null, null, null, null]
-	_robot_has_dir = [false, false, false, false]
-	_vehicle_has_dir = [false, false, false, false]
+	_robot_dir = [null, null, null, null, null, null, null, null]
+	_vehicle_dir = [null, null, null, null, null, null, null, null]
+	_robot_has_dir = [false, false, false, false, false, false, false, false]
+	_vehicle_has_dir = [false, false, false, false, false, false, false, false]
 	_robot_flip_w = false
 	_vehicle_flip_w = false
 	_has_walk = false
@@ -518,19 +531,9 @@ func _load_character_art() -> void:
 		_vehicle_turn_tex = load(vehicle_turn_path)
 	_load_dir_textures("robot", _robot_idle_tex, _robot_dir, _robot_has_dir)
 	_load_dir_textures("vehicle", _vehicle_idle_tex, _vehicle_dir, _vehicle_has_dir)
-	# W fallback: mirror E if present, else mirror idle.
-	_robot_flip_w = not bool(_robot_has_dir[Facing.W])
-	if _robot_flip_w:
-		if bool(_robot_has_dir[Facing.E]) and _robot_dir[Facing.E] != null:
-			_robot_dir[Facing.W] = _robot_dir[Facing.E]
-		else:
-			_robot_dir[Facing.W] = _robot_idle_tex
-	_vehicle_flip_w = not bool(_vehicle_has_dir[Facing.W])
-	if _vehicle_flip_w:
-		if bool(_vehicle_has_dir[Facing.E]) and _vehicle_dir[Facing.E] != null:
-			_vehicle_dir[Facing.W] = _vehicle_dir[Facing.E]
-		else:
-			_vehicle_dir[Facing.W] = _vehicle_idle_tex
+	_apply_cardinal_flip_fallbacks()
+	_apply_diagonal_fallbacks(_robot_dir, _robot_has_dir, true)
+	_apply_diagonal_fallbacks(_vehicle_dir, _vehicle_has_dir, false)
 	_robot_sprite.scale = SPRITE_SCALE
 	_vehicle_sprite.scale = SPRITE_SCALE
 	_robot_sprite.centered = true
@@ -612,15 +615,53 @@ func _load_dir_textures(
 	out_dirs: Array,
 	out_has: Array
 ) -> void:
-	for i in range(4):
+	for i in range(DIR_COUNT):
 		var path := ART + "%s_%s_%s.png" % [character_id, form_name, DIR_SUFFIX[i]]
 		if ResourceLoader.exists(path):
-			out_dirs[i] = load(path)
-			out_has[i] = true
+			var tex: Texture2D = load(path) as Texture2D
+			if tex != null:
+				out_dirs[i] = tex
+				out_has[i] = true
+				continue
+		out_dirs[i] = idle
+		out_has[i] = false
+
+
+func _apply_cardinal_flip_fallbacks() -> void:
+	# W fallback: mirror E if present, else mirror idle (flip_h).
+	_robot_flip_w = not bool(_robot_has_dir[Facing.W])
+	if _robot_flip_w:
+		if bool(_robot_has_dir[Facing.E]) and _robot_dir[Facing.E] != null:
+			_robot_dir[Facing.W] = _robot_dir[Facing.E]
 		else:
-			# Fallbacks: s/e/n ← idle; w handled by caller (flip).
-			out_dirs[i] = idle
-			out_has[i] = false
+			_robot_dir[Facing.W] = _robot_idle_tex
+	_vehicle_flip_w = not bool(_vehicle_has_dir[Facing.W])
+	if _vehicle_flip_w:
+		if bool(_vehicle_has_dir[Facing.E]) and _vehicle_dir[Facing.E] != null:
+			_vehicle_dir[Facing.W] = _vehicle_dir[Facing.E]
+		else:
+			_vehicle_dir[Facing.W] = _vehicle_idle_tex
+
+
+## Missing diagonals fall back to cardinals (prefer S for SE/SW front).
+func _apply_diagonal_fallbacks(dirs: Array, has: Array, _prefer_s_for_front: bool) -> void:
+	_fill_diag_slot(dirs, has, Facing.SE, [Facing.S, Facing.E])
+	_fill_diag_slot(dirs, has, Facing.SW, [Facing.S, Facing.W])
+	_fill_diag_slot(dirs, has, Facing.NE, [Facing.N, Facing.E])
+	_fill_diag_slot(dirs, has, Facing.NW, [Facing.N, Facing.W])
+
+
+func _fill_diag_slot(dirs: Array, has: Array, slot: Facing, prefs: Array) -> void:
+	if bool(has[slot]) and dirs[slot] != null:
+		return
+	for pref in prefs:
+		var p: int = int(pref)
+		if dirs[p] != null:
+			dirs[slot] = dirs[p]
+			has[slot] = false
+			return
+	# Last resort: leave whatever idle was assigned at load.
+	has[slot] = false
 
 
 func _play_transform(to_vehicle: bool) -> void:
