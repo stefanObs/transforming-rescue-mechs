@@ -160,10 +160,9 @@ func _add_continuous_roads() -> void:
 		"half_w": ROAD_HALF_W * 0.7,
 	})
 
-	# SW of spawn (0, 40) — clears the crossroads.
-	RoadKitLib.add_roundabout(_ground, Vector2(-280, 280), 95.0, 30.0, {
+	# Far SW of spawn — wide ring (half_w ≈ main road) must clear E–W (y≈80) and N–S (x=0).
+	RoadKitLib.add_roundabout(_ground, Vector2(-400, 450), 170.0, 78.0, {
 		"sidewalk": true,
-		"centerline": true,
 	})
 
 

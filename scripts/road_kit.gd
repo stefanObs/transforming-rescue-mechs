@@ -71,7 +71,8 @@ static func add_diagonal(parent: Node2D, a: Vector2, b: Vector2, opts: Dictionar
 	add_straight(parent, a, b, opts)
 
 
-## Ring road around center; radius is ring midline. opts: sidewalk, centerline, sidewalk_w, …
+## Ring road around center; radius is ring midline. opts: sidewalk, centerline (default off —
+## no mittellinie on rings; opt-in for debug only), sidewalk_w, …
 static func add_roundabout(
 	parent: Node2D,
 	center: Vector2,
@@ -83,7 +84,7 @@ static func add_roundabout(
 		return
 	var sidewalk_w: float = float(opts.get("sidewalk_w", DEFAULT_SIDEWALK_W))
 	var want_sidewalk: bool = bool(opts.get("sidewalk", false))
-	var want_centerline: bool = bool(opts.get("centerline", true))
+	var want_centerline: bool = bool(opts.get("centerline", false))
 	var r_inner := maxf(radius - ring_half_w, 1.0)
 	var r_outer := radius + ring_half_w
 
