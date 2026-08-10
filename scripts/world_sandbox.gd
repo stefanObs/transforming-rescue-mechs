@@ -210,7 +210,7 @@ func _add_hill_mound(center: Vector2, rx: float, ry: float, color: Color, z: int
 
 
 func _add_continuous_roads() -> void:
-	# Geo-aligned Seuzach network (stilisiert). Sidewalk+centerline on main straights.
+	# Maps/OSM-aligned Seuzach network (stilisiert). Named markers for tests.
 	var main_opts := {
 		"sidewalk": true,
 		"centerline": true,
@@ -221,44 +221,145 @@ func _add_continuous_roads() -> void:
 		"centerline": false,
 		"half_w": ROAD_HALF_W * 0.85,
 	}
+	var lane_opts := {
+		"sidewalk": true,
+		"centerline": false,
+		"half_w": ROAD_HALF_W * 0.72,
+	}
 	var a1_opts := {
 		"sidewalk": false,
 		"centerline": true,
 		"half_w": ROAD_HALF_W * 1.25,
 	}
 
-	# Winterthurerstrasse / Dorf N–S: Badi/Halden north → Forrenberg south.
-	RoadKitLib.add_straight(_ground, Vector2(80, -750), Vector2(200, 900), main_opts)
+	# Winterthurerstrasse — primary N–S on the west side (Maps).
+	_add_named_road(
+		"Winterthurerstrasse",
+		Vector2(-140, -720),
+		Vector2(-80, 720),
+		main_opts
+	)
 
-	# Ohringerstrasse / Dorfkern E–W toward Bahnhof.
-	RoadKitLib.add_straight(_ground, Vector2(-400, -40), Vector2(1050, -80), main_opts)
+	# Landstrasse — central N–S through Dorfkern toward Badi/Halden (Maps).
+	_add_named_road(
+		"Landstrasse",
+		Vector2(160, -720),
+		Vector2(200, 620),
+		main_opts
+	)
 
-	# Kirchgasse stub west to Kirchhügel.
-	RoadKitLib.add_straight(_ground, Vector2(-40, -40), Vector2(-40, 40), branch_opts)
+	# Ohringerstrasse — E–W toward Ohringen (west) and kern (Maps secondary).
+	_add_named_road(
+		"Ohringerstrasse",
+		Vector2(-1050, 40),
+		Vector2(420, -60),
+		main_opts
+	)
 
-	# Spur to Feuerwehr / Gemeindehaus (N of kern).
-	RoadKitLib.add_straight(_ground, Vector2(80, -200), Vector2(260, -360), branch_opts)
+	# Stationsstrasse — toward Bahnhof (east).
+	_add_named_road(
+		"Stationsstrasse",
+		Vector2(220, -80),
+		Vector2(980, -120),
+		branch_opts
+	)
 
-	# Birch / Bachtobel east-northeast.
-	RoadKitLib.add_straight(_ground, Vector2(200, -80), Vector2(700, -180), branch_opts)
+	# Kirchgasse — stub to Kirchhügel.
+	_add_named_road(
+		"Kirchgasse",
+		Vector2(160, -20),
+		Vector2(-40, 20),
+		lane_opts
+	)
 
-	# Landstrasse toward Badi Weiher (north).
-	RoadKitLib.add_straight(_ground, Vector2(200, -200), Vector2(460, -520), branch_opts)
+	# Strehlgasse — toward Feuerwehr / Gemeindehaus (N).
+	_add_named_road(
+		"Strehlgasse",
+		Vector2(180, -180),
+		Vector2(280, -380),
+		lane_opts
+	)
 
-	# Ohringerstrasse west → Unter-/Oberohringen (SW).
-	RoadKitLib.add_diagonal(_ground, Vector2(-200, 0), Vector2(-900, 480), branch_opts)
+	# Bachwiesenstrasse — Birch school area (E).
+	_add_named_road(
+		"Bachwiesenstrasse",
+		Vector2(220, -100),
+		Vector2(760, -200),
+		lane_opts
+	)
 
-	# Reutlingerstrasse / Forrenbergstrasse south-east toward St. Martin + A1.
-	RoadKitLib.add_straight(_ground, Vector2(200, 80), Vector2(520, 400), branch_opts)
-	RoadKitLib.add_straight(_ground, Vector2(400, 400), Vector2(490, 600), branch_opts)
+	# Weiherstrasse / Landstrasse spur — Badi Weiher (N).
+	_add_named_road(
+		"Weiherstrasse",
+		Vector2(200, -240),
+		Vector2(460, -560),
+		branch_opts
+	)
 
-	# A1 hint past Forrenberg (E–W motorway strip).
-	RoadKitLib.add_straight(_ground, Vector2(-200, 780), Vector2(1100, 780), a1_opts)
+	# Welsikonerstrasse — NE residential connector.
+	_add_named_road(
+		"Welsikonerstrasse",
+		Vector2(200, -300),
+		Vector2(520, -420),
+		lane_opts
+	)
+
+	# Breitestrasse — short E–W residential in kern.
+	_add_named_road(
+		"Breitestrasse",
+		Vector2(-40, 120),
+		Vector2(360, 100),
+		lane_opts
+	)
+
+	# Reutlingerstrasse / Forrenbergstrasse — SE toward St. Martin + Forrenberg/A1.
+	_add_named_road(
+		"Reutlingerstrasse",
+		Vector2(200, 80),
+		Vector2(520, 380),
+		branch_opts
+	)
+	_add_named_road(
+		"Forrenbergstrasse",
+		Vector2(420, 380),
+		Vector2(490, 600),
+		branch_opts
+	)
+
+	# Schulstrasse — Ohringen school access.
+	_add_named_road(
+		"Schulstrasse",
+		Vector2(-980, 380),
+		Vector2(-820, 700),
+		lane_opts
+	)
+
+	# A1 motorway strip south of Forrenberg.
+	_add_named_road(
+		"A1",
+		Vector2(-200, 800),
+		Vector2(1100, 800),
+		a1_opts
+	)
 
 	# Roundabout near Landstrasse / Badi approach (stilisiert).
-	RoadKitLib.add_roundabout(_ground, Vector2(320, -320), 140.0, ROAD_HALF_W, {
+	RoadKitLib.add_roundabout(_ground, Vector2(280, -280), 130.0, ROAD_HALF_W, {
 		"sidewalk": true,
 	})
+	_add_road_marker("Kreisel_Landstrasse", Vector2(280, -280))
+
+
+func _add_named_road(road_name: String, a: Vector2, b: Vector2, opts: Dictionary) -> void:
+	RoadKitLib.add_straight(_ground, a, b, opts)
+	_add_road_marker(road_name, (a + b) * 0.5)
+
+
+func _add_road_marker(road_name: String, pos: Vector2) -> void:
+	var marker := Node2D.new()
+	marker.name = "Road_%s" % road_name.replace(" ", "_")
+	marker.position = pos
+	marker.set_meta("road_name", road_name)
+	_ground.add_child(marker)
 
 
 func _place_landmarks() -> void:
@@ -341,34 +442,6 @@ func _place_landmarks() -> void:
 		PROP_SCALE,
 		{"landmark_id": "laden_b", "poi_type": "shop", "district": "dorfkern"},
 		"landmark_laden_b"
-	)
-	_add_prop(
-		"house_a.png",
-		Vector2(-200, -100),
-		PROP_SCALE,
-		{"house_variant": "a", "district": "dorfkern"},
-		"house_kern_a"
-	)
-	_add_prop(
-		"house_b.png",
-		Vector2(220, 140),
-		PROP_SCALE,
-		{"house_variant": "b", "district": "dorfkern"},
-		"house_kern_b"
-	)
-	_add_prop(
-		"house_c.png",
-		Vector2(-160, 220),
-		PROP_SCALE,
-		{"house_variant": "c", "district": "dorfkern"},
-		"house_kern_c"
-	)
-	_add_prop(
-		"house_d.png",
-		Vector2(340, 200),
-		PROP_SCALE,
-		{"house_variant": "d", "district": "dorfkern"},
-		"house_kern_d"
 	)
 
 	# St. Martin (modern) SE of Kirchhügel near Buechewäldli — not a fake Ohringen church.
@@ -616,36 +689,96 @@ func _place_landmarks() -> void:
 		{"landmark_id": "spielplatz_ohringen", "district": "ohringen", "poi_type": "playground"},
 		"landmark_spielplatz_ohringen"
 	)
-	_add_prop(
-		"house_a.png",
-		Vector2(-760, -60),
-		PROP_SCALE,
-		{"house_variant": "a", "district": "ohringen"},
-		"house_unterohringen_a"
-	)
-	_add_prop(
-		"house_b.png",
-		Vector2(-720, 420),
-		PROP_SCALE,
-		{"house_variant": "b", "district": "ohringen"},
-		"house_ohringen_b"
-	)
-	_add_prop(
-		"house_c.png",
-		Vector2(-980, 440),
-		PROP_SCALE,
-		{"house_variant": "c", "district": "ohringen"},
-		"house_ohringen_c"
-	)
-	_add_prop(
-		"house_farm.png",
-		Vector2(-1040, 360),
-		PROP_SCALE,
-		{"house_variant": "farm", "district": "ohringen"},
-		"house_ohringen_farm"
-	)
 
 	_prop_parent = _props
+	_place_housing_blocks()
+
+
+func _place_housing_blocks() -> void:
+	## Realistic mix: EFH (a–d), farm, MFH, Flachdach, Reihen — denser along Maps streets.
+	## Keep spacing ≥~120 so Y-sort / occlusion stay readable.
+	var kern := [
+		["house_a.png", Vector2(-220, -120), "a", "gabled"],
+		["house_b.png", Vector2(-40, 160), "b", "gabled"],
+		["house_c.png", Vector2(320, 180), "c", "gabled"],
+		["house_d.png", Vector2(40, 240), "d", "gabled"],
+		["house_reihen.png", Vector2(-280, 200), "reihen", "gabled"],
+		["house_reihen.png", Vector2(380, 80), "reihen", "gabled"],
+		["house_flachdach.png", Vector2(280, -140), "flachdach", "flat"],
+		["house_mfh.png", Vector2(-100, 280), "mfh", "gabled"],
+		["house_a.png", Vector2(420, 200), "a", "gabled"],
+		["house_flachdach.png", Vector2(-320, 40), "flachdach", "flat"],
+	]
+	for item in kern:
+		_add_house(str(item[0]), item[1] as Vector2, str(item[2]), str(item[3]), "dorfkern")
+
+	# Bahnhof / Stationsstrasse — more MFH + Flachdach (Maps denser east).
+	var bahnhof := [
+		["house_mfh.png", Vector2(720, -200), "mfh", "gabled"],
+		["house_mfh.png", Vector2(980, -40), "mfh", "gabled"],
+		["house_flachdach.png", Vector2(840, 80), "flachdach", "flat"],
+		["house_reihen.png", Vector2(640, 40), "reihen", "gabled"],
+		["house_b.png", Vector2(1080, -160), "b", "gabled"],
+		["house_flachdach.png", Vector2(920, -220), "flachdach", "flat"],
+	]
+	for item in bahnhof:
+		_add_house(str(item[0]), item[1] as Vector2, str(item[2]), str(item[3]), "bahnhof")
+
+	# Birch / Bachwiesen — EFH + Reihen.
+	var birch := [
+		["house_reihen.png", Vector2(480, -80), "reihen", "gabled"],
+		["house_a.png", Vector2(880, -280), "a", "gabled"],
+		["house_c.png", Vector2(400, -200), "c", "gabled"],
+		["house_flachdach.png", Vector2(900, -80), "flachdach", "flat"],
+	]
+	for item in birch:
+		_add_house(str(item[0]), item[1] as Vector2, str(item[2]), str(item[3]), "birch")
+
+	# Süd / Reutlinger–Forrenberg — Flachdach + EFH toward A1.
+	var sued := [
+		["house_flachdach.png", Vector2(300, 280), "flachdach", "flat"],
+		["house_flachdach.png", Vector2(600, 500), "flachdach", "flat"],
+		["house_d.png", Vector2(140, 360), "d", "gabled"],
+		["house_reihen.png", Vector2(360, 440), "reihen", "gabled"],
+		["house_mfh.png", Vector2(680, 360), "mfh", "gabled"],
+	]
+	for item in sued:
+		_add_house(str(item[0]), item[1] as Vector2, str(item[2]), str(item[3]), "forrenberg")
+
+	# Ohringen / Unterohringen — farm + EFH + some Reihen/MFH.
+	var ohringen: Node2D = _props.get_node_or_null("DistrictOhringen") as Node2D
+	var prev: Node2D = _prop_parent
+	if ohringen:
+		_prop_parent = ohringen
+	var ohr := [
+		["house_farm.png", Vector2(-1100, 300), "farm", "gabled"],
+		["house_a.png", Vector2(-760, -40), "a", "gabled"],
+		["house_b.png", Vector2(-640, 360), "b", "gabled"],
+		["house_c.png", Vector2(-1120, 520), "c", "gabled"],
+		["house_reihen.png", Vector2(-680, 640), "reihen", "gabled"],
+		["house_flachdach.png", Vector2(-960, 240), "flachdach", "flat"],
+		["house_mfh.png", Vector2(-560, 500), "mfh", "gabled"],
+		["house_d.png", Vector2(-820, 280), "d", "gabled"],
+	]
+	for item in ohr:
+		_add_house(str(item[0]), item[1] as Vector2, str(item[2]), str(item[3]), "ohringen")
+	_prop_parent = prev if prev != null else _props
+
+
+func _add_house(
+	file_name: String,
+	pos: Vector2,
+	variant: String,
+	roof_type: String,
+	district: String
+) -> void:
+	var metas := {
+		"house_variant": variant,
+		"roof_type": roof_type,
+		"district": district,
+	}
+	var node_name := "house_%s_%d_%d" % [variant, int(pos.x), int(pos.y)]
+	_add_prop(file_name, pos, PROP_SCALE, metas, node_name)
 
 
 func _add_hub_enter_zone() -> void:

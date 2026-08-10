@@ -31,6 +31,9 @@ const REQUIRED_ART := [
 	"landmark_laden_b.png",
 	"landmark_laden_c.png",
 	"hub_station.png",
+	"house_mfh.png",
+	"house_flachdach.png",
+	"house_reihen.png",
 ]
 
 ## Preferred new geo-slice art (required once delivered).
@@ -147,6 +150,35 @@ func _run() -> void:
 		variants.size() >= 4,
 		"≥4 distinct house_variant values (got %d: %s)" % [variants.size(), str(variants.keys())]
 	)
+	for required_variant in ["mfh", "flachdach", "reihen"]:
+		_assert(
+			variants.has(required_variant),
+			"house_variant %s present" % required_variant
+		)
+
+	var house_n := 0
+	var roof_types: Dictionary = {}
+	for spr in all_sprites:
+		if spr.has_meta("house_variant"):
+			house_n += 1
+		if spr.has_meta("roof_type"):
+			roof_types[str(spr.get_meta("roof_type"))] = true
+	_assert(house_n >= 20, "≥20 housing props (got %d)" % house_n)
+	_assert(roof_types.has("flat"), "roof_type flat present (Flachdach)")
+	_assert(roof_types.has("gabled"), "roof_type gabled present")
+
+	var house_pos_keys: Dictionary = {}
+	var dup_houses := 0
+	for spr in all_sprites:
+		if not spr.has_meta("house_variant"):
+			continue
+		var key := "%d_%d" % [int(spr.global_position.x), int(spr.global_position.y)]
+		if house_pos_keys.has(key):
+			dup_houses += 1
+		house_pos_keys[key] = true
+	_assert(dup_houses == 0, "no duplicate housing positions (got %d)" % dup_houses)
+
+	_assert_named_roads(world)
 
 	var ohringen: Node = props.get_node_or_null("DistrictOhringen")
 	_assert(ohringen != null, "DistrictOhringen node exists")
@@ -173,6 +205,32 @@ func _run() -> void:
 
 	world.queue_free()
 	_finish()
+
+
+func _assert_named_roads(world: Node) -> void:
+	var ground: Node = world.get_node_or_null("%Ground")
+	_assert(ground != null, "Ground for road markers")
+	if ground == null:
+		return
+	var names: Dictionary = {}
+	for node in _collect_nodes(ground):
+		if node.has_meta("road_name"):
+			names[str(node.get_meta("road_name"))] = true
+	for required in [
+		"Winterthurerstrasse",
+		"Landstrasse",
+		"Ohringerstrasse",
+		"Stationsstrasse",
+		"Reutlingerstrasse",
+		"Forrenbergstrasse",
+		"A1",
+	]:
+		_assert(names.has(required), "road marker %s present" % required)
+	# Maps: two distinct N–S arteries (west Winterthurer, central Landstrasse).
+	_assert(
+		names.has("Winterthurerstrasse") and names.has("Landstrasse"),
+		"separate Winterthurerstrasse + Landstrasse N–S"
+	)
 
 
 func _assert_geo_quadrants(sprites: Array[Sprite2D]) -> void:
