@@ -23,9 +23,20 @@ Review the current change set (and plan file if provided) for correctness, tests
 - **Bugfixes:** Repro & RCA section present; regression test exists
 - No secrets, no online multiplayer, no violence against people/animals
 - Style C only for new art references
-- **New/changed `assets/art/`:** must be RGBA without white corner backdrops (`verify_art_alpha.py` / `m2_test` corner checks)
+- **New/changed `assets/art/`:** RGBA without white/black corner plates (`verify_art_alpha.py`)
 - Clear naming, no unnecessary complexity
 - Save/input/controller concerns if touched
+
+### Project-specific regressions to watch
+
+- Dir art shown as authored (no lean/turn-pose when `uses_dir_textures`)
+- Diagonal robot walk uses `walk_ne`/`walk_se` (+ flip), not static-only / wrong cardinal
+- Vehicle/robot **display height** stable across facing (`get_display_height` / scale×tex_h)
+- Actor `z_index` above ground; set early (`_ready`), not only late frames
+- RoadKit: Kreisel ohne Mittellinie; ring clearance vs straights
+- `play-windows.bat` stale-export skip aligned with Linux/macOS
+- World landmarks: Seuzach **inkl. Ohringen**; schools as building clusters; house variety
+- New PNGs imported (tests must not rely on bare `Image.load` only)
 
 ## Output format (mandatory)
 

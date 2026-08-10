@@ -2,7 +2,7 @@
 name: godot-playtester
 description: >-
   Runs automated Godot tests and launches the game smoke-check (godot --path).
-  Also verifies playable art has no white backdrops via verify_art_alpha.py.
+  Also verifies playable art has no white/black backdrops via verify_art_alpha.py.
   Use in phase 4 of the development workflow after code review is clean. Use
   when verifying the game starts, checking logs, or performing playtest smoke.
 model: inherit
@@ -19,17 +19,18 @@ Verify the build runs: art alpha checks + automated tests + game start smoke.
 ## Steps
 
 1. Locate the Godot project (`project.godot`). If missing, report **Block** — cannot playtest.
-2. Find Godot 4 binary (`godot4`, `godot`, or path from env/`which`).
-3. **Art white-backdrop check (required when `assets/art/` exists):**
+2. Find Godot 4 binary (`godot4`, `godot`, or path from env/`which`). Prefer **project mode** (`godot --path`), not a stale `build/` export (same rule as `play-*.sh` / `play-windows.bat`).
+3. **Art plate check (required when `assets/art/` exists):**
    - Run: `python3 scripts/verify_art_alpha.py`
-   - Exit code must be **0**. On failure: **Fail** with the script output — do not treat as Pass.
-   - This catches opaque white “frames/plates” on sprites before play.
-4. Run automated tests as documented (`./scripts/run_tests.sh`). Capture exit code and relevant log lines. Suite must include transparency assertions where present (`m2_test` corner alpha).
-5. Start the game for smoke:
-   - Prefer: `godot --path <project> --quit-after 5` (not a stale `build/` export)
-   - Else: launch main scene, capture stdout/stderr for several seconds, then terminate cleanly
-6. Confirm: no script parse errors, no fatal engine errors on boot, main scene loads.
-7. Update plan status to `Playtest` / `Erledigt` only on Pass (parent may commit).
+   - Exit code must be **0**. On failure: **Fail** — do not treat as Pass.
+   - Catches opaque white/light **and** near-black AI plates at corners.
+4. If new art was just added and tests use `ResourceLoader.exists`, ensure imports exist (`godot --headless --path . --import` once).
+5. Run automated tests: `./scripts/run_tests.sh`. Suite must stay green (facing, walk incl. diagonals, vehicle display height, road kit, world player visible, etc.).
+6. Start the game for smoke:
+   - Prefer: `godot --path <project> --quit-after 5`
+   - Confirm: no script parse errors, no fatal engine errors, main scene loads.
+7. When the plan involves landmarks/world: note remaining **manual** checks (Seuzach+Ohringen districts, school clusters, Feuerwehr/Badi/Bahnhof recognizability).
+8. Update plan status to `Playtest` / `Erledigt` only on Pass (parent may commit).
 
 ## Output format
 
@@ -57,4 +58,4 @@ Pass | Fail | Blocked
 - …
 ```
 
-On Fail/Blocked: list concrete repro steps for Phase 0, then next fixes for `feature-implementer` / `comic-rettung-art` after RCA (white backdrop → art pipeline).
+On Fail/Blocked: list concrete repro steps for Phase 0, then next fixes for `feature-implementer` / `comic-rettung-art` after RCA (plates → art pipeline; missing import → `--import`).

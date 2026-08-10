@@ -26,7 +26,9 @@ Subagent: `.cursor/agents/comic-rettung-art.md` — lädt diese Bilder vor jeder
 5. Transformationen: **snappy** Pose-zu-Pose, keine weichen Morphs
 6. **Mech ↔ Fahrzeug-Lesbarkeit:** Die Robot-Form muss das jeweilige Hauptfahrzeug klar andeuten (Kabinen, Leitern, Rumpf, Propeller, Spoiler, Reifen als Körperteile) — wie bei Rescue Bots, Stil C  
    - Bolt → Feuerwehrwagen · Marina → Boot/Hovercraft · **Rush → roter Elektro-Supercar**
-7. **Spiel-Sprites:** Transparente Hintergründe (RGBA). Keine weißen „Karten“/Platten. Nach Generierung: `python3 scripts/process_art_alpha.py`
+7. **Spiel-Sprites:** Transparente Hintergründe (RGBA). Keine weißen oder schwarzen AI-„Karten“/Platten. Nach Generierung: `python3 scripts/process_art_alpha.py` und `python3 scripts/verify_art_alpha.py` (muss grün). Walk-Frames: `python3 scripts/pad_walk_frames.py`.
+8. **Welt Seuzach inkl. Ohringen:** Landmarken (Bahnhof, Feuerwehr Strehlgasse, Badi Weiher, Schulen Birch/Rietacker/Ohringen) an realen Ortsrefs orientieren (Street View/Fotos), aber stilisiert in C. Schulen = mehrere Einzelgebäude; Wohnen = **mehrere** Hausvarianten.
+9. **Facing/Walk:** Dir-Sprites so autoren, wie sie im Spiel ohne Lean/Turn gezeigt werden. Walk `n/e/s/ne/se` (W/NW/SW per Flip). Fahrzeug-Seitenansichten nicht als winzige Streifen liefern (Höhen-Masse lesbar halten).
 
 ## Palette
 
@@ -48,8 +50,8 @@ Subagent: `.cursor/agents/comic-rettung-art.md` — lädt diese Bilder vor jeder
 - Outline im Sprite, nicht als globaler Outline-Shader verlassen
 - `AnimatedSprite2D` / `SpriteFrames` für Charaktere; wenige klare Frames
 - UI: weiße Panels, dicke Rahmen, versetzter Sticker-Schatten; Comic-Bubbles für Rettungs-Radio
-- TileMap isometrisch; Landmarken als klare Icon-Formen (Kirche, Bahnhof)
-- **Boden/Gras/Straße zum Kacheln:** durchgehende Cel-Fläche + weiche organische Gras-Patches; Straßen als **durchgehende Bänder** (nicht Iso-Schachbrett / Per-Kachel-Diamanten). Keine schwarzen Per-Kachel-Outlines. Dicke `#1A1A1A`-Konturen gehören auf Charaktere/Props. Keine perspektivischen „3D-Block“-Hero-Sprites als Boden. Haus/Kirche/Hub nur als **einzelne Props**.
+- TileMap isometrisch; Landmarken als klare Icon-Formen (Kirche, Bahnhof, Feuerwehr, Badi, Schulcluster)
+- **Boden/Gras/Straße zum Kacheln:** durchgehende Cel-Fläche + weiche organische Gras-Patches; Straßen als **durchgehende Bänder** (RoadKit: Kreisel **ohne** Mittellinie). Keine schwarzen Per-Kachel-Outlines. Dicke `#1A1A1A`-Konturen gehören auf Charaktere/Props. Keine perspektivischen „3D-Block“-Hero-Sprites als Boden. Haus/Kirche/Hub/Landmarken nur als **einzelne Props**.
 
 ## Nicht C
 

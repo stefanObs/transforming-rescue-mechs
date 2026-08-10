@@ -19,12 +19,16 @@ Create or update a plan file under `docs/plans/<kurzname>.md` following `docs/pl
 ## Steps
 
 1. Read `docs/KONZEPT.md` and `docs/ENTWICKLUNGSABLAUF.md` if needed for constraints.
-2. Clarify scope from the parent prompt (do not invent huge extras).
+2. Clarify scope from the parent prompt (do not invent huge extras). Prefer incremental MVP slices (e.g. M3 landmarks before full TileMap).
 3. Set **Typ** to Feature or Bugfix.
 4. If Bugfix: ensure Phase 0 content is in the plan (**Repro & RCA**) — do not mark ready for implementation until Repro is confirmed (or explicitly “not reproducible”).
 5. Write: Ziel, Scope/Nicht-Scope, Systeme, Technische Schritte, Testplan (for bugs: regression test), Art-Bedarf, Akzeptanzkriterien.
-6. If art is needed, note Style C and that `comic-rettung-art` must be used in phase 2.
-7. Set status to `Entwurf` unless the user already approved.
+6. If art is needed, note Style C and that **`comic-rettung-art`** must be used in phase 2. Call out:
+   - naming under `assets/art/`
+   - alpha + pad pipeline
+   - for Seuzach world: **Seuzach inklusive Ohringen**; Schulen als Einzelgebäude-Cluster; Feuerwehr / Badi Weiher / Bahnhof ortsbezogen
+7. For player/visual bugs, check known patterns: dir-art vs lean, walk only when assets exist, vehicle height normalization (`SPRITE_SCALE` × tex height), RoadKit Kreisel ohne Mittellinie, Windows stale export.
+8. Set status to `Entwurf` unless the user already approved.
 
 ## Output to parent
 

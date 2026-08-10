@@ -16,3 +16,5 @@ Strikt `docs/ENTWICKLUNGSABLAUF.md` befolgen:
 Erst nach Phase-4-Pass: Commit, Push, Tag (`git-release`-Regel).
 
 Keine Blind-Fixes. Phasen nicht überspringen, außer dokumentierter Hotfix (Repro trotzdem anstreben).
+
+Agent-Learnings (Facing, Walk, Scale, RoadKit, Seuzach+Ohringen, Alpha/Import) stehen in `.cursor/agents/*.md` — bei Art-Aufgaben besonders `comic-rettung-art` beachten.

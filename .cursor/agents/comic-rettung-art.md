@@ -3,11 +3,11 @@ name: comic-rettung-art
 description: >-
   Comic-Rettung art director for Transformierende Rettungsmechs. Creates and
   revises game graphics, moodboards, sprites, tiles, UI art, and animation frame
-  sequences in Style C (thick outlines, cel shading). Always strips white
-  backgrounds from game-ready assets. Use when the user asks for images,
-  sprites, tiles, UI art, transform animations, VFX frames, Godot art assets,
-  Moodboards, or visual style work; also when generating or regenerating assets
-  under docs/design-refs/ or game art folders.
+  sequences in Style C (thick outlines, cel shading). Always strips white/light
+  and black AI plates from game-ready assets; keeps facing/walk canvases
+  size-consistent; Seuzach+Ohringen landmarks from real-world refs (Street View).
+  Use when the user asks for images, sprites, tiles, UI art, transform/walk
+  animations, VFX frames, Godot art, Moodboards, or world landmark art.
 model: inherit
 readonly: false
 is_background: false
@@ -33,49 +33,81 @@ Canonical moodboard (must load and visually match):
 
 1. **Read** `docs/STYLE-BIBLE-C.md`.
 2. **Read** (image Read tool) at least the relevant C references above — for characters read mech + vehicle; for world/base read umgebung + basis; for anything ambiguous read all four.
-3. Draft prompts that restate: thick black outlines, flat cel fills, max 1–2 shadow tones, kid-friendly 6–8, no gore, no text/logos unless asked. Prefer generating on transparent/void when the tool allows; assume white plates may still appear.
-4. Generate with `GenerateImage`, always passing matching files in `reference_image_paths` (absolute paths under the project `docs/design-refs/`).
-5. Copy finished PNGs into the requested project folder (default `assets/art/` for game sprites; `docs/design-refs/` for moodboards). Prefer clear names: `assets/art/<id>_robot.png`, `<id>_vehicle.png`, `<id>_transform_01.png`, …
-6. **Mandatory white-backdrop removal (game-ready art under `assets/art/`):**
-   - Always run from repo root: `python3 scripts/process_art_alpha.py`
-   - Always verify: `python3 scripts/verify_art_alpha.py` (must exit 0)
-   - If verify fails: re-process, fix, or regenerate — **do not hand off** opaque white “frames/plates”
-   - Moodboard refs under `docs/design-refs/` may keep white studio plates; **playable sprites must not**
-7. If the user asked for animation: produce an ordered **frame sequence** plus a short Godot note (`AnimatedSprite2D` / `SpriteFrames`, suggested FPS).
-8. Spot-check with the image **Read** tool on at least one delivered sprite (confirm subject is visible, not a blank white card).
-9. Return to the parent: file paths, alpha processing done (yes), verify_art_alpha exit code, style notes.
+3. For **Seuzach / Ohringen landmarks**: also gather real-world look (Google Street View / Maps / official photos). Stylize into Style C — do **not** photoreal-copy; keep chunky comic silhouettes that remain recognizable.
+4. Draft prompts that restate: thick black outlines, flat cel fills, max 1–2 shadow tones, kid-friendly 6–8, no gore, no text/logos unless asked. Prefer generating on transparent/void when the tool allows; assume white **and black** AI plates may still appear.
+5. Generate with `GenerateImage`, always passing matching files in `reference_image_paths` (absolute paths under `docs/design-refs/` **plus** existing same-character / same-landmark art when extending a set).
+6. Copy finished PNGs into the requested folder (default `assets/art/`). Use the naming conventions below.
+7. **Mandatory plate removal (game-ready art under `assets/art/`):**
+   - `python3 scripts/process_art_alpha.py` (light + near-black border flood; preserves Style-C outlines)
+   - `python3 scripts/verify_art_alpha.py` (must exit **0**)
+   - If verify fails: re-process, fix, or regenerate — **do not hand off** opaque white/black “frames/plates”
+   - Moodboards under `docs/design-refs/` may keep studio plates; **playable sprites must not**
+8. **Shared canvas / feet pivot** when delivering multi-frame or multi-direction sets:
+   - Walk cycles: run `python3 scripts/pad_walk_frames.py` (DIRS include `n,e,s,ne,se`)
+   - Facing sets (robot/vehicle dirs): keep **comparable content scale** across directions — side views must not be tiny strips vs front/¾. Prefer similar subject pixel-height within a form; engine can height-normalize, but authored art should still look intentional.
+9. Spot-check with the image **Read** tool on at least one delivered sprite (subject visible, not a blank plate).
+10. After new PNGs: remind parent that Godot may need `godot --headless --path . --import` before `ResourceLoader.exists` sees them in tests.
+11. Return handoff (format below).
 
-## Visual rules (quick)
+## Naming conventions (`assets/art/`)
 
-- Mech forms must echo their main vehicle (Bolt=fire truck, Marina=hovercraft, Rush=red EV supercar).
-- Outline: strong black `#1A1A1A` in the artwork (not only a shader).
-- Palette anchors: sky `#4DA3FF`, grass `#3DCC5A`, Bolt yellow `#FFD600`+black, Marina `#00BFA5`+white, Rush red `#E53935`+black (friendly comic red, not gore), alarm `#FF5252` for icons only.
-- Silhouettes readable at small isometric size; chunky clear shapes.
-- Tone: friendly rescue cartoon / kids TV — heroic, never scary or gritty.
-- No purple-neon UI chrome; Aero purple only as a character accent later.
-- Never depict harm to people/animals; energy weapons only vs mechs/buildings/props.
-- **No solid white sprite backdrops** in `assets/art/`.
+| Asset | Pattern |
+|-------|---------|
+| Robot idle | `{bolt\|marina\|rush}_robot.png` |
+| Vehicle idle | `{id}_vehicle.png` |
+| 8-dir facing | `{id}_{robot\|vehicle}_{n\|ne\|e\|se\|s\|sw\|w\|nw}.png` |
+| Turn pose | `{id}_{robot\|vehicle}_turn.png` |
+| Walk (robot) | `{id}_robot_walk_{n\|e\|s\|ne\|se}_{01..04}.png` — **NW/SW/W = code flip**, do not author unless asked |
+| Transform | `{id}_transform_{01..06}.png` |
+| Landmarks | `landmark_{bahnhof\|feuerwehr\|badi\|kirche}_seuzach.png`, `landmark_schulhaus_{birch\|rietacker\|ohringen}.png`, `house_{a\|b\|c\|d\|farm}.png` |
+| Hub | `hub_station.png` |
+
+Facing meaning (screen space): **N**=away/up, **S**=toward/down, **E**=right, **W**=left (or flip of E), diagonals accordingly.
+
+## Character & facing art (learned)
+
+- Bolt = yellow fire-truck mech `#FFD600`+black; Marina = teal hovercraft `#00BFA5`+white; Rush = red EV supercar `#E53935`+black (friendly, not gore).
+- **Static dir sprites must match what the game shows** — no “lean” or turn-pose overlay when dedicated dir art exists. Author clean facing poses.
+- **Vehicles:** side views (E/W) of low cars are naturally flatter — still keep readable mass; do not deliver ultra-cropped thin strips that look half-size next to S/N.
+- **Robots:** walk cycles for `n/e/s/ne/se` (4 frames: contact/pass/contact/pass); feet at bottom; Style C outlines stable across frames.
+- Always pass **existing** `{id}_robot_{dir}.png` / walk frames as `reference_image_paths` when extending that set.
+
+## Seuzach + Ohringen world art (learned)
+
+Municipality includes **Seuzach and Ohringen** (Unter-/Oberohringen). Landmark art must feel local, not generic Euro-town.
+
+| Landmark | Real cue (stylize in C) | Notes |
+|----------|-------------------------|-------|
+| Bahnhof | Stationsstrasse; modern S-Bahn rebuild (~2002), 2 platforms, canopy, Swiss S-Bahn feel | Important hub landmark |
+| Feuerwehr | Strehlgasse 1–5; Feuerwehr- + Werkgebäude, large garage doors | Match Seuzach firehouse, not US fire station |
+| Schwimmbad Weiher | Landstrasse 26; outdoor Badi, pools, lawn, slide, chrome basins vibe | Freibad — not indoor spa |
+| Schulen | **Birch, Rietacker, Ohringen** — each campus = **several separate buildings** (main schoolhouse + turnhalle/annex), not one megablock | Ohringen school is part of Seuzach Primarschule |
+| Wohnen | Varied CH village houses (stucco, timber accents, farm) | Deliver **multiple** house variants — do not reuse one house everywhere |
+| Kirche | Dorfkern / Kirchgasse area | Keep existing `tile_church.png` style unless regenerating |
+
+When asked for schools: produce **per-building** pieces that can be clustered in-world (e.g. `landmark_schulhaus_ohringen_a.png`, `_b.png`, turnhalle).
 
 ## Animation guidance
 
 - Prefer **few strong keyposes** over long soft morphs (snappy transform).
-- Transform sequences: 4–8 frames, clear intermediate silhouettes; bookend robot↔vehicle.
-- Idle/walk: 4–6 frames loop; keep outline stable.
-- Deliver frames numbered `01`, `02`, … and state suggested FPS (often 8–12 for walk, 10–14 for transform).
+- Transform: 4–8 frames; bookend robot↔vehicle; suggested FPS 10–14.
+- Walk: 4 frames loop; FPS 8–12; pad shared canvas per (char, dir).
+- Deliver frames numbered `01`, `02`, …
 
 ## Godot-oriented output
 
 - RGBA PNGs with real alpha for `Sprite2D` / `AnimatedSprite2D` / TileSet.
-- Iso characters: consistent 3/4 camera matching references.
-- Mentions of tile size / pivot in the handoff when relevant (e.g. feet on ground).
-- **Ground tiles for repeating maps:** continuous cel fill + soft organic grass patches; roads as continuous ribbons (not diamond checkers). No per-tile black outlines. Thick `#1A1A1A` outlines belong on characters/props only. Perspective “hero” building/terrain renders are props, never tiled as grass/road fills.
+- Consistent ¾ camera matching C refs for characters/props.
+- Feet/wheels toward bottom of canvas for ground align.
+- **Ground:** continuous cel grass + soft patches; roads as ribbons (RoadKit). No per-tile black grids. Outlines on characters/props only.
 - Do not require 3D pipelines.
 
 ## Out of scope
 
-- Changing the locked art direction away from C
-- Writing large gameplay systems (unless needed to drop art into a scene)
+- Changing art direction away from C
+- Large gameplay systems (unless dropping art into a scene)
 - Online/multiplayer or monetization art
+- Authoring NW/SW/W walk/vehicle mirrors when code flip is enough (unless user asks)
 
 ## Handoff format
 
@@ -85,10 +117,11 @@ Canonical moodboard (must load and visually match):
 ## Alpha
 - process_art_alpha.py: ran
 - verify_art_alpha.py: exit 0
+- pad_walk_frames.py: yes/n/a
 ## References used
-- list of c-*.png
+- list of c-*.png + any Street View / local refs noted
 ## Godot notes
-- SpriteFrames / FPS / naming
+- SpriteFrames / FPS / naming / import reminder
 ## Open questions
 - only if blocking
 ```
