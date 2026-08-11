@@ -36,6 +36,13 @@ const BIRCH_TURNHALLE_LAT := 47.5354751
 const BIRCH_TURNHALLE_LON := 8.7362554
 const RIETACKER_LAT := 47.5362833
 const RIETACKER_LON := 8.7271400
+## OSM building centroids on campus Rietacker (not the amenity=school yard centroid).
+const RIETACKER_SCHULHAUS_A_LAT := 47.5360788
+const RIETACKER_SCHULHAUS_A_LON := 8.7273791
+const RIETACKER_SCHULHAUS_B_LAT := 47.5365102
+const RIETACKER_SCHULHAUS_B_LON := 8.7275595
+const RIETACKER_TURNHALLE_LAT := 47.5361323
+const RIETACKER_TURNHALLE_LON := 8.7262616
 const OHRINGEN_LAT := 47.5280584
 const OHRINGEN_LON := 8.7121325
 const FORRENBERG_LAT := 47.5263004
@@ -128,6 +135,18 @@ static func birch_turnhalle_world() -> Vector2:
 
 static func rietacker_world() -> Vector2:
 	return gps_to_world(RIETACKER_LAT, RIETACKER_LON)
+
+
+static func rietacker_schulhaus_a_world() -> Vector2:
+	return gps_to_world(RIETACKER_SCHULHAUS_A_LAT, RIETACKER_SCHULHAUS_A_LON)
+
+
+static func rietacker_schulhaus_b_world() -> Vector2:
+	return gps_to_world(RIETACKER_SCHULHAUS_B_LAT, RIETACKER_SCHULHAUS_B_LON)
+
+
+static func rietacker_turnhalle_world() -> Vector2:
+	return gps_to_world(RIETACKER_TURNHALLE_LAT, RIETACKER_TURNHALLE_LON)
 
 
 static func ohringen_world() -> Vector2:

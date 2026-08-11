@@ -103,6 +103,7 @@ func _run() -> void:
 		var n := _count_school_cluster(all_sprites, cluster)
 		_assert(n >= 2, "school_cluster %s has >=2 props (got %d)" % [cluster, n])
 	_assert_birch_campus(all_sprites)
+	_assert_rietacker_campus(all_sprites)
 	_assert_geo_quadrants(all_sprites)
 	_assert_schools_off_roads(world, all_sprites)
 
@@ -361,12 +362,121 @@ func _assert_birch_campus(sprites: Array[Sprite2D]) -> void:
 			"%s has BuildingCollision" % spr.name
 		)
 		_assert(is_zero_approx(spr.rotation), "%s rotation is 0" % spr.name)
-	_assert_generic_campus_offset("schulhaus_rietacker_a", SeuzachGeo.rietacker_world(), Vector2(280.0, 0.0), sprites)
-	_assert_generic_campus_offset("schulhaus_rietacker_b", SeuzachGeo.rietacker_world(), Vector2(-164.8, 226.4), sprites)
-	_assert_generic_campus_offset("turnhalle_rietacker", SeuzachGeo.rietacker_world(), Vector2(-86.1, -266.4), sprites)
 	_assert_generic_campus_offset("schulhaus_ohringen_a", SeuzachGeo.ohringen_world(), Vector2(280.0, 0.0), sprites)
 	_assert_generic_campus_offset("schulhaus_ohringen_b", SeuzachGeo.ohringen_world(), Vector2(-164.8, 226.4), sprites)
 	_assert_generic_campus_offset("turnhalle_ohringen", SeuzachGeo.ohringen_world(), Vector2(-86.1, -266.4), sprites)
+
+
+func _assert_rietacker_campus(sprites: Array[Sprite2D]) -> void:
+	var a := _find_named(sprites, "schulhaus_rietacker_a")
+	var b := _find_named(sprites, "schulhaus_rietacker_b")
+	var gym := _find_named(sprites, "turnhalle_rietacker")
+	_assert(a != null, "node schulhaus_rietacker_a exists")
+	_assert(b != null, "node schulhaus_rietacker_b exists")
+	_assert(gym != null, "node turnhalle_rietacker exists")
+	_assert(
+		is_equal_approx(SeuzachGeo.RIETACKER_LAT, 47.5362833)
+		and is_equal_approx(SeuzachGeo.RIETACKER_LON, 8.7271400),
+		"rietacker_world() GPS constants unchanged"
+	)
+	_assert(
+		SeuzachGeo.rietacker_world().is_equal_approx(
+			SeuzachGeo.gps_to_world(SeuzachGeo.RIETACKER_LAT, SeuzachGeo.RIETACKER_LON)
+		),
+		"rietacker_world() still maps RIETACKER_LAT/LON"
+	)
+	_assert(
+		is_equal_approx(SeuzachGeo.RIETACKER_SCHULHAUS_A_LAT, 47.5360788)
+		and is_equal_approx(SeuzachGeo.RIETACKER_SCHULHAUS_A_LON, 8.7273791)
+		and is_equal_approx(SeuzachGeo.RIETACKER_SCHULHAUS_B_LAT, 47.5365102)
+		and is_equal_approx(SeuzachGeo.RIETACKER_SCHULHAUS_B_LON, 8.7275595)
+		and is_equal_approx(SeuzachGeo.RIETACKER_TURNHALLE_LAT, 47.5361323)
+		and is_equal_approx(SeuzachGeo.RIETACKER_TURNHALLE_LON, 8.7262616),
+		"Rietacker building GPS constants match S02 OSM table"
+	)
+	_assert(
+		SeuzachGeo.rietacker_schulhaus_a_world().distance_to(
+			SeuzachGeo.rietacker_world() + Vector2(339.1, 429.5)
+		) < 1.0,
+		"rietacker_a offset vs yard ≈ (339.1, 429.5)"
+	)
+	_assert(
+		SeuzachGeo.rietacker_schulhaus_b_world().distance_to(
+			SeuzachGeo.rietacker_world() + Vector2(594.9, -476.6)
+		) < 1.0,
+		"rietacker_b offset vs yard ≈ (594.9, -476.6)"
+	)
+	_assert(
+		SeuzachGeo.rietacker_turnhalle_world().distance_to(
+			SeuzachGeo.rietacker_world() + Vector2(-1245.6, 317.2)
+		) < 1.0,
+		"rietacker turnhalle offset vs yard ≈ (-1245.6, 317.2)"
+	)
+	var rietacker_n := _count_school_cluster(sprites, "rietacker")
+	_assert(rietacker_n == 3, "school_cluster rietacker has exactly 3 props (got %d)" % rietacker_n)
+	if a == null or b == null or gym == null:
+		return
+	_assert(
+		str(a.get_meta("landmark_id")) == "schulhaus_rietacker"
+		and str(a.get_meta("school_cluster")) == "rietacker"
+		and str(a.get_meta("district")) == "rietacker",
+		"schulhaus_rietacker_a metas"
+	)
+	_assert(
+		str(b.get_meta("landmark_id")) == "schulhaus_rietacker"
+		and str(b.get_meta("school_cluster")) == "rietacker"
+		and str(b.get_meta("district")) == "rietacker",
+		"schulhaus_rietacker_b metas"
+	)
+	_assert(
+		str(gym.get_meta("landmark_id")) == "turnhalle_rietacker"
+		and str(gym.get_meta("school_cluster")) == "rietacker"
+		and str(gym.get_meta("district")) == "rietacker"
+		and str(gym.get_meta("poi_type")) == "gym",
+		"turnhalle_rietacker metas"
+	)
+	_assert(
+		a.position.distance_to(SeuzachGeo.rietacker_schulhaus_a_world()) <= 80.0,
+		"schulhaus_rietacker_a within 80 wu of OSM getter (d=%.1f)"
+		% a.position.distance_to(SeuzachGeo.rietacker_schulhaus_a_world())
+	)
+	_assert(
+		b.position.distance_to(SeuzachGeo.rietacker_schulhaus_b_world()) <= 80.0,
+		"schulhaus_rietacker_b within 80 wu of OSM getter (d=%.1f)"
+		% b.position.distance_to(SeuzachGeo.rietacker_schulhaus_b_world())
+	)
+	_assert(
+		gym.position.distance_to(SeuzachGeo.rietacker_turnhalle_world()) <= 80.0,
+		"turnhalle_rietacker within 80 wu of OSM getter (d=%.1f)"
+		% gym.position.distance_to(SeuzachGeo.rietacker_turnhalle_world())
+	)
+	_assert(
+		gym.position.x < minf(a.position.x, b.position.x) - 800.0,
+		"turnhalle west of rietacker a/b (gym.x=%.0f a.x=%.0f b.x=%.0f)"
+		% [gym.position.x, a.position.x, b.position.x]
+	)
+	_assert(
+		b.position.y < a.position.y - 400.0,
+		"rietacker_b north of rietacker_a (b.y=%.0f a.y=%.0f)"
+		% [b.position.y, a.position.y]
+	)
+	_assert(
+		a.position.x > gym.position.x and b.position.x > gym.position.x,
+		"both rietacker schulhäuser east of turnhalle (a.x=%.0f b.x=%.0f gym.x=%.0f)"
+		% [a.position.x, b.position.x, gym.position.x]
+	)
+	var yard := SeuzachGeo.rietacker_world()
+	for spr in [a, b, gym]:
+		_assert(
+			spr.position.distance_to(yard) < 1600.0,
+			"%s within 1600 wu of rietacker_world (d=%.1f)"
+			% [spr.name, spr.position.distance_to(yard)]
+		)
+		_assert(
+			spr.has_meta("has_building_collision") and bool(spr.get_meta("has_building_collision")),
+			"%s has BuildingCollision" % spr.name
+		)
+		_assert(is_zero_approx(spr.rotation), "%s rotation is 0" % spr.name)
 
 
 func _assert_geo_quadrants(sprites: Array[Sprite2D]) -> void:
@@ -415,8 +525,8 @@ func _assert_geo_quadrants(sprites: Array[Sprite2D]) -> void:
 			"birch school near Nominatim GPS (1400 wu covers OSM building a)"
 		)
 		_assert(
-			rietacker.position.distance_to(SeuzachGeo.rietacker_world()) < 800.0,
-			"rietacker school near Nominatim GPS"
+			rietacker.position.distance_to(SeuzachGeo.rietacker_world()) < 1600.0,
+			"rietacker school near Nominatim GPS (1600 wu covers OSM gym)"
 		)
 
 

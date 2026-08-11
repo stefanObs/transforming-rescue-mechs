@@ -12,7 +12,7 @@ Feature-Schritte, keine Prozess-Schritte. Pro Zeile folgt der volle Entwicklungs
 | ID | Datei | Feature | Hängt ab von | Status |
 |----|-------|---------|----------------|--------|
 | S01 | `S01-campus-birch.md` | Campus Birch (Maps-Ausrichtung) | — | erledigt |
-| S02 | `S02-campus-rietacker.md` | Campus Rietacker (Maps-Ausrichtung) | — | offen |
+| S02 | `S02-campus-rietacker.md` | Campus Rietacker (Maps-Ausrichtung) | — | erledigt |
 | S03 | `S03-campus-ohringen.md` | Campus Ohringen (Maps-Ausrichtung) | — | offen |
 | S04 | `S04-kiga-bachtobel.md` | Kindergarten Bachtobel | — | offen |
 | S05 | `S05-kiga-weid.md` | Kindergarten Weid | — | offen |

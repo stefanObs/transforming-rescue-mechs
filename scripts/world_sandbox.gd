@@ -402,7 +402,7 @@ func _place_landmarks() -> void:
 
 
 func _place_school_clusters() -> void:
-	## Birch: OSM building centroids. Rietacker/Ohringen keep generic offsets (later slices).
+	## Birch + Rietacker: OSM building centroids. Ohringen keeps generic offsets (later slice).
 	_add_prop(
 		"landmark_schulhaus_birch_a.png",
 		SeuzachGeo.birch_schulhaus_a_world(),
@@ -424,24 +424,23 @@ func _place_school_clusters() -> void:
 		{"landmark_id": "turnhalle_birch", "school_cluster": "birch", "district": "birch", "poi_type": "gym"},
 		"turnhalle_birch"
 	)
-	var rietacker := SeuzachGeo.rietacker_world()
 	_add_prop(
 		"landmark_schulhaus_rietacker_a.png",
-		rietacker + Vector2(280.0, 0.0),
+		SeuzachGeo.rietacker_schulhaus_a_world(),
 		SCHOOL_SCALE,
 		{"landmark_id": "schulhaus_rietacker", "school_cluster": "rietacker", "district": "rietacker"},
 		"schulhaus_rietacker_a"
 	)
 	_add_prop(
 		"landmark_schulhaus_rietacker_b.png",
-		rietacker + Vector2(-164.8, 226.4),
+		SeuzachGeo.rietacker_schulhaus_b_world(),
 		SCHOOL_SCALE,
 		{"landmark_id": "schulhaus_rietacker", "school_cluster": "rietacker", "district": "rietacker"},
 		"schulhaus_rietacker_b"
 	)
 	_add_prop(
 		"landmark_turnhalle_rietacker.png",
-		rietacker + Vector2(-86.1, -266.4),
+		SeuzachGeo.rietacker_turnhalle_world(),
 		SCHOOL_SCALE,
 		{"landmark_id": "turnhalle_rietacker", "school_cluster": "rietacker", "district": "rietacker", "poi_type": "gym"},
 		"turnhalle_rietacker"
