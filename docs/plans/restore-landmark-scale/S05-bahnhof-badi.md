@@ -26,7 +26,31 @@ Bahnhof Seuzach und Badi/Weiher (zwei Civic-Landmarks) haben grob korrekte Ausri
 
 - nein — bevorzugt Rotation/Scale im Code; Art nur bei falschem Sprite-Facing
 
-## Testplan (optional, 2 Bullets)
+## Locked Mults (LANDMARK_SCALE 0.55)
 
-- Suite: Bahnhof- und Badi-Nodes vorhanden; sinnvolle Rotation/Scale-Checks
+| Prop | MULT | Effective |
+|------|------|-----------|
+| `bahnhof` | **0.79** | ~0.4345 (~35 m station; PNG oversized at 0.55) |
+| `badi_weiher` | **1.01** | ~0.5555 (~45 m pool complex, nearly 1.0) |
+
+Named consts: `BAHNHOF_SCALE_MULT`, `BADI_SCALE_MULT`.  
+`LANDMARK_SCALE * MULT` in `_place_bahnhof` / `_place_badi`.  
+`flip_h` false; GPS unverändert; Rotation 0 (Bahnhof south of tracks, canopy faces N authored; Badi north of Landstrasse).  
+Forests stay `FOREST_SCALE` 0.24. Schulen/Kigas nicht anfassen.
+
+## Art
+
+- nein — Rotation/Scale im Code; Art nur bei falschem Sprite-Facing
+
+## Testplan
+
+- Suite: Bahnhof/Badi scales (`LANDMARK_SCALE * MULT`); Position ±80 wu; `rotation == 0`; forests 0.24; `house_n == 0`; Schulen unberührt
 - Playtest: beide Civic-Landmarks lesbar; Ausrichtung/Größe vs. Maps/Street View grob stimmig
+
+## Akzeptanzkriterien
+
+- [ ] Zwei Props mit locked Mults; `flip_h` false; GPS unverändert; Rotation 0
+- [ ] Forests `FOREST_SCALE` 0.24; Schulen/Kigas unberührt; globales `LANDMARK_SCALE` 0.55
+- [ ] Suite grün; Review + Playtest Pass
+
+Playtest 2026-08-12: Pass (Bahnhof south of tracks canopy N; Badi readable; Mults 0.79/1.01).

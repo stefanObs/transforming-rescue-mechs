@@ -203,8 +203,7 @@ func _assert_named_roads(world: Node) -> void:
 
 
 func _assert_landmark_scales(world: Node, sprites: Array[Sprite2D]) -> void:
-	## S01 globals + S02 Birch/Rietacker + S03 Ohringen + S04 Seuzach kiga per-building mults.
-	## Bahnhof/badi stay LANDMARK_SCALE.
+	## S01 globals + S02 Birch/Rietacker + S03 Ohringen + S04 Seuzach kiga + S05 Bahnhof/Badi mults.
 	var world_script: Script = world.get_script()
 	_assert(world_script != null, "world_sandbox script attached")
 	if world_script == null:
@@ -238,6 +237,8 @@ func _assert_landmark_scales(world: Node, sprites: Array[Sprite2D]) -> void:
 	var kiga_bt_mult: float = float(consts.get("KIGA_BACHTOBEL_SCALE_MULT", 0.57))
 	var kiga_weid_mult: float = float(consts.get("KIGA_WEID_SCALE_MULT", 0.55))
 	var kiga_sw_mult: float = float(consts.get("KIGA_SCHNECKENWIESE_SCALE_MULT", 1.03))
+	var bahnhof_mult: float = float(consts.get("BAHNHOF_SCALE_MULT", 0.79))
+	var badi_mult: float = float(consts.get("BADI_SCALE_MULT", 1.01))
 	_assert(absf(birch_a_mult - 1.20) < 0.02, "BIRCH_A_SCALE_MULT ≈ 1.20 (got %.3f)" % birch_a_mult)
 	_assert(absf(birch_b_mult - 1.20) < 0.02, "BIRCH_B_SCALE_MULT ≈ 1.20 (got %.3f)" % birch_b_mult)
 	_assert(absf(birch_gym_mult - 1.00) < 0.02, "BIRCH_TURNHALLE_SCALE_MULT ≈ 1.00 (got %.3f)" % birch_gym_mult)
@@ -251,6 +252,8 @@ func _assert_landmark_scales(world: Node, sprites: Array[Sprite2D]) -> void:
 	_assert(absf(kiga_bt_mult - 0.57) < 0.02, "KIGA_BACHTOBEL_SCALE_MULT ≈ 0.57 (got %.3f)" % kiga_bt_mult)
 	_assert(absf(kiga_weid_mult - 0.55) < 0.02, "KIGA_WEID_SCALE_MULT ≈ 0.55 (got %.3f)" % kiga_weid_mult)
 	_assert(absf(kiga_sw_mult - 1.03) < 0.02, "KIGA_SCHNECKENWIESE_SCALE_MULT ≈ 1.03 (got %.3f)" % kiga_sw_mult)
+	_assert(absf(bahnhof_mult - 0.79) < 0.02, "BAHNHOF_SCALE_MULT ≈ 0.79 (got %.3f)" % bahnhof_mult)
+	_assert(absf(badi_mult - 1.01) < 0.02, "BADI_SCALE_MULT ≈ 1.01 (got %.3f)" % badi_mult)
 
 	var per_building_expected := {
 		"schulhaus_birch_a": school_scale * birch_a_mult,
@@ -267,10 +270,15 @@ func _assert_landmark_scales(world: Node, sprites: Array[Sprite2D]) -> void:
 		"kiga_weid": school_scale * kiga_weid_mult,
 		"kiga_schneckenwiese": school_scale * kiga_sw_mult,
 	}
+	var civic_expected := {
+		"bahnhof": landmark_scale * bahnhof_mult,
+		"badi_weiher": landmark_scale * badi_mult,
+	}
 	var school_building_n := 0
 	var birch_rietacker_n := 0
 	var ohringen_n := 0
 	var seuzach_kiga_n := 0
+	var civic_n := 0
 	for spr in sprites:
 		if not spr.has_meta("landmark_id"):
 			continue
@@ -296,15 +304,21 @@ func _assert_landmark_scales(world: Node, sprites: Array[Sprite2D]) -> void:
 			else:
 				ohringen_n += 1
 			school_building_n += 1
-		elif lid == "bahnhof" or lid == "badi_weiher":
+		elif spr.name in civic_expected:
+			var civic_scale: Vector2 = civic_expected[spr.name]
 			_assert(
-				spr.scale.is_equal_approx(landmark_scale),
-				"%s scale == LANDMARK_SCALE (got %s)" % [spr.name, str(spr.scale)]
+				spr.scale.is_equal_approx(civic_scale),
+				"%s scale == LANDMARK_SCALE * mult (got %s expect %s)"
+				% [spr.name, str(spr.scale), str(civic_scale)]
 			)
+			civic_n += 1
+		elif lid == "bahnhof" or lid == "badi_weiher":
+			_assert(false, "civic landmark %s missing expected name for scale mult" % spr.name)
 	_assert(birch_rietacker_n == 6, "6 Birch/Rietacker per-building scales (got %d)" % birch_rietacker_n)
 	_assert(ohringen_n == 4, "4 Ohringen campus+kiga per-building scales (got %d)" % ohringen_n)
 	_assert(seuzach_kiga_n == 3, "3 Seuzach kiga per-building scales (got %d)" % seuzach_kiga_n)
 	_assert(school_building_n == 13, "9 campus + 4 kiga school buildings (got %d)" % school_building_n)
+	_assert(civic_n == 2, "2 civic Bahnhof/Badi per-building scales (got %d)" % civic_n)
 	_assert(_count_landmark(sprites, "bahnhof") == 1, "bahnhof present for scale check")
 	_assert(_count_landmark(sprites, "badi_weiher") == 1, "badi present for scale check")
 	## 9 school/gym + 4 kiga + bahnhof + badi = 15 building landmarks
@@ -1264,6 +1278,7 @@ func _assert_bahnhof(world: Node, sprites: Array[Sprite2D]) -> void:
 		bahnhof.has_meta("has_building_collision") and bool(bahnhof.get_meta("has_building_collision")),
 		"bahnhof has BuildingCollision"
 	)
+	_assert(not bahnhof.flip_h, "bahnhof flip_h false")
 	_assert(is_zero_approx(bahnhof.rotation), "bahnhof rotation is 0")
 	_assert_sprite_off_named_roads(world, bahnhof)
 	var ground: Node = world.get_node_or_null("%Ground")
@@ -1501,6 +1516,7 @@ func _assert_badi(world: Node, sprites: Array[Sprite2D]) -> void:
 		badi.has_meta("has_building_collision") and bool(badi.get_meta("has_building_collision")),
 		"badi has BuildingCollision"
 	)
+	_assert(not badi.flip_h, "badi flip_h false")
 	_assert(is_zero_approx(badi.rotation), "badi rotation is 0")
 	_assert_sprite_off_named_roads(world, badi)
 	var ground: Node = world.get_node_or_null("%Ground")

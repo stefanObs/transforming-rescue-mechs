@@ -29,6 +29,9 @@ const KIGA_OHRINGEN_SCALE_MULT := 0.55
 const KIGA_BACHTOBEL_SCALE_MULT := 0.57
 const KIGA_WEID_SCALE_MULT := 0.55
 const KIGA_SCHNECKENWIESE_SCALE_MULT := 1.03
+## S05: Bahnhof + Badi multipliers on LANDMARK_SCALE (OSM footprint ratios).
+const BAHNHOF_SCALE_MULT := 0.79
+const BADI_SCALE_MULT := 1.01
 ## Ground polygons sit at z ≈ −50…−34. Actors/props share one BASE so Y-sort works
 ## while staying above ground. Godot canvas z_index max is 4096.
 const ACTOR_Z_BASE := 2000
@@ -787,11 +790,12 @@ func _place_kindergartens() -> void:
 
 func _place_bahnhof() -> void:
 	## S08: station building + canopy at Stationsstrasse 53. No tracks (S09).
+	## S05: LANDMARK_SCALE * BAHNHOF_SCALE_MULT; flip_h false; rotation 0 (canopy faces N).
 	_prop_parent = _props
 	_add_prop(
 		"landmark_bahnhof_seuzach.png",
 		SeuzachGeo.bahnhof_world(),
-		LANDMARK_SCALE,
+		LANDMARK_SCALE * BAHNHOF_SCALE_MULT,
 		{"landmark_id": "bahnhof", "district": "seuzach", "poi_type": "station"},
 		"bahnhof"
 	)
@@ -799,11 +803,12 @@ func _place_bahnhof() -> void:
 
 func _place_badi() -> void:
 	## S10: outdoor pool at Landstrasse 26. Not Ohringen, not Birch indoor pool.
+	## S05: LANDMARK_SCALE * BADI_SCALE_MULT; flip_h false; rotation 0 (north of Landstrasse).
 	_prop_parent = _props
 	_add_prop(
 		"landmark_badi_weiher.png",
 		SeuzachGeo.badi_world(),
-		LANDMARK_SCALE,
+		LANDMARK_SCALE * BADI_SCALE_MULT,
 		{"landmark_id": "badi_weiher", "district": "seuzach", "poi_type": "swimming"},
 		"badi_weiher"
 	)
