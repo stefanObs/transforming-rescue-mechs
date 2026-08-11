@@ -45,6 +45,13 @@ const RIETACKER_TURNHALLE_LAT := 47.5361323
 const RIETACKER_TURNHALLE_LON := 8.7262616
 const OHRINGEN_LAT := 47.5280584
 const OHRINGEN_LON := 8.7121325
+## OSM / Gemeinde building centroids on campus Ohringen (not the amenity=school yard centroid).
+const OHRINGEN_SCHULHAUS_A_LAT := 47.5283478
+const OHRINGEN_SCHULHAUS_A_LON := 8.7123497
+const OHRINGEN_SCHULHAUS_B_LAT := 47.5281003
+const OHRINGEN_SCHULHAUS_B_LON := 8.7125046
+const OHRINGEN_TURNHALLE_LAT := 47.5279647
+const OHRINGEN_TURNHALLE_LON := 8.7122618
 const FORRENBERG_LAT := 47.5263004
 const FORRENBERG_LON := 8.7353138
 const BADI_LAT := 47.5393193
@@ -151,6 +158,18 @@ static func rietacker_turnhalle_world() -> Vector2:
 
 static func ohringen_world() -> Vector2:
 	return gps_to_world(OHRINGEN_LAT, OHRINGEN_LON)
+
+
+static func ohringen_schulhaus_a_world() -> Vector2:
+	return gps_to_world(OHRINGEN_SCHULHAUS_A_LAT, OHRINGEN_SCHULHAUS_A_LON)
+
+
+static func ohringen_schulhaus_b_world() -> Vector2:
+	return gps_to_world(OHRINGEN_SCHULHAUS_B_LAT, OHRINGEN_SCHULHAUS_B_LON)
+
+
+static func ohringen_turnhalle_world() -> Vector2:
+	return gps_to_world(OHRINGEN_TURNHALLE_LAT, OHRINGEN_TURNHALLE_LON)
 
 
 static func bahnhof_world() -> Vector2:

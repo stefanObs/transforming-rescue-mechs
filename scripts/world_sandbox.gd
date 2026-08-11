@@ -402,7 +402,7 @@ func _place_landmarks() -> void:
 
 
 func _place_school_clusters() -> void:
-	## Birch + Rietacker: OSM building centroids. Ohringen keeps generic offsets (later slice).
+	## Birch + Rietacker + Ohringen: OSM building centroids.
 	_add_prop(
 		"landmark_schulhaus_birch_a.png",
 		SeuzachGeo.birch_schulhaus_a_world(),
@@ -451,24 +451,23 @@ func _place_school_clusters() -> void:
 	ohringen.position = Vector2.ZERO
 	_props.add_child(ohringen)
 	_prop_parent = ohringen
-	var ohringen_gps := SeuzachGeo.ohringen_world()
 	_add_prop(
 		"landmark_schulhaus_ohringen_a.png",
-		ohringen_gps + Vector2(280.0, 0.0),
+		SeuzachGeo.ohringen_schulhaus_a_world(),
 		SCHOOL_SCALE,
 		{"landmark_id": "schulhaus_ohringen", "school_cluster": "ohringen", "district": "ohringen"},
 		"schulhaus_ohringen_a"
 	)
 	_add_prop(
 		"landmark_schulhaus_ohringen_b.png",
-		ohringen_gps + Vector2(-164.8, 226.4),
+		SeuzachGeo.ohringen_schulhaus_b_world(),
 		SCHOOL_SCALE,
 		{"landmark_id": "schulhaus_ohringen", "school_cluster": "ohringen", "district": "ohringen"},
 		"schulhaus_ohringen_b"
 	)
 	_add_prop(
 		"landmark_turnhalle_ohringen.png",
-		ohringen_gps + Vector2(-86.1, -266.4),
+		SeuzachGeo.ohringen_turnhalle_world(),
 		SCHOOL_SCALE,
 		{"landmark_id": "turnhalle_ohringen", "school_cluster": "ohringen", "district": "ohringen", "poi_type": "gym"},
 		"turnhalle_ohringen"

@@ -104,6 +104,7 @@ func _run() -> void:
 		_assert(n >= 2, "school_cluster %s has >=2 props (got %d)" % [cluster, n])
 	_assert_birch_campus(all_sprites)
 	_assert_rietacker_campus(all_sprites)
+	_assert_ohringen_campus(all_sprites)
 	_assert_geo_quadrants(all_sprites)
 	_assert_schools_off_roads(world, all_sprites)
 
@@ -362,9 +363,6 @@ func _assert_birch_campus(sprites: Array[Sprite2D]) -> void:
 			"%s has BuildingCollision" % spr.name
 		)
 		_assert(is_zero_approx(spr.rotation), "%s rotation is 0" % spr.name)
-	_assert_generic_campus_offset("schulhaus_ohringen_a", SeuzachGeo.ohringen_world(), Vector2(280.0, 0.0), sprites)
-	_assert_generic_campus_offset("schulhaus_ohringen_b", SeuzachGeo.ohringen_world(), Vector2(-164.8, 226.4), sprites)
-	_assert_generic_campus_offset("turnhalle_ohringen", SeuzachGeo.ohringen_world(), Vector2(-86.1, -266.4), sprites)
 
 
 func _assert_rietacker_campus(sprites: Array[Sprite2D]) -> void:
@@ -479,6 +477,140 @@ func _assert_rietacker_campus(sprites: Array[Sprite2D]) -> void:
 		_assert(is_zero_approx(spr.rotation), "%s rotation is 0" % spr.name)
 
 
+func _assert_ohringen_campus(sprites: Array[Sprite2D]) -> void:
+	var a := _find_named(sprites, "schulhaus_ohringen_a")
+	var b := _find_named(sprites, "schulhaus_ohringen_b")
+	var gym := _find_named(sprites, "turnhalle_ohringen")
+	_assert(a != null, "node schulhaus_ohringen_a exists")
+	_assert(b != null, "node schulhaus_ohringen_b exists")
+	_assert(gym != null, "node turnhalle_ohringen exists")
+	_assert(
+		is_equal_approx(SeuzachGeo.OHRINGEN_LAT, 47.5280584)
+		and is_equal_approx(SeuzachGeo.OHRINGEN_LON, 8.7121325),
+		"ohringen_world() GPS constants unchanged"
+	)
+	_assert(
+		SeuzachGeo.ohringen_world().is_equal_approx(
+			SeuzachGeo.gps_to_world(SeuzachGeo.OHRINGEN_LAT, SeuzachGeo.OHRINGEN_LON)
+		),
+		"ohringen_world() still maps OHRINGEN_LAT/LON"
+	)
+	_assert(
+		is_equal_approx(SeuzachGeo.OHRINGEN_SCHULHAUS_A_LAT, 47.5283478)
+		and is_equal_approx(SeuzachGeo.OHRINGEN_SCHULHAUS_A_LON, 8.7123497)
+		and is_equal_approx(SeuzachGeo.OHRINGEN_SCHULHAUS_B_LAT, 47.5281003)
+		and is_equal_approx(SeuzachGeo.OHRINGEN_SCHULHAUS_B_LON, 8.7125046)
+		and is_equal_approx(SeuzachGeo.OHRINGEN_TURNHALLE_LAT, 47.5279647)
+		and is_equal_approx(SeuzachGeo.OHRINGEN_TURNHALLE_LON, 8.7122618),
+		"Ohringen building GPS constants match S03 OSM table"
+	)
+	_assert(
+		SeuzachGeo.ohringen_schulhaus_a_world().distance_to(
+			SeuzachGeo.ohringen_world() + Vector2(308.0, -607.8)
+		) < 1.0,
+		"ohringen_a offset vs yard ≈ (308.0, -607.8)"
+	)
+	_assert(
+		SeuzachGeo.ohringen_schulhaus_b_world().distance_to(
+			SeuzachGeo.ohringen_world() + Vector2(527.7, -88.0)
+		) < 1.0,
+		"ohringen_b offset vs yard ≈ (527.7, -88.0)"
+	)
+	_assert(
+		SeuzachGeo.ohringen_turnhalle_world().distance_to(
+			SeuzachGeo.ohringen_world() + Vector2(183.4, 196.8)
+		) < 1.0,
+		"ohringen turnhalle offset vs yard ≈ (183.4, 196.8)"
+	)
+	var ohringen_n := _count_school_cluster(sprites, "ohringen")
+	_assert(ohringen_n == 3, "school_cluster ohringen has exactly 3 props (got %d)" % ohringen_n)
+	_assert(not _has_kindergarten(sprites, "kiga_ohringen"), "kiga_ohringen not placed (S07)")
+	_assert(_find_named(sprites, "kiga_ohringen") == null, "no kiga_ohringen node")
+	if a == null or b == null or gym == null:
+		return
+	_assert(
+		_has_named_ancestor(a, "DistrictOhringen")
+		and _has_named_ancestor(b, "DistrictOhringen")
+		and _has_named_ancestor(gym, "DistrictOhringen"),
+		"Ohringen campus parent chain includes DistrictOhringen"
+	)
+	_assert(
+		str(a.get_meta("landmark_id")) == "schulhaus_ohringen"
+		and str(a.get_meta("school_cluster")) == "ohringen"
+		and str(a.get_meta("district")) == "ohringen",
+		"schulhaus_ohringen_a metas"
+	)
+	_assert(
+		str(b.get_meta("landmark_id")) == "schulhaus_ohringen"
+		and str(b.get_meta("school_cluster")) == "ohringen"
+		and str(b.get_meta("district")) == "ohringen",
+		"schulhaus_ohringen_b metas"
+	)
+	_assert(
+		str(gym.get_meta("landmark_id")) == "turnhalle_ohringen"
+		and str(gym.get_meta("school_cluster")) == "ohringen"
+		and str(gym.get_meta("district")) == "ohringen"
+		and str(gym.get_meta("poi_type")) == "gym",
+		"turnhalle_ohringen metas"
+	)
+	_assert(
+		a.position.distance_to(SeuzachGeo.ohringen_schulhaus_a_world()) <= 80.0,
+		"schulhaus_ohringen_a within 80 wu of OSM getter (d=%.1f)"
+		% a.position.distance_to(SeuzachGeo.ohringen_schulhaus_a_world())
+	)
+	_assert(
+		b.position.distance_to(SeuzachGeo.ohringen_schulhaus_b_world()) <= 80.0,
+		"schulhaus_ohringen_b within 80 wu of OSM getter (d=%.1f)"
+		% b.position.distance_to(SeuzachGeo.ohringen_schulhaus_b_world())
+	)
+	_assert(
+		gym.position.distance_to(SeuzachGeo.ohringen_turnhalle_world()) <= 80.0,
+		"turnhalle_ohringen within 80 wu of OSM getter (d=%.1f)"
+		% gym.position.distance_to(SeuzachGeo.ohringen_turnhalle_world())
+	)
+	_assert(
+		a.position.y < b.position.y - 400.0,
+		"ohringen_a north of ohringen_b (a.y=%.0f b.y=%.0f)"
+		% [a.position.y, b.position.y]
+	)
+	_assert(
+		a.position.y < gym.position.y - 400.0,
+		"ohringen_a north of turnhalle (a.y=%.0f gym.y=%.0f)"
+		% [a.position.y, gym.position.y]
+	)
+	_assert(
+		gym.position.y > maxf(a.position.y, b.position.y),
+		"turnhalle south of ohringen a/b (gym.y=%.0f a.y=%.0f b.y=%.0f)"
+		% [gym.position.y, a.position.y, b.position.y]
+	)
+	_assert(
+		b.position.x > gym.position.x + 200.0,
+		"ohringen_b east of turnhalle by >200 wu (b.x=%.0f gym.x=%.0f)"
+		% [b.position.x, gym.position.x]
+	)
+	_assert(
+		a.position.x > gym.position.x,
+		"ohringen_a east of turnhalle (a.x=%.0f gym.x=%.0f)"
+		% [a.position.x, gym.position.x]
+	)
+	_assert(
+		a.position.x < -15000.0 and a.position.y > 8000.0,
+		"ohringen school SW (got %s)" % str(a.position)
+	)
+	var yard := SeuzachGeo.ohringen_world()
+	for spr in [a, b, gym]:
+		_assert(
+			spr.position.distance_to(yard) < 900.0,
+			"%s within 900 wu of ohringen_world (d=%.1f)"
+			% [spr.name, spr.position.distance_to(yard)]
+		)
+		_assert(
+			spr.has_meta("has_building_collision") and bool(spr.get_meta("has_building_collision")),
+			"%s has BuildingCollision" % spr.name
+		)
+		_assert(is_zero_approx(spr.rotation), "%s rotation is 0" % spr.name)
+
+
 func _assert_geo_quadrants(sprites: Array[Sprite2D]) -> void:
 	## +X east, +Y south; Kirche ~ (0,0); Forrenberg south; Badi north; Ohringen SW.
 	var hub := _find_landmark(sprites, "hub_station")
@@ -510,8 +642,8 @@ func _assert_geo_quadrants(sprites: Array[Sprite2D]) -> void:
 			"ohringen school SW (got %s)" % str(ohringen_school.position)
 		)
 		_assert(
-			ohringen_school.position.distance_to(SeuzachGeo.ohringen_world()) < 800.0,
-			"ohringen school near Nominatim GPS"
+			ohringen_school.position.distance_to(SeuzachGeo.ohringen_world()) < 900.0,
+			"ohringen school near Nominatim GPS (900 wu covers OSM building a)"
 		)
 	if birch and rietacker:
 		_assert(
@@ -634,20 +766,6 @@ func _dist_to_segment(p: Vector2, a: Vector2, b: Vector2) -> float:
 	return p.distance_to(a + ab * t)
 
 
-func _assert_generic_campus_offset(
-	node_name: String, yard: Vector2, offset: Vector2, sprites: Array[Sprite2D]
-) -> void:
-	var spr := _find_named(sprites, node_name)
-	_assert(spr != null, "%s present for offset guard" % node_name)
-	if spr == null:
-		return
-	var want := yard + offset
-	_assert(
-		spr.position.distance_to(want) < 1.0,
-		"%s stays generic offset %s (d=%.3f)" % [node_name, str(offset), spr.position.distance_to(want)]
-	)
-
-
 func _find_landmark(sprites: Array[Sprite2D], landmark_id: String) -> Sprite2D:
 	for spr in sprites:
 		if spr.has_meta("landmark_id") and str(spr.get_meta("landmark_id")) == landmark_id:
@@ -660,6 +778,15 @@ func _find_named(sprites: Array[Sprite2D], node_name: String) -> Sprite2D:
 		if str(spr.name) == node_name:
 			return spr
 	return null
+
+
+func _has_named_ancestor(node: Node, ancestor_name: String) -> bool:
+	var cur: Node = node.get_parent()
+	while cur != null:
+		if str(cur.name) == ancestor_name:
+			return true
+		cur = cur.get_parent()
+	return false
 
 
 func _finish() -> void:
