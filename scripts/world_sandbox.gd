@@ -393,12 +393,13 @@ func _add_road_marker(
 
 
 func _place_landmarks() -> void:
-	## Street map + school clusters for orientation (Maps). No houses/hub facade.
+	## Street map + school clusters + placed kindergartens (Maps). No houses/hub facade.
 	for child in _props.get_children():
 		child.free()
 	_prop_parent = _props
 	_add_hub_enter_zone()
 	_place_school_clusters()
+	_place_kindergartens()
 
 
 func _place_school_clusters() -> void:
@@ -475,6 +476,15 @@ func _place_school_clusters() -> void:
 	_prop_parent = _props
 
 
+func _place_kindergartens() -> void:
+	## S04: only Kindergarten Bachtobel. Weid / Schneckenwiese / Ohringen come later.
+	_add_prop(
+		"landmark_kiga_bachtobel.png",
+		SeuzachGeo.kiga_bachtobel_world(),
+		SCHOOL_SCALE,
+		{"landmark_id": "kiga_bachtobel", "kindergarten_id": "kiga_bachtobel", "district": "bachtobel"},
+		"kiga_bachtobel"
+	)
 
 
 func _add_hub_enter_zone() -> void:

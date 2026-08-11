@@ -56,6 +56,9 @@ const FORRENBERG_LAT := 47.5263004
 const FORRENBERG_LON := 8.7353138
 const BADI_LAT := 47.5393193
 const BADI_LON := 8.7333710
+## OSM way 142728231 Bachtobelstrasse 17 building centroid (not amenity node, not Forrenberg hub).
+const KIGA_BACHTOBEL_LAT := 47.5376225
+const KIGA_BACHTOBEL_LON := 8.7380927
 
 ## z_index = ACTOR_Z_BASE + floor(y / Z_Y_DIV) + 1; Canvas-Max 4096.
 const Z_Y_DIV := 20.0
@@ -174,3 +177,7 @@ static func ohringen_turnhalle_world() -> Vector2:
 
 static func bahnhof_world() -> Vector2:
 	return gps_to_world(BAHNHOF_LAT, BAHNHOF_LON)
+
+
+static func kiga_bachtobel_world() -> Vector2:
+	return gps_to_world(KIGA_BACHTOBEL_LAT, KIGA_BACHTOBEL_LON)
