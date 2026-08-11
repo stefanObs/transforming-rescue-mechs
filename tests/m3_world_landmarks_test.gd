@@ -97,7 +97,7 @@ func _run() -> void:
 		if spr.has_meta("terrain") and str(spr.get_meta("terrain")) == "forest":
 			forest_n += 1
 	_assert(house_n == 0, "no housing props in street-map reset (got %d)" % house_n)
-	_assert(forest_n == 0, "street map has no forest props (got %d)" % forest_n)
+	_assert(forest_n >= 1, "forest silhouette props present (got %d)" % forest_n)
 
 	for cluster in ["rietacker", "ohringen"]:
 		var n := _count_school_cluster(all_sprites, cluster)
@@ -113,6 +113,7 @@ func _run() -> void:
 	_assert_railway(world, all_sprites)
 	_assert_badi(world, all_sprites)
 	_assert_streams(world, all_sprites)
+	_assert_forests(world, all_sprites)
 	_assert_geo_quadrants(all_sprites)
 	_assert_schools_off_roads(world, all_sprites)
 
@@ -1069,7 +1070,7 @@ func _assert_railway(world: Node, sprites: Array[Sprite2D]) -> void:
 		if spr.has_meta("terrain") and str(spr.get_meta("terrain")) == "forest":
 			forest_n += 1
 	_assert(house_n == 0, "no housing props")
-	_assert(forest_n == 0, "no forest props")
+	_assert(forest_n >= 1, "forest props present (got %d)" % forest_n)
 	for cluster in ["birch", "rietacker", "ohringen"]:
 		var n := _count_school_cluster(sprites, cluster)
 		_assert(n == 3, "school_cluster %s still has 3 props (got %d)" % [cluster, n])
@@ -1219,7 +1220,7 @@ func _assert_badi(world: Node, sprites: Array[Sprite2D]) -> void:
 		if spr.has_meta("terrain") and str(spr.get_meta("terrain")) == "forest":
 			forest_n += 1
 	_assert(house_n == 0, "no housing props")
-	_assert(forest_n == 0, "no forest props")
+	_assert(forest_n >= 1, "forest props present (got %d)" % forest_n)
 	for cluster in ["birch", "rietacker", "ohringen"]:
 		var n := _count_school_cluster(sprites, cluster)
 		_assert(n == 3, "school_cluster %s still has 3 props (got %d)" % [cluster, n])
@@ -1316,7 +1317,7 @@ func _assert_streams(world: Node, sprites: Array[Sprite2D]) -> void:
 		if spr.has_meta("terrain") and str(spr.get_meta("terrain")) == "forest":
 			forest_n += 1
 	_assert(house_n == 0, "no housing props")
-	_assert(forest_n == 0, "no forest props")
+	_assert(forest_n >= 1, "forest props present (got %d)" % forest_n)
 	for cluster in ["birch", "rietacker", "ohringen"]:
 		var n := _count_school_cluster(sprites, cluster)
 		_assert(n == 3, "school_cluster %s still has 3 props (got %d)" % [cluster, n])
@@ -1432,6 +1433,171 @@ func _assert_streams(world: Node, sprites: Array[Sprite2D]) -> void:
 		"Ohringerbach marker or Ohringen within 5000 wu (marker=%s d=%.0f)"
 		% [str(has_ohringer), best_ohr]
 	)
+
+
+func _assert_forests(world: Node, sprites: Array[Sprite2D]) -> void:
+	_assert(
+		FileAccess.file_exists("res://data/seuzach_forests.json"),
+		"data/seuzach_forests.json exists"
+	)
+	var house_n := 0
+	var forest_n := 0
+	for spr in sprites:
+		if spr.has_meta("house_variant"):
+			house_n += 1
+		if spr.has_meta("terrain") and str(spr.get_meta("terrain")) == "forest":
+			forest_n += 1
+			_assert(
+				not spr.has_meta("has_building_collision")
+				or not bool(spr.get_meta("has_building_collision")),
+				"forest silhouette has no has_building_collision (%s)" % spr.name
+			)
+			_assert(
+				spr.get_node_or_null("BuildingCollision") == null,
+				"forest silhouette has no BuildingCollision (%s)" % spr.name
+			)
+			_assert(
+				not _has_named_ancestor(spr, "DistrictOhringen"),
+				"forest silhouette parent chain excludes DistrictOhringen (%s)" % spr.name
+			)
+			## A1 through forest is maps-true — do not run _assert_sprite_off_named_roads.
+	_assert(house_n == 0, "no housing props")
+	_assert(
+		forest_n >= 3 and forest_n <= 10,
+		"forest silhouettes 3–10 (got %d)" % forest_n
+	)
+	for cluster in ["birch", "rietacker", "ohringen"]:
+		var n := _count_school_cluster(sprites, cluster)
+		_assert(n == 3, "school_cluster %s still has 3 props (got %d)" % [cluster, n])
+	for kiga_id in KIGA_IDS:
+		_assert(_has_kindergarten(sprites, str(kiga_id)), "%s still placed" % kiga_id)
+	_assert(_count_landmark(sprites, "bahnhof") == 1, "bahnhof count stays 1")
+	_assert(_count_landmark(sprites, "badi_weiher") == 1, "badi count stays 1")
+
+	var ground: Node = world.get_node_or_null("%Ground")
+	_assert(ground != null, "Ground for forest markers")
+	if ground == null:
+		return
+	_assert(ground.get_node_or_null("Forests") != null, "Forests holder under Ground")
+	var hills := 0
+	var floor_n := 0
+	var forest_markers: Array[Node] = []
+	var stream_markers := 0
+	var rail_markers := 0
+	for node in _collect_nodes(ground):
+		if node.has_meta("terrain") and str(node.get_meta("terrain")) == "hill":
+			hills += 1
+		if node.has_meta("forest_kit") and str(node.get_meta("forest_kit")) == "floor":
+			floor_n += 1
+		if node.has_meta("poi_type") and str(node.get_meta("poi_type")) == "stream":
+			stream_markers += 1
+		if node.has_meta("poi_type") and str(node.get_meta("poi_type")) == "railway":
+			rail_markers += 1
+		if not node.has_meta("poi_type") or str(node.get_meta("poi_type")) != "forest":
+			continue
+		forest_markers.append(node)
+		_assert(not node.has_meta("road_name"), "forest marker has no road_name")
+		_assert(not node.has_meta("railway_name"), "forest marker has no railway_name")
+		_assert(not node.has_meta("stream_name"), "forest marker has no stream_name")
+		_assert(
+			not _has_named_ancestor(node, "DistrictOhringen"),
+			"forest marker parent chain excludes DistrictOhringen"
+		)
+	_assert(hills == 0, "no hill markers")
+	_assert(floor_n >= 3, "Ground forest_kit=floor ≥ 3 (got %d)" % floor_n)
+	_assert(forest_markers.size() >= 3, "Ground forest markers ≥ 3 (got %d)" % forest_markers.size())
+	_assert(stream_markers >= 1, "stream markers remain (got %d)" % stream_markers)
+	_assert(rail_markers >= 1, "railway markers remain (got %d)" % rail_markers)
+	var line2d := _count_line2d_nested(ground)
+	_assert(line2d == 0, "Ground has no Line2D (got %d)" % line2d)
+
+	var buech_sample := SeuzachGeo.gps_to_world(47.5306911, 8.7357986)
+	var a1_sample := SeuzachGeo.gps_to_world(47.5281998, 8.7332964)
+	var ohr_sample := SeuzachGeo.gps_to_world(47.5262718, 8.7123371)
+	var nord_sample := SeuzachGeo.gps_to_world(47.5402506, 8.7179862)
+	var has_buech_name := false
+	var buech_hit := false
+	var a1_hit := false
+	var nord_hit := false
+	var nord_y := false
+	var best_a1_centroid := 1.0e9
+	var best_ohr_ring := 1.0e9
+	for marker in forest_markers:
+		var fname := str(marker.get_meta("forest_name")) if marker.has_meta("forest_name") else ""
+		if fname == "Buechwäldli":
+			has_buech_name = true
+		var pts := PackedVector2Array()
+		if marker.has_meta("forest_points"):
+			pts = PackedVector2Array(marker.get_meta("forest_points"))
+		if fname == "Buechwäldli" or _sample_hits_forest(buech_sample, marker.position, pts):
+			buech_hit = true
+		if _sample_hits_forest(a1_sample, marker.position, pts):
+			a1_hit = true
+		if _sample_hits_forest(nord_sample, marker.position, pts):
+			nord_hit = true
+		if marker.position.y < -8000.0:
+			nord_y = true
+		best_a1_centroid = minf(
+			best_a1_centroid, marker.position.distance_to(SeuzachGeo.forrenberg_world())
+		)
+		if pts.size() >= 3:
+			best_ohr_ring = minf(best_ohr_ring, _dist_to_ring(SeuzachGeo.ohringen_world(), pts))
+			best_ohr_ring = minf(best_ohr_ring, _dist_to_ring(ohr_sample, pts))
+	_assert(
+		has_buech_name or buech_hit,
+		"Buechwäldli named marker or sample in a forest ring"
+	)
+	_assert(
+		a1_hit or best_a1_centroid < 6000.0,
+		"A1/Forrenberg sample in ring or centroid < 6000 wu (hit=%s d=%.0f)"
+		% [str(a1_hit), best_a1_centroid]
+	)
+	_assert(
+		best_ohr_ring < 5000.0,
+		"Ohringen campus/sample within 5000 wu of a forest ring (d=%.0f)" % best_ohr_ring
+	)
+	_assert(
+		nord_hit or nord_y,
+		"Nord sample in ring or forest centroid y < -8000 (hit=%s y=%s)"
+		% [str(nord_hit), str(nord_y)]
+	)
+	var stream_lines: Array[PackedVector2Array] = []
+	for node in _collect_nodes(ground):
+		if not node.has_meta("stream_points"):
+			continue
+		var spts: PackedVector2Array = PackedVector2Array(node.get_meta("stream_points"))
+		if spts.size() >= 2:
+			stream_lines.append(spts)
+	for spr in sprites:
+		if not spr.has_meta("terrain") or str(spr.get_meta("terrain")) != "forest":
+			continue
+		var best_stream := 1.0e9
+		for spts in stream_lines:
+			best_stream = minf(best_stream, _dist_to_polyline(spr.position, spts))
+		_assert(
+			best_stream >= 400.0,
+			"forest silhouette %s off brooks (d=%.0f, need ≥400)"
+			% [spr.name, best_stream]
+		)
+
+
+func _sample_hits_forest(sample: Vector2, centroid: Vector2, pts: PackedVector2Array) -> bool:
+	if centroid.distance_to(sample) <= 80.0:
+		return true
+	if pts.size() >= 3 and Geometry2D.is_point_in_polygon(sample, pts):
+		return true
+	return false
+
+
+func _dist_to_ring(p: Vector2, pts: PackedVector2Array) -> float:
+	if pts.size() >= 3 and Geometry2D.is_point_in_polygon(p, pts):
+		return 0.0
+	if pts.is_empty():
+		return 1.0e9
+	var closed := PackedVector2Array(pts)
+	if closed[0].distance_to(closed[closed.size() - 1]) > 1.0:
+		closed.append(closed[0])
+	return _dist_to_polyline(p, closed)
 
 
 func _count_line2d_nested(node: Node) -> int:

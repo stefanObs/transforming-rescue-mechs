@@ -60,6 +60,8 @@ const DEBUG_GRID_CELL := 100.0
 const ROADS_JSON := "res://data/seuzach_roads.json"
 const RAILS_JSON := "res://data/seuzach_rails.json"
 const WATER_JSON := "res://data/seuzach_water.json"
+const FORESTS_JSON := "res://data/seuzach_forests.json"
+const FOREST_FLOOR_Z := -48
 const RAIL_HW := 38.0
 const STREAM_HW := 16.0
 const RIVER_HW := 24.0
@@ -268,7 +270,7 @@ func _build_flat_ground() -> void:
 	for child in _ground.get_children():
 		child.queue_free()
 
-	# Flat grass canvas — street map only (no hills, forest floors, or landmark props).
+	# Flat grass canvas + OSM forest floors under water/roads. No hills.
 	var b := SeuzachGeo.WORLD_BOUNDS
 	var p0 := b.position
 	var p1 := Vector2(b.end.x, b.position.y)
@@ -282,6 +284,7 @@ func _build_flat_ground() -> void:
 	if _sky:
 		_sky.polygon = PackedVector2Array([p0, p1, p2, p3])
 
+	_add_forest_floors()
 	_add_continuous_streams()
 	_add_continuous_roads()
 	_add_continuous_rails()
@@ -429,6 +432,77 @@ func _add_continuous_streams() -> void:
 		_add_stream_marker(str(rec.get("name", "")), waterway, mid, half_w, pts)
 
 
+func _load_forest_data() -> Dictionary:
+	if not FileAccess.file_exists(FORESTS_JSON):
+		push_warning("Missing %s" % FORESTS_JSON)
+		return {}
+	var file := FileAccess.open(FORESTS_JSON, FileAccess.READ)
+	if file == null:
+		push_warning("Cannot read %s" % FORESTS_JSON)
+		return {}
+	var parsed: Variant = JSON.parse_string(file.get_as_text())
+	if parsed is Dictionary:
+		return parsed as Dictionary
+	return {}
+
+
+func _add_forest_floors() -> void:
+	## OSM forest/wood fills under Ground, below WaterKit. No collision, no Line2D.
+	var data := _load_forest_data()
+	var forests_root := Node2D.new()
+	forests_root.name = "Forests"
+	_ground.add_child(forests_root)
+	var forests: Array = data.get("forests", [])
+	for item in forests:
+		if not (item is Dictionary):
+			continue
+		var rec: Dictionary = item
+		var pts := _points_from_json(rec.get("points", []))
+		if pts.size() < 3:
+			continue
+		var poly := Polygon2D.new()
+		poly.color = COLOR_FOREST_FLOOR
+		poly.z_index = FOREST_FLOOR_Z
+		var packed := PackedVector2Array()
+		for pt in pts:
+			packed.append(pt as Vector2)
+		poly.polygon = packed
+		poly.set_meta("forest_kit", "floor")
+		poly.set_meta("terrain", "forest")
+		forests_root.add_child(poly)
+		var centroid := _json_vec2(rec.get("centroid", []), packed)
+		_add_forest_marker(str(rec.get("name", "")), str(rec.get("osm", "forest")), centroid, packed)
+
+
+func _json_vec2(raw: Variant, fallback_pts: PackedVector2Array) -> Vector2:
+	if raw is Array and (raw as Array).size() >= 2:
+		return Vector2(float(raw[0]), float(raw[1]))
+	if fallback_pts.size() == 0:
+		return Vector2.ZERO
+	var acc := Vector2.ZERO
+	for p in fallback_pts:
+		acc += p
+	return acc / float(fallback_pts.size())
+
+
+func _add_forest_marker(
+	forest_name: String,
+	osm: String,
+	pos: Vector2,
+	points: PackedVector2Array
+) -> void:
+	var marker := Node2D.new()
+	var label := forest_name if forest_name != "" else "unnamed"
+	marker.name = "Forest_%s_%d_%d" % [label.replace(" ", "_"), int(pos.x), int(pos.y)]
+	marker.position = pos
+	marker.set_meta("forest_name", forest_name)
+	marker.set_meta("osm", osm)
+	marker.set_meta("poi_type", "forest")
+	if points.size() >= 3:
+		marker.set_meta("forest_points", points)
+	_ground.add_child(marker)
+
+
 func _add_stream_marker(
 	stream_name: String,
 	waterway: String,
@@ -561,7 +635,8 @@ func _add_road_marker(
 
 
 func _place_landmarks() -> void:
-	## Street map + school clusters + kindergartens + Bahnhof + Badi (Maps). No houses/hub facade.
+	## Street map + school clusters + kindergartens + Bahnhof + Badi + forest silhouettes.
+	## No houses/hub facade.
 	for child in _props.get_children():
 		child.free()
 	_prop_parent = _props
@@ -570,6 +645,7 @@ func _place_landmarks() -> void:
 	_place_kindergartens()
 	_place_bahnhof()
 	_place_badi()
+	_place_forest_silhouettes()
 
 
 func _place_school_clusters() -> void:
@@ -711,6 +787,63 @@ func _place_badi() -> void:
 		{"landmark_id": "badi_weiher", "district": "seuzach", "poi_type": "swimming"},
 		"badi_weiher"
 	)
+
+
+func _place_forest_silhouettes() -> void:
+	## Few cluster sprites on patch centroids. Not _add_prop (no BuildingCollision).
+	_prop_parent = _props
+	var data := _load_forest_data()
+	var silhouettes: Array = data.get("silhouettes", [])
+	var idx := 0
+	for item in silhouettes:
+		if not (item is Dictionary):
+			continue
+		var rec: Dictionary = item
+		var art := str(rec.get("art", "a"))
+		if art != "b":
+			art = "a"
+		var file_name := "landmark_wald_b.png" if art == "b" else "landmark_wald_a.png"
+		var pos := _json_vec2(rec.get("pos", []), PackedVector2Array())
+		var forest_name := str(rec.get("name", ""))
+		var node_name := "wald_%s_%d" % [art, idx]
+		idx += 1
+		_add_forest_silhouette(
+			file_name,
+			pos,
+			{
+				"terrain": "forest",
+				"landmark_id": "wald",
+				"forest_name": forest_name,
+				"art": art,
+			},
+			node_name
+		)
+
+
+func _add_forest_silhouette(
+	file_name: String,
+	pos: Vector2,
+	metas: Dictionary = {},
+	node_name: String = ""
+) -> Sprite2D:
+	var path := ART + file_name
+	if not ResourceLoader.exists(path):
+		return null
+	var spr := Sprite2D.new()
+	if node_name != "":
+		spr.name = node_name
+	spr.texture = load(path)
+	spr.scale = LANDMARK_SCALE
+	spr.position = pos
+	spr.centered = true
+	spr.offset = Vector2(0.0, feet_offset_y(spr.texture))
+	spr.z_as_relative = false
+	spr.z_index = compute_prop_z(pos.y)
+	for key in metas.keys():
+		spr.set_meta(str(key), metas[key])
+	var parent: Node2D = _prop_parent if _prop_parent != null else _props
+	parent.add_child(spr)
+	return spr
 
 
 func _add_hub_enter_zone() -> void:

@@ -1,6 +1,6 @@
 # Slices: m3-landmarks-tracks-water-forest
 
-**Status:** In Arbeit  
+**Status:** Erledigt  
 **Aufgabe:** Schul-Campi, Kindergärten, Bahnhof, Gleise, Badi sowie Bäche und Wälder maps-getreu (Grundriss/Ausrichtung) in die Seuzach+Ohringen-Welt setzen.  
 **Datum:** 2026-08-11  
 **Zuschnitt:** ein Campus bzw. ein Kindergarten bzw. ein Landmark; Gleise, Bäche und Wälder je einmal (Patches, nicht jeder Baum)
@@ -22,7 +22,7 @@ Feature-Schritte, keine Prozess-Schritte. Pro Zeile folgt der volle Entwicklungs
 | S09 | `S09-bahngleise.md` | Bahngleise (S-Bahn) | S08 | erledigt |
 | S10 | `S10-badi-weiher.md` | Schwimmbad Weiher | — | erledigt |
 | S11 | `S11-baeche-riedbach.md` | Bäche / Riedbach | — | erledigt |
-| S12 | `S12-waelder.md` | Wälder (Patches) | — | offen |
+| S12 | `S12-waelder.md` | Wälder (Patches) | — | erledigt |
 
 Status: `offen` → `in Arbeit` → `erledigt` (nach Phase-4-Pass + Git).
 

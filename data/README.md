@@ -12,4 +12,8 @@
 
 `seuzach_water.json` ist daraus generiert (`scripts/gen_seuzach_water.py`): benannte Bäche in CLIP (Chrebsbach, Welsikonerbach, Bachtobelgraben, Ohringerbach, …) in denselben Weltkoordinaten. Feldgräben (`ditch`) und der OSM-Riedbach (Eulach, ausserhalb CLIP) sind nicht enthalten.
 
+`seuzach_forests_osm.json` ist ein Overpass-Dump (`landuse=forest` / `natural=wood`, BBox 47.520–47.555 N, 8.700–8.760 E). Nicht mit Highway-, Railway- oder Waterway-Ways mischen.
+
+`seuzach_forests.json` ist daraus generiert (`scripts/gen_seuzach_forests.py`): Waldflächen in CLIP (Buechwäldli, Laubholz, Forrenberg/A1, Ohringen, Seuzach-Nord, …) plus wenige Silhouette-Positionen in denselben Weltkoordinaten. Winterthur-Wälder (Lindberg, Wolfensberg, Schoren, Stadlerberg, Fröschholz) nur als CLIP-Schnitt, nicht als Pflicht-Patches.
+
 Kartendaten © OpenStreetMap-Mitwirkende, [ODbL](https://opendatacommons.org/licenses/odbl/).
