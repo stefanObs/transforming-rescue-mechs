@@ -109,6 +109,7 @@ func _run() -> void:
 	_assert_kiga_weid(world, all_sprites)
 	_assert_kiga_schneckenwiese(world, all_sprites)
 	_assert_kiga_ohringen(world, all_sprites)
+	_assert_bahnhof(world, all_sprites)
 	_assert_geo_quadrants(all_sprites)
 	_assert_schools_off_roads(world, all_sprites)
 
@@ -959,6 +960,132 @@ func _assert_kiga_ohringen(world: Node, sprites: Array[Sprite2D]) -> void:
 		_assert_road_near(ground, "Schulstrasse", SeuzachGeo.kiga_ohringen_world(), 900.0)
 
 
+func _assert_bahnhof(world: Node, sprites: Array[Sprite2D]) -> void:
+	_assert(
+		is_equal_approx(SeuzachGeo.BAHNHOF_LAT, 47.5357159)
+		and is_equal_approx(SeuzachGeo.BAHNHOF_LON, 8.7388969),
+		"bahnhof GPS constants match OSM building centroid (not bus platform)"
+	)
+	_assert(
+		SeuzachGeo.bahnhof_world().is_equal_approx(
+			SeuzachGeo.gps_to_world(SeuzachGeo.BAHNHOF_LAT, SeuzachGeo.BAHNHOF_LON)
+		),
+		"bahnhof_world() maps BAHNHOF_LAT/LON"
+	)
+	_assert(
+		SeuzachGeo.bahnhof_world().distance_to(Vector2(18113.8, -4651.7)) < 1.0,
+		"bahnhof_world() ≈ (18113.8, -4651.7)"
+	)
+	_assert(
+		_count_landmark(sprites, "bahnhof") == 1,
+		"exactly one bahnhof landmark (got %d)" % _count_landmark(sprites, "bahnhof")
+	)
+	var bahnhof := _find_named(sprites, "bahnhof")
+	_assert(bahnhof != null, "node bahnhof exists")
+	_assert(_find_landmark(sprites, "bahnhof") != null, "landmark_id bahnhof present")
+	_assert(_find_landmark(sprites, "badi_weiher") == null, "no badi prop (S10)")
+	_assert(_count_poi(sprites, "railway") == 0, "no railway track props (S09)")
+	_assert(_find_landmark(sprites, "gleise") == null, "no gleise landmark (S09)")
+	if bahnhof == null:
+		return
+	_assert(
+		str(bahnhof.get_meta("landmark_id")) == "bahnhof"
+		and str(bahnhof.get_meta("district")) == "seuzach"
+		and str(bahnhof.get_meta("poi_type")) == "station",
+		"bahnhof metas"
+	)
+	_assert(not bahnhof.has_meta("school_cluster"), "bahnhof has no school_cluster")
+	_assert(not bahnhof.has_meta("kindergarten_id"), "bahnhof has no kindergarten_id")
+	_assert(
+		str(bahnhof.get_meta("district")) != "forrenberg",
+		"bahnhof district is not forrenberg"
+	)
+	_assert(
+		not _has_named_ancestor(bahnhof, "DistrictOhringen"),
+		"bahnhof parent chain excludes DistrictOhringen"
+	)
+	_assert(
+		bahnhof.position.distance_to(SeuzachGeo.bahnhof_world()) <= 80.0,
+		"bahnhof within 80 wu of OSM getter (d=%.1f)"
+		% bahnhof.position.distance_to(SeuzachGeo.bahnhof_world())
+	)
+	_assert(
+		bahnhof.position.x > 15000.0 and bahnhof.position.y < 0.0,
+		"bahnhof east village north of Kirche (got %s)" % str(bahnhof.position)
+	)
+	_assert(
+		bahnhof.position.x > SeuzachGeo.birch_schulhaus_a_world().x,
+		"bahnhof east of Birch-a (bahnhof.x=%.0f a.x=%.0f)"
+		% [bahnhof.position.x, SeuzachGeo.birch_schulhaus_a_world().x]
+	)
+	var d_birch := bahnhof.position.distance_to(SeuzachGeo.birch_world())
+	_assert(
+		d_birch > 3000.0 and d_birch < 5000.0,
+		"bahnhof 3000–5000 wu from Birch (d=%.0f)" % d_birch
+	)
+	_assert(
+		bahnhof.position.distance_to(SeuzachGeo.forrenberg_world()) > 8000.0,
+		"bahnhof far from Forrenberg hub (d=%.0f)"
+		% bahnhof.position.distance_to(SeuzachGeo.forrenberg_world())
+	)
+	_assert(
+		bahnhof.position.distance_to(SeuzachGeo.kiga_ohringen_world()) > 8000.0,
+		"bahnhof far from kiga_ohringen (d=%.0f)"
+		% bahnhof.position.distance_to(SeuzachGeo.kiga_ohringen_world())
+	)
+	_assert(
+		bahnhof.position.distance_to(SeuzachGeo.ohringen_world()) > 15000.0,
+		"bahnhof far from Ohringen campus (d=%.0f)"
+		% bahnhof.position.distance_to(SeuzachGeo.ohringen_world())
+	)
+	## OSM stop ref 1 (node 130250360) — inline GPS, not a SeuzachGeo constant (S09).
+	var stop_ref1 := SeuzachGeo.gps_to_world(47.5358162, 8.7389630)
+	_assert(
+		bahnhof.position.y > stop_ref1.y,
+		"bahnhof south of track stop ref 1 (bahnhof.y=%.0f stop.y=%.0f)"
+		% [bahnhof.position.y, stop_ref1.y]
+	)
+	_assert(
+		bahnhof.has_meta("has_building_collision") and bool(bahnhof.get_meta("has_building_collision")),
+		"bahnhof has BuildingCollision"
+	)
+	_assert(is_zero_approx(bahnhof.rotation), "bahnhof rotation is 0")
+	_assert_sprite_off_named_roads(world, bahnhof)
+	var ground: Node = world.get_node_or_null("%Ground")
+	if ground:
+		_assert_road_near(ground, "Stationsstrasse", SeuzachGeo.bahnhof_world(), 900.0)
+
+
+func _assert_sprite_off_named_roads(world: Node, spr: Sprite2D) -> void:
+	var ground: Node = world.get_node_or_null("%Ground")
+	_assert(ground != null, "Ground for %s-vs-road clearance" % spr.name)
+	if ground == null:
+		return
+	var aabb := _school_aabb(spr)
+	for node in _collect_nodes(ground):
+		if not node.has_meta("road_name") or not node.has_meta("road_points"):
+			continue
+		var pts: PackedVector2Array = PackedVector2Array(node.get_meta("road_points"))
+		if pts.size() < 2:
+			continue
+		var half_w := float(node.get_meta("half_w")) if node.has_meta("half_w") else 36.0
+		var d_feet := _dist_to_polyline(spr.position, pts)
+		var d_aabb := _dist_aabb_to_polyline(aabb, pts)
+		var need_feet := half_w + 64.0
+		var need_aabb := half_w + 14.0
+		var road_name := str(node.get_meta("road_name"))
+		_assert(
+			d_feet >= need_feet,
+			"%s must sit off %s (d=%.0f, need ≥%.0f)"
+			% [spr.name, road_name, d_feet, need_feet]
+		)
+		_assert(
+			d_aabb >= need_aabb,
+			"%s facade must sit off %s (aabb d=%.0f, need ≥%.0f)"
+			% [spr.name, road_name, d_aabb, need_aabb]
+		)
+
+
 func _assert_geo_quadrants(sprites: Array[Sprite2D]) -> void:
 	## +X east, +Y south; Kirche ~ (0,0); Forrenberg south; Badi north; Ohringen SW.
 	var hub := _find_landmark(sprites, "hub_station")
@@ -982,8 +1109,12 @@ func _assert_geo_quadrants(sprites: Array[Sprite2D]) -> void:
 		)
 	if badi:
 		_assert(badi.position.y < -200.0, "badi north of Kirche (y<-200, got %.0f)" % badi.position.y)
+	_assert(bahnhof != null, "bahnhof present in geo quadrants")
 	if bahnhof:
-		_assert(bahnhof.position.x > 500.0, "bahnhof east (x>500, got %.0f)" % bahnhof.position.x)
+		_assert(
+			bahnhof.position.x > 10000.0,
+			"bahnhof east of Kirche at field scale (x>10000, got %.0f)" % bahnhof.position.x
+		)
 	if ohringen_school:
 		_assert(
 			ohringen_school.position.x < -15000.0 and ohringen_school.position.y > 8000.0,

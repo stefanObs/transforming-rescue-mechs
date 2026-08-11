@@ -393,13 +393,14 @@ func _add_road_marker(
 
 
 func _place_landmarks() -> void:
-	## Street map + school clusters + placed kindergartens (Maps). No houses/hub facade.
+	## Street map + school clusters + kindergartens + Bahnhof (Maps). No houses/hub facade.
 	for child in _props.get_children():
 		child.free()
 	_prop_parent = _props
 	_add_hub_enter_zone()
 	_place_school_clusters()
 	_place_kindergartens()
+	_place_bahnhof()
 
 
 func _place_school_clusters() -> void:
@@ -517,6 +518,18 @@ func _place_kindergartens() -> void:
 		"kiga_ohringen"
 	)
 	_prop_parent = _props
+
+
+func _place_bahnhof() -> void:
+	## S08: station building + canopy at Stationsstrasse 53. No tracks (S09).
+	_prop_parent = _props
+	_add_prop(
+		"landmark_bahnhof_seuzach.png",
+		SeuzachGeo.bahnhof_world(),
+		LANDMARK_SCALE,
+		{"landmark_id": "bahnhof", "district": "seuzach", "poi_type": "station"},
+		"bahnhof"
+	)
 
 
 func _add_hub_enter_zone() -> void:

@@ -23,8 +23,11 @@ const VILLAGE_WEST_LON := 8.725788
 const VILLAGE_EAST_LAT := 47.536171
 const VILLAGE_EAST_LON := 8.746202
 
-const BAHNHOF_LAT := 47.5354389
-const BAHNHOF_LON := 8.7393932
+## OSM way 116582470 Stationsstrasse 53 (building=train_station).
+## Not bus platform way 315997018, not railway=station node 1313973484,
+## not track stops 130250360 / 1313973485.
+const BAHNHOF_LAT := 47.5357159
+const BAHNHOF_LON := 8.7388969
 const BIRCH_LAT := 47.5353419
 const BIRCH_LON := 8.7362524
 ## OSM building centroids on campus Birch (not the amenity=school yard centroid).
