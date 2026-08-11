@@ -29,12 +29,12 @@ func _run() -> void:
 					ground_sprites += 1
 				elif child is Polygon2D:
 					ground_polys += 1
-				elif child is Line2D:
-					ground_lines += 1
+			ground_lines = _count_line2d_nested(ground)
 		_assert(ground_sprites == 0, "ground has no Sprite2D tiles (got %d)" % ground_sprites)
 		_assert(ground_polys >= 1, "ground has flat polygons")
 		_assert(ground_lines == 0, "ground has no Line2D (got %d)" % ground_lines)
 		# Organic ground + RoadKit dashes/ring — not a diamond flood.
+		# RailwayKit lives under a Rails holder so sleeper-free ribbons stay within cap.
 		_assert(ground_polys <= 4000, "ground poly count organic (got %d, want <=4000)" % ground_polys)
 		var kit_roads := 0
 		var kit_stripes := 0
@@ -98,6 +98,15 @@ func _run() -> void:
 	else:
 		printerr("=== m2_world_test FAIL (%d) ===" % _failed)
 		quit(1)
+
+
+func _count_line2d_nested(node: Node) -> int:
+	var n := 0
+	if node is Line2D:
+		n += 1
+	for child in node.get_children():
+		n += _count_line2d_nested(child)
+	return n
 
 
 func _assert(cond: bool, msg: String) -> void:

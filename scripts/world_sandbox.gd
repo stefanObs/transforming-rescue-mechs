@@ -3,6 +3,7 @@ extends Node2D
 ## M3: Seuzach+Ohringen OSM-Netz auf 5,3 m/Feld; HubEnter unsichtbar am Forrenberg.
 
 const RoadKitLib := preload("res://scripts/road_kit.gd")
+const RailwayKitLib := preload("res://scripts/railway_kit.gd")
 const ART := "res://assets/art/"
 const HUB_SCENE := "res://scenes/hub_station.tscn"
 const PROP_SCALE := Vector2(0.22, 0.22)
@@ -56,6 +57,8 @@ const ROAD_DEBUG_SPACING := 900.0
 const DEBUG_GRID_SCRIPT := preload("res://scripts/debug_grid.gd")
 const DEBUG_GRID_CELL := 100.0
 const ROADS_JSON := "res://data/seuzach_roads.json"
+const RAILS_JSON := "res://data/seuzach_rails.json"
+const RAIL_HW := 38.0
 
 @onready var _player: CharacterBody2D = %Player
 @onready var _hint: Label = %HintLabel
@@ -276,6 +279,7 @@ func _build_flat_ground() -> void:
 		_sky.polygon = PackedVector2Array([p0, p1, p2, p3])
 
 	_add_continuous_roads()
+	_add_continuous_rails()
 
 
 func _add_grass_patch(center: Vector2, rx: float, ry: float, color: Color, z: int) -> void:
@@ -369,6 +373,108 @@ func _add_named_road(road_name: String, road_class: String, points: Array) -> vo
 	RoadKitLib.add_polyline(_ground, points, opts)
 	var mid: Vector2 = points[int(points.size() / 2)] as Vector2
 	_add_road_marker(road_name, mid, road_class, float(opts["half_w"]), points)
+
+
+func _load_rail_data() -> Dictionary:
+	if not FileAccess.file_exists(RAILS_JSON):
+		push_warning("Missing %s" % RAILS_JSON)
+		return {}
+	var file := FileAccess.open(RAILS_JSON, FileAccess.READ)
+	if file == null:
+		push_warning("Cannot read %s" % RAILS_JSON)
+		return {}
+	var parsed: Variant = JSON.parse_string(file.get_as_text())
+	if parsed is Dictionary:
+		return parsed as Dictionary
+	return {}
+
+
+func _add_continuous_rails() -> void:
+	## OSM SBB 821 ballast+rails under Ground. No collision, no road_name.
+	var data := _load_rail_data()
+	var rails_root := Node2D.new()
+	rails_root.name = "Rails"
+	_ground.add_child(rails_root)
+	var tracks: Array = data.get("tracks", [])
+	for item in tracks:
+		if not (item is Dictionary):
+			continue
+		var rec: Dictionary = item
+		var pts := _points_from_json(rec.get("points", []))
+		if pts.size() < 2:
+			continue
+		RailwayKitLib.add_polyline(rails_root, pts, {"half_w": RAIL_HW})
+		var mid: Vector2 = pts[int(pts.size() / 2)] as Vector2
+		_add_railway_marker(
+			str(rec.get("name", "")),
+			str(rec.get("track_ref", "")),
+			mid,
+			RAIL_HW,
+			pts
+		)
+	var platforms: Array = data.get("platforms", [])
+	for item in platforms:
+		if not (item is Dictionary):
+			continue
+		var rec: Dictionary = item
+		var pts := _points_from_json(rec.get("points", []))
+		if pts.size() < 3:
+			continue
+		RailwayKitLib.add_platform(rails_root, pts)
+		_add_platform_marker(str(rec.get("ref", "")), pts)
+
+
+func _points_from_json(raw_pts: Variant) -> Array:
+	var pts: Array = []
+	if not (raw_pts is Array):
+		return pts
+	for p in raw_pts:
+		if p is Array and (p as Array).size() >= 2:
+			pts.append(Vector2(float(p[0]), float(p[1])))
+	return pts
+
+
+func _add_railway_marker(
+	railway_name: String,
+	track_ref: String,
+	pos: Vector2,
+	half_w: float,
+	points: Array
+) -> void:
+	var marker := Node2D.new()
+	marker.name = "Railway_%s_%s" % [railway_name.replace(" ", "_"), track_ref]
+	marker.position = pos
+	marker.set_meta("railway_name", railway_name)
+	marker.set_meta("track_ref", track_ref)
+	marker.set_meta("half_w", half_w)
+	marker.set_meta("poi_type", "railway")
+	if not points.is_empty():
+		var packed := PackedVector2Array()
+		for pt in points:
+			packed.append(pt as Vector2)
+		marker.set_meta("railway_points", packed)
+	_ground.add_child(marker)
+
+
+func _add_platform_marker(platform_ref: String, points: Array) -> void:
+	if points.is_empty():
+		return
+	## Station-area vertex (closest to OSM stop ref 1), not the long SE tail centroid.
+	var stop_ref1 := SeuzachGeo.gps_to_world(47.5358162, 8.7389630)
+	var pos: Vector2 = points[0] as Vector2
+	var best := pos.distance_to(stop_ref1)
+	for pt in points:
+		var p: Vector2 = pt as Vector2
+		var d := p.distance_to(stop_ref1)
+		if d < best:
+			best = d
+			pos = p
+	var marker := Node2D.new()
+	marker.name = "Railway_platform_%s" % platform_ref
+	marker.position = pos
+	marker.set_meta("platform_ref", platform_ref)
+	marker.set_meta("poi_type", "railway")
+	_ground.add_child(marker)
 
 
 func _add_road_marker(

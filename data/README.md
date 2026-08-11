@@ -4,4 +4,8 @@
 
 `seuzach_roads.json` ist daraus generiert (`scripts/gen_seuzach_roads.py`) in Spielwelt-Koordinaten (Kirche = Ursprung, 1 Feld = 5,3 m = 100 wu).
 
+`seuzach_rails_osm.json` ist ein Overpass-Dump (`railway=rail` / `railway=platform` / `railway=stop`, BBox 47.520–47.555 N, 8.700–8.760 E). Nicht mit den Highway-Ways mischen.
+
+`seuzach_rails.json` ist daraus generiert (`scripts/gen_seuzach_rails.py`): SBB-Linie 821 (Durchgang `track_ref=1`, Stations-Gleis 2, Perron 2) in denselben Weltkoordinaten und CLIP wie die Strassen.
+
 Kartendaten © OpenStreetMap-Mitwirkende, [ODbL](https://opendatacommons.org/licenses/odbl/).

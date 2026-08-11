@@ -110,6 +110,7 @@ func _run() -> void:
 	_assert_kiga_schneckenwiese(world, all_sprites)
 	_assert_kiga_ohringen(world, all_sprites)
 	_assert_bahnhof(world, all_sprites)
+	_assert_railway(world, all_sprites)
 	_assert_geo_quadrants(all_sprites)
 	_assert_schools_off_roads(world, all_sprites)
 
@@ -984,8 +985,8 @@ func _assert_bahnhof(world: Node, sprites: Array[Sprite2D]) -> void:
 	_assert(bahnhof != null, "node bahnhof exists")
 	_assert(_find_landmark(sprites, "bahnhof") != null, "landmark_id bahnhof present")
 	_assert(_find_landmark(sprites, "badi_weiher") == null, "no badi prop (S10)")
-	_assert(_count_poi(sprites, "railway") == 0, "no railway track props (S09)")
-	_assert(_find_landmark(sprites, "gleise") == null, "no gleise landmark (S09)")
+	_assert(_count_poi(sprites, "railway") == 0, "railway sprite POIs stay 0 (S09 kit is Ground, not Sprite)")
+	_assert(_find_landmark(sprites, "gleise") == null, "no gleise landmark sprite (S09 uses RailwayKit)")
 	if bahnhof == null:
 		return
 	_assert(
@@ -1054,6 +1055,142 @@ func _assert_bahnhof(world: Node, sprites: Array[Sprite2D]) -> void:
 	var ground: Node = world.get_node_or_null("%Ground")
 	if ground:
 		_assert_road_near(ground, "Stationsstrasse", SeuzachGeo.bahnhof_world(), 900.0)
+
+
+func _assert_railway(world: Node, sprites: Array[Sprite2D]) -> void:
+	_assert(_count_poi(sprites, "railway") == 0, "railway sprite POIs remain 0 (kit ≠ sprite)")
+	_assert(_find_landmark(sprites, "gleise") == null, "no gleise landmark sprite")
+	_assert(_find_landmark(sprites, "badi_weiher") == null, "no badi prop")
+	var house_n := 0
+	var forest_n := 0
+	for spr in sprites:
+		if spr.has_meta("house_variant"):
+			house_n += 1
+		if spr.has_meta("terrain") and str(spr.get_meta("terrain")) == "forest":
+			forest_n += 1
+	_assert(house_n == 0, "no housing props")
+	_assert(forest_n == 0, "no forest props")
+	for cluster in ["birch", "rietacker", "ohringen"]:
+		var n := _count_school_cluster(sprites, cluster)
+		_assert(n == 3, "school_cluster %s still has 3 props (got %d)" % [cluster, n])
+	for kiga_id in KIGA_IDS:
+		_assert(_has_kindergarten(sprites, str(kiga_id)), "%s still placed" % kiga_id)
+	_assert(_count_landmark(sprites, "bahnhof") == 1, "bahnhof count stays 1")
+
+	var ground: Node = world.get_node_or_null("%Ground")
+	_assert(ground != null, "Ground for railway markers")
+	if ground == null:
+		return
+	var hills := 0
+	var rail_markers: Array[Node] = []
+	var ballast_n := 0
+	var rail_n := 0
+	var has_platform_kit := false
+	var has_platform_marker := false
+	var platform_north := false
+	var stop_ref1 := SeuzachGeo.gps_to_world(47.5358162, 8.7389630)
+	var stop_ref2 := SeuzachGeo.gps_to_world(47.5358434, 8.7390122)
+	for node in _collect_nodes(ground):
+		if node.has_meta("terrain") and str(node.get_meta("terrain")) == "hill":
+			hills += 1
+		if node.has_meta("railway_kit"):
+			var kit := str(node.get_meta("railway_kit"))
+			if kit == "ballast":
+				ballast_n += 1
+			elif kit == "rail":
+				rail_n += 1
+		if node.has_meta("railway_kit") and str(node.get_meta("railway_kit")) == "platform":
+			has_platform_kit = true
+			if node is Polygon2D:
+				for p in (node as Polygon2D).polygon:
+					if p.y < stop_ref1.y and p.distance_to(stop_ref1) <= 400.0:
+						platform_north = true
+						break
+		if node.has_meta("platform_ref") and str(node.get_meta("platform_ref")) == "2":
+			has_platform_marker = true
+			if node.position.y < stop_ref1.y:
+				platform_north = true
+		if not node.has_meta("poi_type") or str(node.get_meta("poi_type")) != "railway":
+			continue
+		rail_markers.append(node)
+		_assert(not node.has_meta("road_name"), "railway marker has no road_name")
+		_assert(
+			not _has_named_ancestor(node, "DistrictOhringen"),
+			"railway marker parent chain excludes DistrictOhringen"
+		)
+	_assert(hills == 0, "no hill markers")
+	_assert(ballast_n >= 1, "Ground railway_kit=ballast ≥ 1 (got %d)" % ballast_n)
+	_assert(rail_n >= 2, "Ground railway_kit=rail ≥ 2 (got %d)" % rail_n)
+	_assert(rail_markers.size() >= 1, "Ground railway markers ≥ 1 (got %d)" % rail_markers.size())
+
+	var through: Node = null
+	var through_pts := PackedVector2Array()
+	var through_len := 0.0
+	var min_x := 1.0e9
+	var max_x := -1.0e9
+	var best_stop1 := 1.0e9
+	var loop: Node = null
+	var best_stop2 := 1.0e9
+	for marker in rail_markers:
+		if not marker.has_meta("track_ref") or not marker.has_meta("railway_points"):
+			continue
+		var tref := str(marker.get_meta("track_ref"))
+		var pts: PackedVector2Array = PackedVector2Array(marker.get_meta("railway_points"))
+		if pts.size() < 2:
+			continue
+		if tref == "1":
+			for p in pts:
+				min_x = minf(min_x, p.x)
+				max_x = maxf(max_x, p.x)
+			through_len = maxf(through_len, _polyline_len(pts))
+			var d1 := _dist_to_polyline(stop_ref1, pts)
+			if d1 <= best_stop1:
+				best_stop1 = d1
+				through_pts = pts
+				through = marker
+		elif tref == "2":
+			loop = marker
+			best_stop2 = minf(best_stop2, _dist_to_polyline(stop_ref2, pts))
+	_assert(through != null, "track_ref=1 through marker present")
+	if through != null:
+		var half_w := float(through.get_meta("half_w")) if through.has_meta("half_w") else 38.0
+		_assert(
+			best_stop1 <= half_w + 40.0,
+			"stop ref 1 on/near Gleis 1 (d=%.1f, need ≤%.1f)" % [best_stop1, half_w + 40.0]
+		)
+		var bahnhof := _find_named(sprites, "bahnhof")
+		_assert(bahnhof != null, "bahnhof prop for railway side check")
+		if bahnhof:
+			_assert(
+				bahnhof.position.y > stop_ref1.y,
+				"bahnhof south of Gleis 1 / stop ref 1 (bahnhof.y=%.0f stop.y=%.0f)"
+				% [bahnhof.position.y, stop_ref1.y]
+			)
+			var d_bldg := _dist_to_polyline(SeuzachGeo.bahnhof_world(), through_pts)
+			_assert(
+				d_bldg >= 80.0 and d_bldg <= 400.0,
+				"bahnhof centroid 80–400 wu from Gleis 1 (d=%.1f)" % d_bldg
+			)
+		_assert(
+			(min_x < 16000.0 and max_x > 28000.0) or through_len > 20000.0,
+			"through spans Ost-Dorf (x %.0f..%.0f len=%.0f)" % [min_x, max_x, through_len]
+		)
+	_assert(loop != null or rail_markers.size() >= 2, "Gleis 2 marker or second railway polyline")
+	if loop != null:
+		var loop_hw := float(loop.get_meta("half_w")) if loop.has_meta("half_w") else 38.0
+		_assert(
+			best_stop2 <= loop_hw + 40.0,
+			"stop ref 2 on/near Gleis 2 (d=%.1f)" % best_stop2
+		)
+	_assert(has_platform_kit or has_platform_marker, "Perron 2 kit polygon or platform_ref=2 marker")
+	_assert(platform_north, "Perron 2 north of Gleis 1 (smaller Y than stop ref 1)")
+
+
+func _polyline_len(pts: PackedVector2Array) -> float:
+	var total := 0.0
+	for i in range(pts.size() - 1):
+		total += pts[i].distance_to(pts[i + 1])
+	return total
 
 
 func _assert_sprite_off_named_roads(world: Node, spr: Sprite2D) -> void:
