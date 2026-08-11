@@ -14,7 +14,7 @@ Feature-Schritte, keine Prozess-Schritte. Pro Zeile folgt der Ablauf (Plan nur w
 | S01 | `S01-global-landmark-scale.md` | Landmark-/Prop-Scale vs. Strasse/Spieler wieder lesbar | — | erledigt |
 | S02 | `S02-campus-birch-rietacker.md` | Campus Birch + Rietacker: Ausrichtung & Relativgrößen | S01 | erledigt |
 | S03 | `S03-ohringen-campus-kiga.md` | Campus Ohringen + Kiga Ohringen: Ausrichtung & Relativgrößen | S01 | erledigt |
-| S04 | `S04-kigas-bachtobel-weid-schneckenwiese.md` | Kigas Bachtobel + Weid + Schneckenwiese: Ausrichtung & Relativgrößen | S01 | offen |
+| S04 | `S04-kigas-bachtobel-weid-schneckenwiese.md` | Kigas Bachtobel + Weid + Schneckenwiese: Ausrichtung & Relativgrößen | S01 | erledigt |
 | S05 | `S05-bahnhof-badi.md` | Bahnhof + Badi: Ausrichtung & Relativgrößen | S01 | offen |
 
 Status nur: `offen` → `in Arbeit` (Implement-Start) → `erledigt` (nach Phase-4-Pass + Git). Kein Slice-File-Phasen-Churn.

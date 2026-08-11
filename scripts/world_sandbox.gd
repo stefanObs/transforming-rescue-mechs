@@ -25,6 +25,10 @@ const OHRINGEN_A_SCALE_MULT := 1.35
 const OHRINGEN_B_SCALE_MULT := 0.83
 const OHRINGEN_TURNHALLE_SCALE_MULT := 0.75
 const KIGA_OHRINGEN_SCALE_MULT := 0.55
+## S04: Seuzach kigas Bachtobel/Weid/Schneckenwiese multipliers on SCHOOL_SCALE (OSM footprint ratios).
+const KIGA_BACHTOBEL_SCALE_MULT := 0.57
+const KIGA_WEID_SCALE_MULT := 0.55
+const KIGA_SCHNECKENWIESE_SCALE_MULT := 1.03
 ## Ground polygons sit at z ≈ −50…−34. Actors/props share one BASE so Y-sort works
 ## while staying above ground. Godot canvas z_index max is 4096.
 const ACTOR_Z_BASE := 2000
@@ -739,25 +743,25 @@ func _place_school_clusters() -> void:
 
 
 func _place_kindergartens() -> void:
-	## S04 Bachtobel + S05 Weid + S06 Schneckenwiese under %Props; S07 Ohringen-Kiga under DistrictOhringen.
+	## Bachtobel + Weid + Schneckenwiese under %Props; Ohringen-Kiga under DistrictOhringen.
 	_add_prop(
 		"landmark_kiga_bachtobel.png",
 		SeuzachGeo.kiga_bachtobel_world(),
-		SCHOOL_SCALE,
+		SCHOOL_SCALE * KIGA_BACHTOBEL_SCALE_MULT,
 		{"landmark_id": "kiga_bachtobel", "kindergarten_id": "kiga_bachtobel", "district": "bachtobel"},
 		"kiga_bachtobel"
 	)
 	_add_prop(
 		"landmark_kiga_weid.png",
 		SeuzachGeo.kiga_weid_world(),
-		SCHOOL_SCALE,
+		SCHOOL_SCALE * KIGA_WEID_SCALE_MULT,
 		{"landmark_id": "kiga_weid", "kindergarten_id": "kiga_weid", "district": "weid"},
 		"kiga_weid"
 	)
 	_add_prop(
 		"landmark_kiga_schneckenwiese.png",
 		SeuzachGeo.kiga_schneckenwiese_world(),
-		SCHOOL_SCALE,
+		SCHOOL_SCALE * KIGA_SCHNECKENWIESE_SCALE_MULT,
 		{
 			"landmark_id": "kiga_schneckenwiese",
 			"kindergarten_id": "kiga_schneckenwiese",

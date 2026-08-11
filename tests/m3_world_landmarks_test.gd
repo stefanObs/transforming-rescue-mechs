@@ -203,8 +203,8 @@ func _assert_named_roads(world: Node) -> void:
 
 
 func _assert_landmark_scales(world: Node, sprites: Array[Sprite2D]) -> void:
-	## S01 globals + S02 Birch/Rietacker + S03 Ohringen campus/kiga per-building mults.
-	## Seuzach kigas (3) stay SCHOOL_SCALE; bahnhof/badi LANDMARK_SCALE.
+	## S01 globals + S02 Birch/Rietacker + S03 Ohringen + S04 Seuzach kiga per-building mults.
+	## Bahnhof/badi stay LANDMARK_SCALE.
 	var world_script: Script = world.get_script()
 	_assert(world_script != null, "world_sandbox script attached")
 	if world_script == null:
@@ -235,6 +235,9 @@ func _assert_landmark_scales(world: Node, sprites: Array[Sprite2D]) -> void:
 	var ohr_b_mult: float = float(consts.get("OHRINGEN_B_SCALE_MULT", 0.83))
 	var ohr_gym_mult: float = float(consts.get("OHRINGEN_TURNHALLE_SCALE_MULT", 0.75))
 	var kiga_ohr_mult: float = float(consts.get("KIGA_OHRINGEN_SCALE_MULT", 0.55))
+	var kiga_bt_mult: float = float(consts.get("KIGA_BACHTOBEL_SCALE_MULT", 0.57))
+	var kiga_weid_mult: float = float(consts.get("KIGA_WEID_SCALE_MULT", 0.55))
+	var kiga_sw_mult: float = float(consts.get("KIGA_SCHNECKENWIESE_SCALE_MULT", 1.03))
 	_assert(absf(birch_a_mult - 1.20) < 0.02, "BIRCH_A_SCALE_MULT ≈ 1.20 (got %.3f)" % birch_a_mult)
 	_assert(absf(birch_b_mult - 1.20) < 0.02, "BIRCH_B_SCALE_MULT ≈ 1.20 (got %.3f)" % birch_b_mult)
 	_assert(absf(birch_gym_mult - 1.00) < 0.02, "BIRCH_TURNHALLE_SCALE_MULT ≈ 1.00 (got %.3f)" % birch_gym_mult)
@@ -245,6 +248,9 @@ func _assert_landmark_scales(world: Node, sprites: Array[Sprite2D]) -> void:
 	_assert(absf(ohr_b_mult - 0.83) < 0.02, "OHRINGEN_B_SCALE_MULT ≈ 0.83 (got %.3f)" % ohr_b_mult)
 	_assert(absf(ohr_gym_mult - 0.75) < 0.02, "OHRINGEN_TURNHALLE_SCALE_MULT ≈ 0.75 (got %.3f)" % ohr_gym_mult)
 	_assert(absf(kiga_ohr_mult - 0.55) < 0.02, "KIGA_OHRINGEN_SCALE_MULT ≈ 0.55 (got %.3f)" % kiga_ohr_mult)
+	_assert(absf(kiga_bt_mult - 0.57) < 0.02, "KIGA_BACHTOBEL_SCALE_MULT ≈ 0.57 (got %.3f)" % kiga_bt_mult)
+	_assert(absf(kiga_weid_mult - 0.55) < 0.02, "KIGA_WEID_SCALE_MULT ≈ 0.55 (got %.3f)" % kiga_weid_mult)
+	_assert(absf(kiga_sw_mult - 1.03) < 0.02, "KIGA_SCHNECKENWIESE_SCALE_MULT ≈ 1.03 (got %.3f)" % kiga_sw_mult)
 
 	var per_building_expected := {
 		"schulhaus_birch_a": school_scale * birch_a_mult,
@@ -257,11 +263,14 @@ func _assert_landmark_scales(world: Node, sprites: Array[Sprite2D]) -> void:
 		"schulhaus_ohringen_b": school_scale * ohr_b_mult,
 		"turnhalle_ohringen": school_scale * ohr_gym_mult,
 		"kiga_ohringen": school_scale * kiga_ohr_mult,
+		"kiga_bachtobel": school_scale * kiga_bt_mult,
+		"kiga_weid": school_scale * kiga_weid_mult,
+		"kiga_schneckenwiese": school_scale * kiga_sw_mult,
 	}
 	var school_building_n := 0
 	var birch_rietacker_n := 0
 	var ohringen_n := 0
-	var school_scale_n := 0
+	var seuzach_kiga_n := 0
 	for spr in sprites:
 		if not spr.has_meta("landmark_id"):
 			continue
@@ -282,19 +291,10 @@ func _assert_landmark_scales(world: Node, sprites: Array[Sprite2D]) -> void:
 				"turnhalle_rietacker",
 			]:
 				birch_rietacker_n += 1
+			elif spr.name in ["kiga_bachtobel", "kiga_weid", "kiga_schneckenwiese"]:
+				seuzach_kiga_n += 1
 			else:
 				ohringen_n += 1
-			school_building_n += 1
-		elif lid in [
-			"kiga_bachtobel",
-			"kiga_weid",
-			"kiga_schneckenwiese",
-		]:
-			_assert(
-				spr.scale.is_equal_approx(school_scale),
-				"%s scale == SCHOOL_SCALE (got %s)" % [spr.name, str(spr.scale)]
-			)
-			school_scale_n += 1
 			school_building_n += 1
 		elif lid == "bahnhof" or lid == "badi_weiher":
 			_assert(
@@ -303,7 +303,7 @@ func _assert_landmark_scales(world: Node, sprites: Array[Sprite2D]) -> void:
 			)
 	_assert(birch_rietacker_n == 6, "6 Birch/Rietacker per-building scales (got %d)" % birch_rietacker_n)
 	_assert(ohringen_n == 4, "4 Ohringen campus+kiga per-building scales (got %d)" % ohringen_n)
-	_assert(school_scale_n == 3, "3 Seuzach kigas at SCHOOL_SCALE (got %d)" % school_scale_n)
+	_assert(seuzach_kiga_n == 3, "3 Seuzach kiga per-building scales (got %d)" % seuzach_kiga_n)
 	_assert(school_building_n == 13, "9 campus + 4 kiga school buildings (got %d)" % school_building_n)
 	_assert(_count_landmark(sprites, "bahnhof") == 1, "bahnhof present for scale check")
 	_assert(_count_landmark(sprites, "badi_weiher") == 1, "badi present for scale check")
@@ -876,6 +876,11 @@ func _assert_kiga_bachtobel(world: Node, sprites: Array[Sprite2D]) -> void:
 		kiga.has_meta("has_building_collision") and bool(kiga.get_meta("has_building_collision")),
 		"kiga_bachtobel has BuildingCollision"
 	)
+	_assert(
+		kiga.scale.is_equal_approx(Vector2(0.285, 0.285)),
+		"kiga_bachtobel scale ≈ 0.285 (got %s)" % str(kiga.scale)
+	)
+	_assert(not kiga.flip_h, "kiga_bachtobel flip_h false")
 	_assert(is_zero_approx(kiga.rotation), "kiga_bachtobel rotation is 0")
 	var ground: Node = world.get_node_or_null("%Ground")
 	if ground:
@@ -953,6 +958,11 @@ func _assert_kiga_weid(world: Node, sprites: Array[Sprite2D]) -> void:
 		kiga.has_meta("has_building_collision") and bool(kiga.get_meta("has_building_collision")),
 		"kiga_weid has BuildingCollision"
 	)
+	_assert(
+		kiga.scale.is_equal_approx(Vector2(0.275, 0.275)),
+		"kiga_weid scale ≈ 0.275 (got %s)" % str(kiga.scale)
+	)
+	_assert(not kiga.flip_h, "kiga_weid flip_h false")
 	_assert(is_zero_approx(kiga.rotation), "kiga_weid rotation is 0")
 	var ground: Node = world.get_node_or_null("%Ground")
 	if ground:
@@ -1044,6 +1054,11 @@ func _assert_kiga_schneckenwiese(world: Node, sprites: Array[Sprite2D]) -> void:
 		kiga.has_meta("has_building_collision") and bool(kiga.get_meta("has_building_collision")),
 		"kiga_schneckenwiese has BuildingCollision"
 	)
+	_assert(
+		kiga.scale.is_equal_approx(Vector2(0.515, 0.515)),
+		"kiga_schneckenwiese scale ≈ 0.515 (got %s)" % str(kiga.scale)
+	)
+	_assert(not kiga.flip_h, "kiga_schneckenwiese flip_h false")
 	_assert(is_zero_approx(kiga.rotation), "kiga_schneckenwiese rotation is 0")
 	var ground: Node = world.get_node_or_null("%Ground")
 	if ground:
