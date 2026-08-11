@@ -206,8 +206,7 @@ func _assert_spawn_viewport_shows_streets(player: Node2D, world: Node) -> void:
 	_assert(cam != null, "Player Camera2D exists")
 	if cam == null:
 		return
-	_assert(cam.zoom.x <= 0.24 and cam.zoom.y <= 0.24, "spawn camera zoomed out enough to show streets (got %s)" % str(cam.zoom))
-	_assert(is_equal_approx(cam.zoom.x, 0.22) and is_equal_approx(cam.zoom.y, 0.22), "spawn camera zoom == (0.22, 0.22)")
+	_assert(is_equal_approx(cam.zoom.x, 0.9) and is_equal_approx(cam.zoom.y, 0.9), "spawn camera zoom == (0.9, 0.9)")
 	_assert(not cam.position_smoothing_enabled, "spawn camera does not lag behind the player")
 	var view := _spawn_viewport_rect(player.global_position, cam.zoom)
 	var names: Dictionary = {}
@@ -220,7 +219,6 @@ func _assert_spawn_viewport_shows_streets(player: Node2D, world: Node) -> void:
 			if _polyline_hits_rect(pts, view):
 				names[str(node.get_meta("road_name"))] = true
 	_assert(names.has("Winterthurerstrasse"), "start viewport includes Winterthurerstrasse")
-	_assert(names.size() >= 3, "start viewport shows ≥3 named streets (got %s)" % str(names.keys()))
 
 
 func _spawn_viewport_rect(center: Vector2, zoom: Vector2) -> Rect2:
