@@ -16,7 +16,7 @@ Feature-Schritte, keine Prozess-Schritte. Pro Zeile folgt der volle Entwicklungs
 | S03 | `S03-campus-ohringen.md` | Campus Ohringen (Maps-Ausrichtung) | — | erledigt |
 | S04 | `S04-kiga-bachtobel.md` | Kindergarten Bachtobel | — | erledigt |
 | S05 | `S05-kiga-weid.md` | Kindergarten Weid | — | erledigt |
-| S06 | `S06-kiga-schneckenwiese.md` | Kindergarten Schneckenwiese | — | offen |
+| S06 | `S06-kiga-schneckenwiese.md` | Kindergarten Schneckenwiese | — | erledigt |
 | S07 | `S07-kiga-ohringen.md` | Kindergarten Ohringen | — | offen |
 | S08 | `S08-bahnhof-seuzach.md` | Bahnhof Seuzach | — | offen |
 | S09 | `S09-bahngleise.md` | Bahngleise (S-Bahn) | S08 | offen |

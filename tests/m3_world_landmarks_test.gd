@@ -107,6 +107,7 @@ func _run() -> void:
 	_assert_ohringen_campus(all_sprites)
 	_assert_kiga_bachtobel(world, all_sprites)
 	_assert_kiga_weid(world, all_sprites)
+	_assert_kiga_schneckenwiese(world, all_sprites)
 	_assert_geo_quadrants(all_sprites)
 	_assert_schools_off_roads(world, all_sprites)
 
@@ -633,7 +634,11 @@ func _assert_kiga_bachtobel(world: Node, sprites: Array[Sprite2D]) -> void:
 	_assert(kiga != null, "node kiga_bachtobel exists")
 	_assert(_has_kindergarten(sprites, "kiga_bachtobel"), "kindergarten_id kiga_bachtobel present")
 	for other_id in KIGA_IDS:
-		if other_id == "kiga_bachtobel" or other_id == "kiga_weid":
+		if (
+			other_id == "kiga_bachtobel"
+			or other_id == "kiga_weid"
+			or other_id == "kiga_schneckenwiese"
+		):
 			continue
 		_assert(not _has_kindergarten(sprites, other_id), "%s not placed (later slice)" % other_id)
 		_assert(_find_named(sprites, other_id) == null, "no %s node" % other_id)
@@ -709,7 +714,7 @@ func _assert_kiga_weid(world: Node, sprites: Array[Sprite2D]) -> void:
 	var kiga := _find_named(sprites, "kiga_weid")
 	_assert(kiga != null, "node kiga_weid exists")
 	_assert(_has_kindergarten(sprites, "kiga_weid"), "kindergarten_id kiga_weid present")
-	for absent_id in ["kiga_schneckenwiese", "kiga_ohringen"]:
+	for absent_id in ["kiga_ohringen"]:
 		_assert(not _has_kindergarten(sprites, absent_id), "%s not placed (later slice)" % absent_id)
 		_assert(_find_named(sprites, absent_id) == null, "no %s node" % absent_id)
 	if kiga == null:
@@ -768,6 +773,101 @@ func _assert_kiga_weid(world: Node, sprites: Array[Sprite2D]) -> void:
 	var ground: Node = world.get_node_or_null("%Ground")
 	if ground:
 		_assert_road_near(ground, "Weidstrasse", SeuzachGeo.kiga_weid_world(), 900.0)
+
+
+func _assert_kiga_schneckenwiese(world: Node, sprites: Array[Sprite2D]) -> void:
+	_assert(
+		is_equal_approx(SeuzachGeo.KIGA_SCHNECKENWIESE_LAT, 47.5347527)
+		and is_equal_approx(SeuzachGeo.KIGA_SCHNECKENWIESE_LON, 8.7310559),
+		"kiga_schneckenwiese GPS constants match OSM building centroid"
+	)
+	_assert(
+		SeuzachGeo.kiga_schneckenwiese_world().is_equal_approx(
+			SeuzachGeo.gps_to_world(
+				SeuzachGeo.KIGA_SCHNECKENWIESE_LAT, SeuzachGeo.KIGA_SCHNECKENWIESE_LON
+			)
+		),
+		"kiga_schneckenwiese_world() maps KIGA_SCHNECKENWIESE_LAT/LON"
+	)
+	_assert(
+		SeuzachGeo.kiga_schneckenwiese_world().distance_to(Vector2(6994.6, -2628.6)) < 1.0,
+		"kiga_schneckenwiese_world() ≈ (6994.6, -2628.6)"
+	)
+	var kiga := _find_named(sprites, "kiga_schneckenwiese")
+	_assert(kiga != null, "node kiga_schneckenwiese exists")
+	_assert(
+		_has_kindergarten(sprites, "kiga_schneckenwiese"),
+		"kindergarten_id kiga_schneckenwiese present"
+	)
+	_assert(not _has_kindergarten(sprites, "kiga_ohringen"), "kiga_ohringen not placed (S07)")
+	_assert(_find_named(sprites, "kiga_ohringen") == null, "no kiga_ohringen node")
+	if kiga == null:
+		return
+	_assert(
+		str(kiga.get_meta("landmark_id")) == "kiga_schneckenwiese"
+		and str(kiga.get_meta("kindergarten_id")) == "kiga_schneckenwiese"
+		and str(kiga.get_meta("district")) == "schneckenwiese",
+		"kiga_schneckenwiese metas"
+	)
+	_assert(not kiga.has_meta("school_cluster"), "kiga_schneckenwiese has no school_cluster")
+	_assert(
+		not _has_named_ancestor(kiga, "DistrictOhringen"),
+		"kiga_schneckenwiese parent chain excludes DistrictOhringen"
+	)
+	_assert(
+		kiga.position.distance_to(SeuzachGeo.kiga_schneckenwiese_world()) <= 80.0,
+		"kiga_schneckenwiese within 80 wu of OSM getter (d=%.1f)"
+		% kiga.position.distance_to(SeuzachGeo.kiga_schneckenwiese_world())
+	)
+	_assert(
+		kiga.position.x > 4000.0
+		and kiga.position.x < 12000.0
+		and kiga.position.y > -5000.0
+		and kiga.position.y < 0.0,
+		"kiga_schneckenwiese village core not Ohringen/hub (got %s)" % str(kiga.position)
+	)
+	var birch := SeuzachGeo.birch_world()
+	_assert(
+		kiga.position.x < birch.x - 4000.0,
+		"kiga_schneckenwiese west of Birch (kiga.x=%.0f birch.x=%.0f)"
+		% [kiga.position.x, birch.x]
+	)
+	_assert(
+		kiga.position.y > birch.y,
+		"kiga_schneckenwiese south of Birch (kiga.y=%.0f birch.y=%.0f)"
+		% [kiga.position.y, birch.y]
+	)
+	_assert(
+		kiga.position.y > SeuzachGeo.kiga_bachtobel_world().y + 4000.0,
+		"kiga_schneckenwiese south of Bachtobel (kiga.y=%.0f bachtobel.y=%.0f)"
+		% [kiga.position.y, SeuzachGeo.kiga_bachtobel_world().y]
+	)
+	_assert(
+		kiga.position.x < SeuzachGeo.kiga_weid_world().x - 4000.0
+		and kiga.position.y < SeuzachGeo.kiga_weid_world().y,
+		"kiga_schneckenwiese west and north of Weid (kiga=%s weid=%s)"
+		% [str(kiga.position), str(SeuzachGeo.kiga_weid_world())]
+	)
+	_assert(
+		kiga.position.distance_to(SeuzachGeo.ohringen_world()) > 8000.0,
+		"kiga_schneckenwiese far from Ohringen (d=%.0f)"
+		% kiga.position.distance_to(SeuzachGeo.ohringen_world())
+	)
+	_assert(
+		kiga.position.distance_to(SeuzachGeo.forrenberg_world()) > 8000.0,
+		"kiga_schneckenwiese far from Forrenberg hub (d=%.0f)"
+		% kiga.position.distance_to(SeuzachGeo.forrenberg_world())
+	)
+	_assert(
+		kiga.has_meta("has_building_collision") and bool(kiga.get_meta("has_building_collision")),
+		"kiga_schneckenwiese has BuildingCollision"
+	)
+	_assert(is_zero_approx(kiga.rotation), "kiga_schneckenwiese rotation is 0")
+	var ground: Node = world.get_node_or_null("%Ground")
+	if ground:
+		_assert_road_near(
+			ground, "Schneckenwiesenstrasse", SeuzachGeo.kiga_schneckenwiese_world(), 900.0
+		)
 
 
 func _assert_geo_quadrants(sprites: Array[Sprite2D]) -> void:

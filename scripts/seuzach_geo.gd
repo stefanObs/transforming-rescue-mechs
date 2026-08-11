@@ -62,6 +62,10 @@ const KIGA_BACHTOBEL_LON := 8.7380927
 ## OSM way 131647378 Weidstrasse 16 (building=POI), not Forrenberg hub, not Ohringen.
 const KIGA_WEID_LAT := 47.5330589
 const KIGA_WEID_LON := 8.7379167
+## OSM way 140785850 Reutlingerstrasse 15 / Schneckenwiesenstrasse (building=POI).
+## Not schoolyard way 1071502860, not Forrenberg hub, not Ohringen.
+const KIGA_SCHNECKENWIESE_LAT := 47.5347527
+const KIGA_SCHNECKENWIESE_LON := 8.7310559
 
 ## z_index = ACTOR_Z_BASE + floor(y / Z_Y_DIV) + 1; Canvas-Max 4096.
 const Z_Y_DIV := 20.0
@@ -188,3 +192,7 @@ static func kiga_bachtobel_world() -> Vector2:
 
 static func kiga_weid_world() -> Vector2:
 	return gps_to_world(KIGA_WEID_LAT, KIGA_WEID_LON)
+
+
+static func kiga_schneckenwiese_world() -> Vector2:
+	return gps_to_world(KIGA_SCHNECKENWIESE_LAT, KIGA_SCHNECKENWIESE_LON)
