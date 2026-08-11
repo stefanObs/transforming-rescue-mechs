@@ -28,29 +28,29 @@ flowchart TB
 
 ---
 
-## Phase S — Zerlegung (immer zuerst)
+## Phase S — Zerlegung in Feature-Schritte (immer zuerst)
 
-**Wann:** **Jede** neue Aufgabe (Feature, Karte, Art-Batch, Bug mit mehr als einem Fixpunkt, Docs-Paket) — **bevor** geplant oder gebaut wird.
+**Wann:** **Jede** neue Aufgabe — **bevor** geplant oder gebaut wird.
 
-**Wer:** Subagent `task-slicer` (nicht der Hauptagent allein; der Hauptagent startet den Subagenten und orchestriert danach).
+**Wer:** Subagent `task-slicer`.
 
-**Output:**
+**Was:** Das User-Feature in **kleinere Features** schneiden (Haus A, Quartier Birch, Spawn auf der Winterthurerstrasse). **Nicht** in Prozess-Phasen schneiden.
 
-- `docs/plans/<kurzname>/INDEX.md` — Reihenfolge, Raster, Status
-- `docs/plans/<kurzname>/S<nn>-<slug>.md` — **ein Markdown-File pro Schritt**
+**Keine** Slices für Review, Tests, Playtest, Git, RCA, „Datei speichern“ vs. „Docs verdrahten“. Das steckt schon in Phase 0–4 + Git **pro Feature-Schritt**.
 
-Vorlagen: `docs/plans/_SLICE_INDEX.md`, `docs/plans/_SLICE.md`.
+**Output:** kurzes INDEX + ein **kurzer Stub** pro Feature (`docs/plans/_SLICE_INDEX.md`, `docs/plans/_SLICE.md`). Den vollen Plan (Tests, RCA, Akzeptanz) schreibt erst Phase 1.
 
 ### Zuschnitt (Beispiele)
 
-- **Häuser:** ein Haus / eine Variante / ein Landmark pro Slice — nicht „alle Häuser“.
-- **Karte:** Gebiet in ein **Rasternetz** (F1-Felder, typisch 10er-Blöcke oder benanntes Quartier). Ein Slice = eine Zelle.
-- **Art:** ein Asset oder ein enges Set (ein Walk-Dir, eine Landmark).
-- **Code:** ein testbares Verhalten.
+- **Häuser:** ein Haus / eine Variante / ein Landmark — nicht „alle Häuser“.
+- **Karte:** ein Quartier / eine Rasterzelle.
+- **Art:** ein Landmark oder ein Haus-Set.
+- **Code:** ein Verhalten oder ein Bug.
+- **Prozess/Docs:** ein Thema = ein Slice.
 
-Ohne INDEX und Slice-Files **keine** Phase 1–4 für die Gesamtaufgabe. Der Hauptagent arbeitet die Slices **streng nacheinander** ab: für **jeden** Slice den bisherigen Ablauf (Phase 0–4 + Git) vollständig.
+Ohne INDEX **keine** Phase 1–4 für die Gesamtaufgabe. Slices **nacheinander**: für jeden den Ablauf 0–4 + Git.
 
-Ausnahme: dokumentierter **Hotfix** — INDEX mit genau einem Slice ist erlaubt.
+Ausnahme: **Hotfix** — INDEX mit einem Slice.
 
 ---
 
@@ -164,7 +164,7 @@ Nur bei **Pass** (oder explizitem User-Override) gilt **dieser Slice** als ferti
 
 | Name | Datei | Rolle |
 |------|-------|--------|
-| `task-slicer` | `.cursor/agents/task-slicer.md` | Phase S: INDEX + ein Markdown pro Schritt |
+| `task-slicer` | `.cursor/agents/task-slicer.md` | Phase S: Feature-Schritte (kein Review/Test/Git als Slice) |
 | `feature-planner` | `.cursor/agents/feature-planner.md` | Einen Slice zum Plan ausbauen; inkl. Repro/RCA bei Bugs |
 | `feature-implementer` | `.cursor/agents/feature-implementer.md` | Code + Tests **eines** Slices; ruft Art |
 | `comic-rettung-art` | `.cursor/agents/comic-rettung-art.md` | Grafik & Animation Stil C, nur Slice-Assets |

@@ -13,7 +13,7 @@ You are the **feature-planner** for *Transformierende Rettungsmechs*.
 
 ## Job
 
-Expand **exactly one** slice file (`docs/plans/<aufgabe>/S<nn>-<slug>.md`) using `docs/plans/_SLICE.md` and `docs/plans/_TEMPLATE.md`. Follow `docs/ENTWICKLUNGSABLAUF.md`.
+Expand **exactly one** feature stub (`docs/plans/<aufgabe>/S<nn>-<slug>.md`) into a full plan using `docs/plans/_TEMPLATE.md`. The slicer file is only Ziel + Grenzen — you add RCA (bugs), technische Schritte, Testplan, Art-Bedarf, Akzeptanz. Follow `docs/ENTWICKLUNGSABLAUF.md`. Do not invent Review/Test/Git as extra slices.
 
 ## Preconditions
 

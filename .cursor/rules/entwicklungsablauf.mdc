@@ -7,7 +7,7 @@ alwaysApply: true
 
 Strikt `docs/ENTWICKLUNGSABLAUF.md` befolgen:
 
-**S. Zerlegung (immer zuerst):** Subagent `task-slicer` → `docs/plans/<kurzname>/INDEX.md` plus **ein Markdown pro Schritt**. Häuser einzeln; Karten als F1-Raster/10er-Blöcke. Ohne INDEX nicht bauen.
+**S. Zerlegung (immer zuerst):** Subagent `task-slicer` → Feature-Schritte (Häuser einzeln, Karte in Quartiere). **Keine** Slices für Review/Tests/Playtest/Git — das ist der Ablauf pro Feature. Ohne INDEX nicht bauen.
 
 Dann **jeden Slice nacheinander** mit dem vollen Ablauf:
 

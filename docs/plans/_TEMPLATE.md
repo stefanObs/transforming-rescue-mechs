@@ -8,7 +8,7 @@
 **Slice-Datei:** `docs/plans/<aufgabe>/S<nn>-<slug>.md`  
 **Hängt ab von:** — | S01 | …
 
-Neue Aufgaben liegen unter `docs/plans/<aufgabe>/` (INDEX + ein File pro Schritt). Dieses Template füllt `feature-planner` **in die Slice-Datei**. Alte flache `docs/plans/<name>.md` nur historisch.
+Neue Aufgaben: INDEX + kurze Feature-Stubs vom `task-slicer`. Dieses Template füllt `feature-planner` **in dieselbe Slice-Datei** (Tests/Review/Git bleiben der Ablauf, keine Extra-Slices). Alte flache `docs/plans/<name>.md` nur historisch.
 
 ## Ziel
 
