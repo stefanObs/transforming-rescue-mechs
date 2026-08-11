@@ -3,6 +3,7 @@ extends SceneTree
 
 const WORLD_SCENE := "res://scenes/world_sandbox.tscn"
 const RoadKitLib := preload("res://scripts/road_kit.gd")
+const DebugGridLib := preload("res://scripts/debug_grid.gd")
 
 var _failed: int = 0
 
@@ -25,6 +26,8 @@ func _run() -> void:
 
 	_assert(not bool(world.call("is_road_debug_enabled")), "debug overlay off by default")
 	_assert(_count_debug_labels(world) == 0, "no street-name labels before F1")
+	_assert(_find_debug_grid(world) == null, "no debug grid before F1")
+	_assert_cell_mapping()
 
 	world.call("set_road_debug", true)
 	_assert(bool(world.call("is_road_debug_enabled")), "set_road_debug(true) enables overlay")
@@ -63,16 +66,58 @@ func _run() -> void:
 			"Winterthurerstrasse (north-south) label is nearly vertical (got %.3f)" % winter.rotation
 		)
 
+	var grid := _find_debug_grid(world)
+	_assert(grid != null, "F1 shows coordinate grid")
+	if grid:
+		_assert(
+			is_equal_approx(float(grid.get_meta("cell_size")), 100.0),
+			"grid cell size is 100 (got %s)" % str(grid.get_meta("cell_size"))
+		)
+		_assert(grid.get_script() == DebugGridLib, "grid node uses DebugGrid")
+		if grid.get_script() == DebugGridLib:
+			var grid_bounds: Rect2 = grid.get("bounds")
+			_assert(grid_bounds.has_point(Vector2.ZERO), "grid covers Kirche origin (0,0)")
+			_assert(is_equal_approx(float(grid.get("cell_size")), 100.0), "DebugGrid.cell_size is 100")
+	var player: Node2D = world.get_node_or_null("%Player") as Node2D
+	if player:
+		var feld: Vector2i = DebugGridLib.world_to_cell(player.global_position, 100.0)
+		_assert(
+			feld == Vector2i(4, 7),
+			"spawn (490,750) is Feld 4,7 (got %s)" % str(feld)
+		)
+	var status: Label = world.get_node_or_null("%StatusLabel") as Label
+	if status:
+		_assert(
+			status.text.contains("Feld 4,7") and status.text.contains("Raster 100"),
+			"status shows Feld 4,7 and Raster 100 (got %s)" % status.text
+		)
+	var ground: Node = world.get_node_or_null("%Ground")
+	if ground:
+		var ground_lines := 0
+		for child in ground.get_children():
+			if child is Line2D:
+				ground_lines += 1
+		_assert(ground_lines == 0, "debug grid does not put Line2D on Ground")
+	if grid:
+		var grid_lines := 0
+		for child in grid.get_children():
+			if child is Line2D:
+				grid_lines += 1
+		_assert(grid_lines == 0, "grid uses _draw, not Line2D children")
+
 	world.call("set_road_debug", false)
 	_assert(not bool(world.call("is_road_debug_enabled")), "debug overlay toggles off")
 	_assert(_count_debug_labels(world) == 0, "turning debug off removes labels")
+	_assert(_find_debug_grid(world) == null, "turning debug off removes grid")
 
 	_send_f1(world)
 	_assert(bool(world.call("is_road_debug_enabled")), "F1 enables road debug")
 	_assert(_count_debug_labels(world) >= 10, "F1 spawn street-name labels")
+	_assert(_find_debug_grid(world) != null, "F1 spawn coordinate grid")
 	_send_f1(world)
 	_assert(not bool(world.call("is_road_debug_enabled")), "F1 toggles road debug off")
 	_assert(_count_debug_labels(world) == 0, "second F1 clears labels")
+	_assert(_find_debug_grid(world) == null, "second F1 clears grid")
 
 	world.get_tree().paused = true
 	_send_f1(world)
@@ -90,6 +135,44 @@ func _run() -> void:
 
 	world.queue_free()
 	_finish()
+
+
+func _assert_cell_mapping() -> void:
+	_assert(
+		DebugGridLib.world_to_cell(Vector2(50, 50), 100.0) == Vector2i(0, 0),
+		"(50,50) is Feld 0,0 (Kirche south-east cell)"
+	)
+	_assert(
+		DebugGridLib.world_to_cell(Vector2(-1, -1), 100.0) == Vector2i(-1, -1),
+		"(-1,-1) is Feld -1,-1"
+	)
+	_assert(
+		DebugGridLib.world_to_cell(Vector2(100, 0), 100.0) == Vector2i(1, 0),
+		"(100,0) is Feld 1,0"
+	)
+	_assert(
+		DebugGridLib.world_to_cell(Vector2(0, 0), 100.0) == Vector2i(0, 0),
+		"Kirche (0,0) sits on Feld 0,0 corner"
+	)
+	var center: Vector2 = DebugGridLib.cell_center(Vector2i(2, -3), 100.0)
+	_assert(
+		center.distance_to(Vector2(250, -250)) < 0.1,
+		"Feld 2,-3 center is (250,-250)"
+	)
+
+
+func _find_debug_grid(world: Node) -> Node:
+	return _find_grid_recursive(world)
+
+
+func _find_grid_recursive(node: Node) -> Node:
+	if node.has_meta("road_debug_grid"):
+		return node
+	for child in node.get_children():
+		var found := _find_grid_recursive(child)
+		if found:
+			return found
+	return null
 
 
 func _send_f1(world: Node) -> void:

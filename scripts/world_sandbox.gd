@@ -52,6 +52,9 @@ const ROAD_HW_LOCAL := 36.0
 const ROAD_HALF_W := ROAD_HW_MAIN
 const ROAD_DEBUG_Z := 3900
 const ROAD_DEBUG_SPACING := 420.0
+const DEBUG_GRID_SCRIPT := preload("res://scripts/debug_grid.gd")
+const DEBUG_GRID_CELL := 100.0
+const DEBUG_GRID_BOUNDS := Rect2(Vector2(-1500, -1000), Vector2(3000, 2200))
 
 @onready var _player: CharacterBody2D = %Player
 @onready var _hint: Label = %HintLabel
@@ -171,6 +174,7 @@ func _clear_road_debug_labels() -> void:
 func _rebuild_road_debug_labels() -> void:
 	_clear_road_debug_labels()
 	var overlay := _ensure_road_debug_root()
+	_add_debug_grid(overlay)
 	if _ground == null:
 		return
 	for node in _ground.get_children():
@@ -205,6 +209,18 @@ func _rebuild_road_debug_labels() -> void:
 			label.position = -sz * 0.5
 
 
+func _add_debug_grid(overlay: Node2D) -> void:
+	var grid = DEBUG_GRID_SCRIPT.new()
+	grid.name = "DebugGrid"
+	grid.z_as_relative = false
+	grid.z_index = ROAD_DEBUG_Z - 10
+	grid.set_meta("road_debug_grid", true)
+	grid.set_meta("cell_size", DEBUG_GRID_CELL)
+	grid.cell_size = DEBUG_GRID_CELL
+	grid.bounds = DEBUG_GRID_BOUNDS
+	overlay.add_child(grid)
+
+
 func _switch_character(id: String) -> void:
 	if _player and _player.has_method("set_character"):
 		if str(_player.get("character_id")) != id:
@@ -224,7 +240,12 @@ func _refresh_status() -> void:
 	var hub_hint := ""
 	if _player_in_hub_enter:
 		hub_hint = " | %s — Erdstation betreten" % InputGlyphs.glyph_for("interact")
-	var debug_hint := " | Debug: Strassen" if _road_debug_enabled else ""
+	var debug_hint := ""
+	if _road_debug_enabled:
+		var feld: Vector2i = DEBUG_GRID_SCRIPT.world_to_cell(_player.global_position, DEBUG_GRID_CELL)
+		debug_hint = " | Debug: Strassen | Raster %d | Feld %d,%d" % [
+			int(DEBUG_GRID_CELL), feld.x, feld.y
+		]
 	_status.text = "M3 Strassenkarte | %s | Form: %s | Münzen: %d%s%s" % [
 		char_id.capitalize(), form_name, GameState.coins, hub_hint, debug_hint
 	]
