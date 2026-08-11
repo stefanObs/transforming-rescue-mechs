@@ -57,6 +57,9 @@ const OHRINGEN_TURNHALLE_LAT := 47.5279647
 const OHRINGEN_TURNHALLE_LON := 8.7122618
 const FORRENBERG_LAT := 47.5263004
 const FORRENBERG_LON := 8.7353138
+## OSM way 37106305 Landstrasse 26 (leisure=sports_centre + amenity=public_bath).
+## Facility centroid, not pool ways 37084074 / 37084078 / 37084086 / 482858953,
+## not Birch indoor pool, not Nominatim village=Oberohringen as district.
 const BADI_LAT := 47.5393193
 const BADI_LON := 8.7333710
 ## OSM way 142728231 Bachtobelstrasse 17 building centroid (not amenity node, not Forrenberg hub).
@@ -191,6 +194,10 @@ static func ohringen_turnhalle_world() -> Vector2:
 
 static func bahnhof_world() -> Vector2:
 	return gps_to_world(BAHNHOF_LAT, BAHNHOF_LON)
+
+
+static func badi_world() -> Vector2:
+	return gps_to_world(BADI_LAT, BADI_LON)
 
 
 static func kiga_bachtobel_world() -> Vector2:

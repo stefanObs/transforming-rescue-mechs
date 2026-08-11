@@ -111,6 +111,7 @@ func _run() -> void:
 	_assert_kiga_ohringen(world, all_sprites)
 	_assert_bahnhof(world, all_sprites)
 	_assert_railway(world, all_sprites)
+	_assert_badi(world, all_sprites)
 	_assert_geo_quadrants(all_sprites)
 	_assert_schools_off_roads(world, all_sprites)
 
@@ -984,7 +985,6 @@ func _assert_bahnhof(world: Node, sprites: Array[Sprite2D]) -> void:
 	var bahnhof := _find_named(sprites, "bahnhof")
 	_assert(bahnhof != null, "node bahnhof exists")
 	_assert(_find_landmark(sprites, "bahnhof") != null, "landmark_id bahnhof present")
-	_assert(_find_landmark(sprites, "badi_weiher") == null, "no badi prop (S10)")
 	_assert(_count_poi(sprites, "railway") == 0, "railway sprite POIs stay 0 (S09 kit is Ground, not Sprite)")
 	_assert(_find_landmark(sprites, "gleise") == null, "no gleise landmark sprite (S09 uses RailwayKit)")
 	if bahnhof == null:
@@ -1060,7 +1060,6 @@ func _assert_bahnhof(world: Node, sprites: Array[Sprite2D]) -> void:
 func _assert_railway(world: Node, sprites: Array[Sprite2D]) -> void:
 	_assert(_count_poi(sprites, "railway") == 0, "railway sprite POIs remain 0 (kit ≠ sprite)")
 	_assert(_find_landmark(sprites, "gleise") == null, "no gleise landmark sprite")
-	_assert(_find_landmark(sprites, "badi_weiher") == null, "no badi prop")
 	var house_n := 0
 	var forest_n := 0
 	for spr in sprites:
@@ -1186,6 +1185,120 @@ func _assert_railway(world: Node, sprites: Array[Sprite2D]) -> void:
 	_assert(platform_north, "Perron 2 north of Gleis 1 (smaller Y than stop ref 1)")
 
 
+func _assert_badi(world: Node, sprites: Array[Sprite2D]) -> void:
+	_assert(
+		is_equal_approx(SeuzachGeo.BADI_LAT, 47.5393193)
+		and is_equal_approx(SeuzachGeo.BADI_LON, 8.7333710),
+		"badi GPS constants match OSM facility centroid way 37106305 (not pool ways, not Birch)"
+	)
+	_assert(
+		SeuzachGeo.badi_world().is_equal_approx(
+			SeuzachGeo.gps_to_world(SeuzachGeo.BADI_LAT, SeuzachGeo.BADI_LON)
+		),
+		"badi_world() maps BADI_LAT/LON"
+	)
+	_assert(
+		SeuzachGeo.badi_world().distance_to(Vector2(10277.6, -12220.2)) < 1.0,
+		"badi_world() ≈ (10277.6, -12220.2)"
+	)
+	_assert(
+		_count_landmark(sprites, "badi_weiher") == 1,
+		"exactly one badi_weiher landmark (got %d)" % _count_landmark(sprites, "badi_weiher")
+	)
+	var badi := _find_named(sprites, "badi_weiher")
+	_assert(badi != null, "node badi_weiher exists")
+	_assert(_find_landmark(sprites, "badi_weiher") != null, "landmark_id badi_weiher present")
+	_assert(_find_landmark(sprites, "sportplatz") == null, "no sportplatz prop")
+	_assert(_count_poi(sprites, "stream") == 0, "no stream/bach sprite POIs")
+	var house_n := 0
+	var forest_n := 0
+	for spr in sprites:
+		if spr.has_meta("house_variant"):
+			house_n += 1
+		if spr.has_meta("terrain") and str(spr.get_meta("terrain")) == "forest":
+			forest_n += 1
+	_assert(house_n == 0, "no housing props")
+	_assert(forest_n == 0, "no forest props")
+	for cluster in ["birch", "rietacker", "ohringen"]:
+		var n := _count_school_cluster(sprites, cluster)
+		_assert(n == 3, "school_cluster %s still has 3 props (got %d)" % [cluster, n])
+	for kiga_id in KIGA_IDS:
+		_assert(_has_kindergarten(sprites, str(kiga_id)), "%s still placed" % kiga_id)
+	_assert(_count_landmark(sprites, "bahnhof") == 1, "bahnhof count stays 1")
+	if badi == null:
+		return
+	_assert(
+		str(badi.get_meta("landmark_id")) == "badi_weiher"
+		and str(badi.get_meta("district")) == "seuzach"
+		and str(badi.get_meta("poi_type")) == "swimming",
+		"badi metas"
+	)
+	_assert(not badi.has_meta("school_cluster"), "badi has no school_cluster")
+	_assert(not badi.has_meta("kindergarten_id"), "badi has no kindergarten_id")
+	_assert(
+		str(badi.get_meta("district")) != "forrenberg"
+		and str(badi.get_meta("district")) != "ohringen",
+		"badi district is not forrenberg or ohringen"
+	)
+	_assert(
+		not _has_named_ancestor(badi, "DistrictOhringen"),
+		"badi parent chain excludes DistrictOhringen"
+	)
+	_assert(
+		badi.position.distance_to(SeuzachGeo.badi_world()) <= 80.0,
+		"badi within 80 wu of OSM getter (d=%.1f)"
+		% badi.position.distance_to(SeuzachGeo.badi_world())
+	)
+	_assert(
+		badi.position.x > 5000.0 and badi.position.y < -8000.0,
+		"badi north village north of Kirche (got %s)" % str(badi.position)
+	)
+	_assert(
+		badi.position.y < SeuzachGeo.kiga_bachtobel_world().y,
+		"badi north of Bachtobel (badi.y=%.0f bachtobel.y=%.0f)"
+		% [badi.position.y, SeuzachGeo.kiga_bachtobel_world().y]
+	)
+	_assert(
+		badi.position.x < SeuzachGeo.bahnhof_world().x,
+		"badi west of Bahnhof (badi.x=%.0f bahnhof.x=%.0f)"
+		% [badi.position.x, SeuzachGeo.bahnhof_world().x]
+	)
+	_assert(
+		badi.position.x > SeuzachGeo.rietacker_world().x,
+		"badi east of Rietacker (badi.x=%.0f rietacker.x=%.0f)"
+		% [badi.position.x, SeuzachGeo.rietacker_world().x]
+	)
+	_assert(
+		badi.position.distance_to(SeuzachGeo.forrenberg_world()) > 20000.0,
+		"badi far from Forrenberg hub (d=%.0f)"
+		% badi.position.distance_to(SeuzachGeo.forrenberg_world())
+	)
+	_assert(
+		badi.position.distance_to(SeuzachGeo.ohringen_world()) > 15000.0,
+		"badi far from Ohringen campus (d=%.0f)"
+		% badi.position.distance_to(SeuzachGeo.ohringen_world())
+	)
+	_assert(
+		badi.position.distance_to(SeuzachGeo.kiga_ohringen_world()) > 15000.0,
+		"badi far from kiga_ohringen (d=%.0f)"
+		% badi.position.distance_to(SeuzachGeo.kiga_ohringen_world())
+	)
+	_assert(
+		badi.has_meta("has_building_collision") and bool(badi.get_meta("has_building_collision")),
+		"badi has BuildingCollision"
+	)
+	_assert(is_zero_approx(badi.rotation), "badi rotation is 0")
+	_assert_sprite_off_named_roads(world, badi)
+	var ground: Node = world.get_node_or_null("%Ground")
+	if ground:
+		var hills := 0
+		for node in _collect_nodes(ground):
+			if node.has_meta("terrain") and str(node.get_meta("terrain")) == "hill":
+				hills += 1
+		_assert(hills == 0, "no hill markers")
+		_assert_road_near(ground, "Landstrasse", SeuzachGeo.badi_world(), 2200.0)
+
+
 func _polyline_len(pts: PackedVector2Array) -> float:
 	var total := 0.0
 	for i in range(pts.size() - 1):
@@ -1244,8 +1357,16 @@ func _assert_geo_quadrants(sprites: Array[Sprite2D]) -> void:
 			tank.position.distance_to(SeuzachGeo.forrenberg_world()) < 800.0,
 			"tankstelle near Forrenberg hub"
 		)
+	_assert(badi != null, "badi present in geo quadrants")
 	if badi:
-		_assert(badi.position.y < -200.0, "badi north of Kirche (y<-200, got %.0f)" % badi.position.y)
+		_assert(
+			badi.position.y < -8000.0,
+			"badi north of Kirche (y<-8000, got %.0f)" % badi.position.y
+		)
+		_assert(
+			badi.position.x > 5000.0,
+			"badi east of Kirche at field scale (x>5000, got %.0f)" % badi.position.x
+		)
 	_assert(bahnhof != null, "bahnhof present in geo quadrants")
 	if bahnhof:
 		_assert(

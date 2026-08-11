@@ -499,7 +499,7 @@ func _add_road_marker(
 
 
 func _place_landmarks() -> void:
-	## Street map + school clusters + kindergartens + Bahnhof (Maps). No houses/hub facade.
+	## Street map + school clusters + kindergartens + Bahnhof + Badi (Maps). No houses/hub facade.
 	for child in _props.get_children():
 		child.free()
 	_prop_parent = _props
@@ -507,6 +507,7 @@ func _place_landmarks() -> void:
 	_place_school_clusters()
 	_place_kindergartens()
 	_place_bahnhof()
+	_place_badi()
 
 
 func _place_school_clusters() -> void:
@@ -635,6 +636,18 @@ func _place_bahnhof() -> void:
 		LANDMARK_SCALE,
 		{"landmark_id": "bahnhof", "district": "seuzach", "poi_type": "station"},
 		"bahnhof"
+	)
+
+
+func _place_badi() -> void:
+	## S10: outdoor pool at Landstrasse 26. Not Ohringen, not Birch indoor pool.
+	_prop_parent = _props
+	_add_prop(
+		"landmark_badi_weiher.png",
+		SeuzachGeo.badi_world(),
+		LANDMARK_SCALE,
+		{"landmark_id": "badi_weiher", "district": "seuzach", "poi_type": "swimming"},
+		"badi_weiher"
 	)
 
 

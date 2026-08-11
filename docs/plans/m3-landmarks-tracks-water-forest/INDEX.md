@@ -20,7 +20,7 @@ Feature-Schritte, keine Prozess-Schritte. Pro Zeile folgt der volle Entwicklungs
 | S07 | `S07-kiga-ohringen.md` | Kindergarten Ohringen | — | erledigt |
 | S08 | `S08-bahnhof-seuzach.md` | Bahnhof Seuzach | — | erledigt |
 | S09 | `S09-bahngleise.md` | Bahngleise (S-Bahn) | S08 | erledigt |
-| S10 | `S10-badi-weiher.md` | Schwimmbad Weiher | — | offen |
+| S10 | `S10-badi-weiher.md` | Schwimmbad Weiher | — | erledigt |
 | S11 | `S11-baeche-riedbach.md` | Bäche / Riedbach | — | offen |
 | S12 | `S12-waelder.md` | Wälder (Patches) | — | offen |
 
