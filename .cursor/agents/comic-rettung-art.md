@@ -30,15 +30,15 @@ Canonical moodboard (must load and visually match):
 | Base | `docs/design-refs/c-basis.png` |
 | Mech form | `docs/design-refs/c-mech.png` |
 | Vehicle form | `docs/design-refs/c-fahrzeug.png` |
-| Iso city / world map (orientation) | `docs/design-refs/c-iso-city-map.png` |
+| Iso city / street–house layout (not scale) | `docs/design-refs/c-iso-city-map.png` |
 
 ## Mandatory workflow (every art task)
 
 1. **Read** `docs/STYLE-BIBLE-C.md`.
-2. **Read** (image Read tool) at least the relevant C references above — for characters read mech + vehicle; for world/base/buildings/map/houses read umgebung + basis **and** `c-iso-city-map.png`; for anything ambiguous read all five. Style C (thick outlines, cel) stays leading; the iso city map orients layout and block mass, it is not a license to go 3D-plastic or drop outlines.
+2. **Read** (image Read tool) at least the relevant C references above — for characters read mech + vehicle; for world/base/buildings/map/houses read umgebung + basis **and** `c-iso-city-map.png`; for anything ambiguous read all five. Style C (thick outlines, cel) stays leading. The iso city map is **house–street interaction only** (buildings along street ribbons, streets as corridors between houses). Do **not** copy size, camera, or proportions from the iso map — those come from `c-umgebung.png`, `c-basis.png`, and existing Style C assets. The iso map is not a license to go 3D-plastic or drop outlines.
 3. For **Seuzach / Ohringen landmarks**: also gather real-world look (Google Street View / Maps / official photos). Stylize into Style C — do **not** photoreal-copy; keep chunky comic silhouettes that remain recognizable.
-4. Draft prompts that restate: thick black outlines, flat cel fills, max 1–2 shadow tones, kid-friendly 6–8, no gore, no text/logos unless asked. Prefer generating on transparent/void when the tool allows; assume white **and black** AI plates may still appear.
-5. Generate with `GenerateImage`, always passing matching files in `reference_image_paths` (absolute paths under `docs/design-refs/` **plus** existing same-character / same-landmark art when extending a set). For world, base, map, houses, landmarks, tiles: include `docs/design-refs/c-iso-city-map.png` together with `c-umgebung.png` / `c-basis.png`, never instead of them.
+4. Draft prompts that restate: thick black outlines, flat cel fills, max 1–2 shadow tones, kid-friendly 6–8, no gore, no text/logos unless asked. Prefer generating on transparent/void when the tool allows; assume white **and black** AI plates may still appear. For world/map/houses/landmarks also restate: street–house layout from the iso map (buildings along ribbons); size and proportions from `c-umgebung`, `c-basis`, and existing Style C assets — not from `c-iso-city-map.png`.
+5. Generate with `GenerateImage`, always passing matching files in `reference_image_paths` (absolute paths under `docs/design-refs/` **plus** existing same-character / same-landmark art when extending a set). For world, base, map, houses, landmarks, tiles: include `docs/design-refs/c-iso-city-map.png` together with `c-umgebung.png` / `c-basis.png`, never instead of them (iso map = interaction/layout, not scale).
 6. Copy finished PNGs into the requested folder (default `assets/art/`). Use the naming conventions below.
 7. **Mandatory plate removal (game-ready art under `assets/art/`):**
    - `python3 scripts/process_art_alpha.py` (light + near-black border flood; preserves Style-C outlines)
@@ -100,7 +100,7 @@ When asked for schools: produce **per-building** pieces that can be clustered in
 ## Godot-oriented output
 
 - RGBA PNGs with real alpha for `Sprite2D` / `AnimatedSprite2D` / TileSet.
-- Consistent ¾ camera matching C refs for characters/props. World/map/houses: same ¾-iso readability as `c-iso-city-map.png` (chunky blocks, street ribbons) while keeping Style-C outlines and cel fills.
+- Consistent ¾ camera matching C refs for characters/props. World/map/houses: ¾ camera and sprite scale stay with Style C refs (`c-umgebung` / `c-basis` / existing assets). From `c-iso-city-map.png` take only street ribbons and buildings sitting along those axes (house–street interaction), not dimensions or toy-city scale. Keep Style-C outlines and cel fills.
 - Feet/wheels toward bottom of canvas for ground align.
 - **Ground:** continuous cel grass + soft patches; roads as ribbons (RoadKit). No per-tile black grids. Outlines on characters/props only.
 - Do not require 3D pipelines.
@@ -122,7 +122,7 @@ When asked for schools: produce **per-building** pieces that can be clustered in
 - verify_art_alpha.py: exit 0
 - pad_walk_frames.py: yes/n/a
 ## References used
-- list of c-*.png (incl. c-iso-city-map.png for world/map/buildings) + any Street View / local refs noted
+- list of c-*.png (incl. c-iso-city-map.png for world/map/buildings — house–street interaction, not mass/scale) + any Street View / local refs noted
 ## Godot notes
 - SpriteFrames / FPS / naming / import reminder
 ## Open questions

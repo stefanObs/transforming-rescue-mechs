@@ -14,11 +14,11 @@ Diese Dateien sind die visuelle Wahrheit. Neue Assets müssen dazu passen:
 | Basis / Erdstation | [`design-refs/c-basis.png`](design-refs/c-basis.png) |
 | Mech-Form (Bolt) | [`design-refs/c-mech.png`](design-refs/c-mech.png) |
 | Fahrzeug-Form | [`design-refs/c-fahrzeug.png`](design-refs/c-fahrzeug.png) |
-| Iso-Stadt / Karte / Gebäude (Orientierung) | [`design-refs/c-iso-city-map.png`](design-refs/c-iso-city-map.png) |
+| Iso-Stadt / Karte / Gebäude (Haus–Strasse-Interaktion) | [`design-refs/c-iso-city-map.png`](design-refs/c-iso-city-map.png) |
 
-Subagent: `.cursor/agents/comic-rettung-art.md` — lädt diese Bilder vor jeder Generierung und übergibt sie als `reference_image_paths`.
+Subagent: `.cursor/agents/comic-rettung-art.md` — lädt diese Bilder vor jeder Generierung und übergibt sie als `reference_image_paths`. Für Welt/Karte/Häuser/Landmarken `c-iso-city-map.png` **zusammen mit** `c-umgebung`/`c-basis` übergeben, nie statt Stil C.
 
-**Iso-Stadt-Karte:** Zusätzliche Orientierung für **Welt, Karte, Straßennetz, Häuserblöcke** (¾-Iso-Übersicht, chunky Gebäude, Straßen als klare Bänder, lesbare Stadtstruktur). Sie **ersetzt Stil C nicht**. Übernehmen: Blockmasse, Rasterlesbarkeit, buntes Dorf/Stadt-Layout. Nicht übernehmen: fotorealistisches 3D, AR-32-Rohlook, weiche Plastik-Städte, Verzicht auf dicke Konturen/Cel. Charaktere weiter über Mech-/Fahrzeug-Refs.
+**Iso-Stadt-Karte:** Moodboard dafür, **wie Häuser und Strassen zusammenwirken** — Bebauung **entlang** der Straßenbänder, Strassen als lesbare Korridore zwischen den Häusern; die Stadtstruktur bleibt als Karte lesbar. Sie **ersetzt Stil C nicht**. **Übernehmen:** Häuser sitzen an Straßenbändern; Strassen sind klare Korridore zwischen der Bebauung. **Nicht übernehmen:** Masse, Kamerawinkel, Toy-City-Klötze, Gebäude-/Straßen-/Spielergröße oder sonstige Proportionen aus diesem Bild; fotorealistisches 3D, AR-32-Rohlook, weiche Plastik-Städte, Verzicht auf dicke Konturen/Cel. **Proportionen und Größe:** `c-umgebung.png`, `c-basis.png` und bestehende Style-C-Sprites — nicht die Iso-Karte. Charaktere weiter über Mech-/Fahrzeug-Refs.
 
 ## Stilregeln
 
