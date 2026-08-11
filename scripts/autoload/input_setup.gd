@@ -15,7 +15,7 @@ func ensure_actions() -> void:
 func has_required_actions() -> bool:
 	var required := [
 		"move_left", "move_right", "move_up", "move_down",
-		"interact", "transform", "gadget", "scan", "pause_menu",
+		"interact", "transform", "gadget", "scan", "pause_menu", "debug_overlay",
 	]
 	for action in required:
 		if not InputMap.has_action(action):
@@ -37,6 +37,10 @@ func _ensure_actions() -> void:
 	_ensure_button_action("gadget", KEY_F, JOY_BUTTON_X)
 	_ensure_button_action("scan", KEY_R, JOY_BUTTON_Y)
 	_ensure_button_action("pause_menu", KEY_ESCAPE, JOY_BUTTON_START)
+	if not InputMap.has_action("debug_overlay"):
+		InputMap.add_action("debug_overlay", DEADZONE)
+	if InputMap.action_get_events("debug_overlay").is_empty():
+		_add_key("debug_overlay", KEY_F1)
 
 
 func _ensure_move_action(

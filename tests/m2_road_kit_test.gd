@@ -16,6 +16,8 @@ func _run() -> void:
 	_test_roundabout_default_no_centerline()
 	_test_roundabout_centerline_opt_in()
 	_test_polyline_covers_bend_corner()
+	_test_readable_label_rotation()
+	_test_label_samples_follow_tangent()
 	if _failed == 0:
 		print("=== m2_road_kit_test PASS ===")
 		quit(0)
@@ -112,6 +114,49 @@ func _test_polyline_covers_bend_corner() -> void:
 	var counts := _count_road_kit(parent)
 	_assert(int(counts["road"]) == 1, "polyline is a single road poly (got %d)" % counts["road"])
 	parent.queue_free()
+
+
+func _test_readable_label_rotation() -> void:
+	var east: float = RoadKitLib.readable_label_rotation(Vector2(1, 0))
+	var west: float = RoadKitLib.readable_label_rotation(Vector2(-1, 0))
+	var south: float = RoadKitLib.readable_label_rotation(Vector2(0, 1))
+	var nw: float = RoadKitLib.readable_label_rotation(Vector2(-1, -1))
+	_assert(_angle_near(east, 0.0, 0.05), "east road label rotation ≈ 0 (got %.3f)" % east)
+	_assert(_angle_near(west, 0.0, 0.05), "west road label stays upright ≈ 0 (got %.3f)" % west)
+	_assert(_angle_near(south, PI * 0.5, 0.05), "south road label ≈ +π/2 (got %.3f)" % south)
+	_assert(absf(nw) <= PI * 0.5 + 0.05, "folded label |rotation| ≤ 90° (got %.3f)" % nw)
+	_assert(_angle_near(nw, PI * 0.25, 0.08), "NW tangent folds to +π/4 (got %.3f)" % nw)
+
+
+func _test_label_samples_follow_tangent() -> void:
+	var horiz: PackedVector2Array = PackedVector2Array([Vector2(0, 0), Vector2(400, 0)])
+	var hs: Array = RoadKitLib.label_samples(horiz, 360.0)
+	_assert(hs.size() == 1, "short east-west road gets one label (got %d)" % hs.size())
+	if hs.size() >= 1:
+		var t: Vector2 = hs[0]["tangent"]
+		_assert(t.x > 0.9 and absf(t.y) < 0.1, "horizontal sample tangent points east (got %s)" % str(t))
+		_assert(
+			_angle_near(RoadKitLib.readable_label_rotation(t), 0.0, 0.05),
+			"horizontal label rotation ≈ 0"
+		)
+		_assert(
+			(hs[0]["pos"] as Vector2).distance_to(Vector2(200, 0)) < 8.0,
+			"horizontal label sits on the ribbon midpoint"
+		)
+	var vert: PackedVector2Array = PackedVector2Array([Vector2(0, 0), Vector2(0, 400)])
+	var vs: Array = RoadKitLib.label_samples(vert, 360.0)
+	_assert(vs.size() == 1, "short north-south road gets one label (got %d)" % vs.size())
+	if vs.size() >= 1:
+		var t2: Vector2 = vs[0]["tangent"]
+		_assert(t2.y > 0.9 and absf(t2.x) < 0.1, "vertical sample tangent points south (got %s)" % str(t2))
+		_assert(
+			_angle_near(RoadKitLib.readable_label_rotation(t2), PI * 0.5, 0.05),
+			"vertical label rotation ≈ +π/2"
+		)
+
+
+func _angle_near(a: float, b: float, tol: float) -> bool:
+	return absf(wrapf(a - b, -PI, PI)) <= tol
 
 
 func _count_road_kit(parent: Node) -> Dictionary:

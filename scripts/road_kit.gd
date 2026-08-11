@@ -117,6 +117,67 @@ static func add_junction(parent: Node2D, center: Vector2, radius: float) -> void
 	parent.add_child(poly)
 
 
+## Keep debug street names upright: fold tangent into ±90° so text is not upside-down.
+static func readable_label_rotation(tangent: Vector2) -> float:
+	if tangent.length_squared() < 0.0001:
+		return 0.0
+	var angle := tangent.angle()
+	if absf(angle) > PI * 0.5 + 0.0001:
+		angle = wrapf(angle + PI, -PI, PI)
+	return angle
+
+
+## Sample points along a polyline for debug name labels (at least one if long enough).
+static func label_samples(points: PackedVector2Array, spacing: float = 360.0) -> Array:
+	var pts := PackedVector2Array()
+	for p in points:
+		if pts.is_empty() or pts[pts.size() - 1].distance_to(p) > 0.5:
+			pts.append(p)
+	if pts.size() < 2:
+		return []
+	var total := 0.0
+	for i in range(pts.size() - 1):
+		total += pts[i].distance_to(pts[i + 1])
+	if total < 0.5:
+		return []
+	var gap := maxf(spacing, 80.0)
+	var targets: Array[float] = []
+	if total < gap * 1.25:
+		targets.append(total * 0.5)
+	else:
+		var d := gap * 0.5
+		while d < total - 8.0:
+			targets.append(d)
+			d += gap
+		if targets.is_empty():
+			targets.append(total * 0.5)
+	var out: Array = []
+	for dist in targets:
+		out.append(_point_tangent_at_length(pts, float(dist)))
+	return out
+
+
+static func _point_tangent_at_length(pts: PackedVector2Array, dist: float) -> Dictionary:
+	var remain := dist
+	var last_i := pts.size() - 2
+	for i in range(last_i + 1):
+		var a: Vector2 = pts[i]
+		var b: Vector2 = pts[i + 1]
+		var seg := a.distance_to(b)
+		if seg < 0.001:
+			continue
+		if remain <= seg or i == last_i:
+			var t := clampf(remain / maxf(seg, 0.001), 0.0, 1.0)
+			return {"pos": a.lerp(b, t), "tangent": (b - a) / seg}
+		remain -= seg
+	var delta := pts[pts.size() - 1] - pts[pts.size() - 2]
+	var ln := delta.length()
+	return {
+		"pos": pts[pts.size() - 1],
+		"tangent": delta / ln if ln > 0.001 else Vector2.RIGHT,
+	}
+
+
 static func _clean_poly_points(points: Array) -> PackedVector2Array:
 	var pts := PackedVector2Array()
 	for raw in points:

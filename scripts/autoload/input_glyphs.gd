@@ -26,6 +26,8 @@ func _keyboard_glyph(action: String) -> String:
 			return "R"
 		"pause_menu":
 			return "Esc"
+		"debug_overlay":
+			return "F1"
 		_:
 			return action
 

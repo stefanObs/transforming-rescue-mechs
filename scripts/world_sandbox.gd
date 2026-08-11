@@ -50,6 +50,8 @@ const ROAD_HW_MAIN := 72.0
 const ROAD_HW_COLLECTOR := 52.0
 const ROAD_HW_LOCAL := 36.0
 const ROAD_HALF_W := ROAD_HW_MAIN
+const ROAD_DEBUG_Z := 3900
+const ROAD_DEBUG_SPACING := 420.0
 
 @onready var _player: CharacterBody2D = %Player
 @onready var _hint: Label = %HintLabel
@@ -62,6 +64,8 @@ var _paused: bool = false
 var _prop_parent: Node2D = null
 var _hub_enter: Area2D = null
 var _player_in_hub_enter: bool = false
+var _road_debug_enabled: bool = false
+var _road_debug_root: Node2D = null
 
 
 func _ready() -> void:
@@ -70,11 +74,12 @@ func _ready() -> void:
 	_build_flat_ground()
 	_place_landmarks()
 	_hint.text = (
-		"Bewegen: %s | Transform: %s/Q | Char: 1=Bolt 2=Marina 3=Rush | Pause: %s"
+		"Bewegen: %s | Transform: %s/Q | Char: 1=Bolt 2=Marina 3=Rush | Pause: %s | Debug: %s"
 		% [
 			InputGlyphs.glyph_for("move_left"),
 			InputGlyphs.glyph_for("transform"),
 			InputGlyphs.glyph_for("pause_menu"),
+			InputGlyphs.glyph_for("debug_overlay"),
 		]
 	)
 	if _player and _player.has_signal("form_changed"):
@@ -92,6 +97,10 @@ func _sync_actor_z() -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
+	if event.is_action_pressed("debug_overlay") and not event.is_echo():
+		toggle_road_debug()
+		get_viewport().set_input_as_handled()
+		return
 	if _paused:
 		return
 	if event is InputEventKey and event.pressed and not event.echo:
@@ -123,6 +132,79 @@ func _process(_delta: float) -> void:
 
 
 
+func is_road_debug_enabled() -> bool:
+	return _road_debug_enabled
+
+
+func toggle_road_debug() -> void:
+	set_road_debug(not _road_debug_enabled)
+
+
+func set_road_debug(enabled: bool) -> void:
+	_road_debug_enabled = enabled
+	if enabled:
+		_rebuild_road_debug_labels()
+	else:
+		_clear_road_debug_labels()
+	if not _paused:
+		_refresh_status()
+
+
+func _ensure_road_debug_root() -> Node2D:
+	if _road_debug_root == null or not is_instance_valid(_road_debug_root):
+		_road_debug_root = Node2D.new()
+		_road_debug_root.name = "RoadDebugOverlay"
+		_road_debug_root.z_as_relative = false
+		_road_debug_root.z_index = ROAD_DEBUG_Z
+		add_child(_road_debug_root)
+	return _road_debug_root
+
+
+func _clear_road_debug_labels() -> void:
+	if _road_debug_root == null or not is_instance_valid(_road_debug_root):
+		return
+	for child in _road_debug_root.get_children():
+		_road_debug_root.remove_child(child)
+		child.free()
+
+
+func _rebuild_road_debug_labels() -> void:
+	_clear_road_debug_labels()
+	var overlay := _ensure_road_debug_root()
+	if _ground == null:
+		return
+	for node in _ground.get_children():
+		if not node.has_meta("road_name") or not node.has_meta("road_points"):
+			continue
+		var road_name := str(node.get_meta("road_name"))
+		var pts: PackedVector2Array = PackedVector2Array(node.get_meta("road_points"))
+		var samples: Array = RoadKitLib.label_samples(pts, ROAD_DEBUG_SPACING)
+		for i in range(samples.size()):
+			var sample: Dictionary = samples[i]
+			var holder := Node2D.new()
+			holder.name = "DebugLabel_%s_%d" % [road_name.replace(" ", "_"), i]
+			holder.position = sample["pos"]
+			holder.rotation = RoadKitLib.readable_label_rotation(sample["tangent"])
+			holder.z_as_relative = false
+			holder.z_index = ROAD_DEBUG_Z
+			holder.set_meta("road_debug_label", true)
+			holder.set_meta("road_name", road_name)
+			var label := Label.new()
+			label.text = road_name
+			label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+			label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+			label.add_theme_font_size_override("font_size", 18)
+			label.add_theme_color_override("font_color", Color(1, 1, 1, 1))
+			label.add_theme_color_override("font_outline_color", Color(0.12, 0.12, 0.12, 0.92))
+			label.add_theme_constant_override("outline_size", 5)
+			holder.add_child(label)
+			overlay.add_child(holder)
+			var sz := label.get_minimum_size()
+			label.size = sz
+			label.position = -sz * 0.5
+
+
 func _switch_character(id: String) -> void:
 	if _player and _player.has_method("set_character"):
 		if str(_player.get("character_id")) != id:
@@ -142,8 +224,9 @@ func _refresh_status() -> void:
 	var hub_hint := ""
 	if _player_in_hub_enter:
 		hub_hint = " | %s — Erdstation betreten" % InputGlyphs.glyph_for("interact")
-	_status.text = "M3 Strassenkarte | %s | Form: %s | Münzen: %d%s" % [
-		char_id.capitalize(), form_name, GameState.coins, hub_hint
+	var debug_hint := " | Debug: Strassen" if _road_debug_enabled else ""
+	_status.text = "M3 Strassenkarte | %s | Form: %s | Münzen: %d%s%s" % [
+		char_id.capitalize(), form_name, GameState.coins, hub_hint, debug_hint
 	]
 
 

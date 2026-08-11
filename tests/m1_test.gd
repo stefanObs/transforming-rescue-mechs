@@ -21,6 +21,15 @@ func _run() -> void:
 	if glyphs:
 		_assert(str(glyphs.call("glyph_for", "transform")) == "Space", "keyboard glyph transform=Space")
 		_assert(str(glyphs.call("glyph_for", "transform", 1)) == "B", "xbox glyph transform=B")
+		_assert(str(glyphs.call("glyph_for", "debug_overlay")) == "F1", "keyboard glyph debug_overlay=F1")
+	if input_setup:
+		_assert(InputMap.has_action("debug_overlay"), "debug_overlay action registered")
+		if InputMap.has_action("debug_overlay"):
+			var has_f1 := false
+			for ev in InputMap.action_get_events("debug_overlay"):
+				if ev is InputEventKey and (ev as InputEventKey).physical_keycode == KEY_F1:
+					has_f1 = true
+			_assert(has_f1, "debug_overlay bound to F1")
 
 	_test_player_transform()
 	_test_screen_move_helper()
