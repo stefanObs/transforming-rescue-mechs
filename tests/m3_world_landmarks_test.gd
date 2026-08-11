@@ -99,6 +99,8 @@ func _run() -> void:
 	_assert(house_n == 0, "no housing props in street-map reset (got %d)" % house_n)
 	_assert(forest_n >= 1, "forest silhouette props present (got %d)" % forest_n)
 
+	_assert_landmark_scales(world, all_sprites)
+
 	for cluster in ["rietacker", "ohringen"]:
 		var n := _count_school_cluster(all_sprites, cluster)
 		_assert(n >= 2, "school_cluster %s has >=2 props (got %d)" % [cluster, n])
@@ -198,6 +200,111 @@ func _assert_named_roads(world: Node) -> void:
 	_assert_road_near(ground, "A1", SeuzachGeo.forrenberg_world(), 800.0)
 	_assert_road_near(ground, "Stationsstrasse", SeuzachGeo.bahnhof_world(), 900.0)
 	_assert_road_near(ground, "Winterthurerstrasse", SeuzachGeo.default_world_spawn(), 40.0)
+
+
+func _assert_landmark_scales(world: Node, sprites: Array[Sprite2D]) -> void:
+	## S01: global building scales restored; forests stay on FOREST_SCALE.
+	var world_script: Script = world.get_script()
+	_assert(world_script != null, "world_sandbox script attached")
+	if world_script == null:
+		return
+	var consts: Dictionary = world_script.get_script_constant_map()
+	_assert(
+		consts.get("SCHOOL_SCALE") == Vector2(0.50, 0.50),
+		"SCHOOL_SCALE == (0.50, 0.50) (got %s)" % str(consts.get("SCHOOL_SCALE"))
+	)
+	_assert(
+		consts.get("LANDMARK_SCALE") == Vector2(0.55, 0.55),
+		"LANDMARK_SCALE == (0.55, 0.55) (got %s)" % str(consts.get("LANDMARK_SCALE"))
+	)
+	_assert(
+		consts.get("FOREST_SCALE") == Vector2(0.24, 0.24),
+		"FOREST_SCALE == (0.24, 0.24) (got %s)" % str(consts.get("FOREST_SCALE"))
+	)
+	var school_scale: Vector2 = consts.get("SCHOOL_SCALE")
+	var landmark_scale: Vector2 = consts.get("LANDMARK_SCALE")
+	var forest_scale: Vector2 = consts.get("FOREST_SCALE")
+
+	## Birch/Rietacker/Ohringen each have two schulhaus sprites sharing landmark_id.
+	var school_building_n := 0
+	for spr in sprites:
+		if not spr.has_meta("landmark_id"):
+			continue
+		var lid := str(spr.get_meta("landmark_id"))
+		if lid in ["schulhaus_birch", "schulhaus_rietacker", "schulhaus_ohringen"]:
+			_assert(
+				spr.scale.is_equal_approx(school_scale),
+				"%s scale == SCHOOL_SCALE (got %s)" % [spr.name, str(spr.scale)]
+			)
+			school_building_n += 1
+		elif lid in [
+			"turnhalle_birch",
+			"turnhalle_rietacker",
+			"turnhalle_ohringen",
+			"kiga_bachtobel",
+			"kiga_weid",
+			"kiga_schneckenwiese",
+			"kiga_ohringen",
+		]:
+			_assert(
+				spr.scale.is_equal_approx(school_scale),
+				"%s scale == SCHOOL_SCALE (got %s)" % [spr.name, str(spr.scale)]
+			)
+			school_building_n += 1
+		elif lid == "bahnhof" or lid == "badi_weiher":
+			_assert(
+				spr.scale.is_equal_approx(landmark_scale),
+				"%s scale == LANDMARK_SCALE (got %s)" % [spr.name, str(spr.scale)]
+			)
+	_assert(school_building_n == 13, "9 campus + 4 kiga at SCHOOL_SCALE (got %d)" % school_building_n)
+	_assert(_count_landmark(sprites, "bahnhof") == 1, "bahnhof present for scale check")
+	_assert(_count_landmark(sprites, "badi_weiher") == 1, "badi present for scale check")
+	## 9 school/gym + 4 kiga + bahnhof + badi = 15 building landmarks
+	var building_n := school_building_n + _count_landmark(sprites, "bahnhof") + _count_landmark(
+		sprites, "badi_weiher"
+	)
+	_assert(building_n == 15, "15 building landmarks present (got %d)" % building_n)
+
+	var birch_a := _find_named_sprite(sprites, "schulhaus_birch_a")
+	if birch_a == null:
+		## Fallback: first birch schulhaus with ~1000px texture.
+		for spr in sprites:
+			if (
+				spr.has_meta("landmark_id")
+				and str(spr.get_meta("landmark_id")) == "schulhaus_birch"
+				and spr.texture != null
+				and spr.texture.get_height() >= 800
+			):
+				birch_a = spr
+				break
+	_assert(birch_a != null and birch_a.texture != null, "birch sample for visual height")
+	if birch_a != null and birch_a.texture != null:
+		_assert(
+			birch_a.scale.is_equal_approx(school_scale),
+			"birch sample scale == SCHOOL_SCALE"
+		)
+		var visual_h := float(birch_a.texture.get_height()) * absf(birch_a.scale.y)
+		_assert(
+			visual_h >= 400.0 and visual_h <= 600.0,
+			"birch visual height ~400–600 wu at SCHOOL_SCALE (got %.1f)" % visual_h
+		)
+
+	var forest_checked := 0
+	for spr in sprites:
+		if spr.has_meta("terrain") and str(spr.get_meta("terrain")) == "forest":
+			_assert(
+				spr.scale.is_equal_approx(forest_scale),
+				"forest %s scale == FOREST_SCALE (got %s)" % [spr.name, str(spr.scale)]
+			)
+			forest_checked += 1
+	_assert(forest_checked >= 1, "at least one forest at FOREST_SCALE")
+
+
+func _find_named_sprite(sprites: Array[Sprite2D], node_name: String) -> Sprite2D:
+	for spr in sprites:
+		if spr.name == node_name:
+			return spr
+	return null
 
 
 func _assert_field_scale() -> void:
@@ -1751,12 +1858,17 @@ func _assert_schools_off_roads(world: Node, sprites: Array[Sprite2D]) -> void:
 
 
 func _school_aabb(spr: Sprite2D) -> Rect2:
-	## Feet on origin, facade extends up (smaller Y) and sideways.
+	## Solid BuildingCollision footprint (matches _attach_building_collision non-hub ratios).
+	## Full comic sprite canvas is taller/wider than the walkable ground pad.
 	if spr.texture == null:
 		return Rect2(spr.position, Vector2.ZERO)
-	var tw := float(spr.texture.get_width()) * absf(spr.scale.x)
-	var th := float(spr.texture.get_height()) * absf(spr.scale.y)
-	return Rect2(Vector2(spr.position.x - tw * 0.5, spr.position.y - th), Vector2(tw, th))
+	var tex_w := float(spr.texture.get_width()) * absf(spr.scale.x)
+	var tex_h := float(spr.texture.get_height()) * absf(spr.scale.y)
+	var footprint_w := maxf(24.0, tex_w * 0.20)
+	var footprint_h := maxf(16.0, tex_h * 0.10)
+	var feet_y := -footprint_h * 0.25
+	var center := spr.position + Vector2(0.0, feet_y)
+	return Rect2(center - Vector2(footprint_w, footprint_h) * 0.5, Vector2(footprint_w, footprint_h))
 
 
 func _dist_to_polyline(p: Vector2, pts: PackedVector2Array) -> float:

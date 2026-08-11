@@ -7,10 +7,12 @@ const RailwayKitLib := preload("res://scripts/railway_kit.gd")
 const WaterKitLib := preload("res://scripts/water_kit.gd")
 const ART := "res://assets/art/"
 const HUB_SCENE := "res://scenes/hub_station.tscn"
+## Unused; buildings use SCHOOL_SCALE / LANDMARK_SCALE (not PROP_SCALE).
 const PROP_SCALE := Vector2(0.22, 0.22)
-const LANDMARK_SCALE := Vector2(0.24, 0.24)
+const LANDMARK_SCALE := Vector2(0.55, 0.55)
+const FOREST_SCALE := Vector2(0.24, 0.24)
 const HUB_SCALE := Vector2(0.28, 0.28)
-const SCHOOL_SCALE := Vector2(0.22, 0.22)
+const SCHOOL_SCALE := Vector2(0.50, 0.50)
 ## Ground polygons sit at z ≈ −50…−34. Actors/props share one BASE so Y-sort works
 ## while staying above ground. Godot canvas z_index max is 4096.
 const ACTOR_Z_BASE := 2000
@@ -833,7 +835,7 @@ func _add_forest_silhouette(
 	if node_name != "":
 		spr.name = node_name
 	spr.texture = load(path)
-	spr.scale = LANDMARK_SCALE
+	spr.scale = FOREST_SCALE
 	spr.position = pos
 	spr.centered = true
 	spr.offset = Vector2(0.0, feet_offset_y(spr.texture))
@@ -902,8 +904,9 @@ func _attach_building_collision(spr: Sprite2D, is_hub: bool = false) -> void:
 	var tex_w := float(spr.texture.get_width()) * absf(spr.scale.x)
 	var tex_h := float(spr.texture.get_height()) * absf(spr.scale.y)
 	# Hub footprint kept tighter so enter zone south of the building stays walkable.
-	var footprint_w := tex_w * (0.28 if is_hub else 0.45)
-	var footprint_h := tex_h * (0.12 if is_hub else 0.22)
+	# Non-hub: shallow ground footprint — display scale grew in S01; keep collision near pre-scale size.
+	var footprint_w := tex_w * (0.28 if is_hub else 0.20)
+	var footprint_h := tex_h * (0.12 if is_hub else 0.10)
 	var body := StaticBody2D.new()
 	body.name = "BuildingCollision"
 	body.collision_layer = 1

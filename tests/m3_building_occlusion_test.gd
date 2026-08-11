@@ -5,7 +5,7 @@ const WORLD_SCENE := "res://scenes/world_sandbox.tscn"
 const FEET_TOL := 2.0
 const VISUAL_BOTTOM_TOL := 8.0
 ## Cluster members should not sit almost on top of each other (screen-space).
-## School sprites ~200px tall at current scale — require clear gaps.
+## School sprites ~470–500 wu tall at SCHOOL_SCALE 0.50 — require clear gaps.
 const MIN_CLUSTER_SEP := 160.0
 const MIN_FORRENBERG_SEP := 220.0
 
