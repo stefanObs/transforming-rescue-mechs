@@ -67,7 +67,7 @@ func _run() -> void:
 						var path := str(tex.resource_path)
 						_assert(not path.ends_with("tile_grass.png"), "props must not use tile_grass")
 						_assert(not path.ends_with("tile_road.png"), "props must not use tile_road")
-		_assert(prop_sprites >= 1, "landmark props present")
+		_assert(prop_sprites == 0, "street map has no landmark props (got %d)" % prop_sprites)
 		var player: Node = world.get_node_or_null("%Player")
 		_assert(player != null, "Player exists")
 		if player:

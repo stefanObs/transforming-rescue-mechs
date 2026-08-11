@@ -97,8 +97,8 @@ func _test_world_hub_enter_and_collision() -> void:
 	_assert(props != null, "Props node exists")
 	var collision_count := _count_building_collisions(props)
 	_assert(
-		collision_count >= 1,
-		"≥1 prop with StaticBody2D / has_building_collision (got %d)" % collision_count
+		collision_count == 0,
+		"street map has no building collision (got %d)" % collision_count
 	)
 
 	var player: CharacterBody2D = world.get_node_or_null("%Player") as CharacterBody2D
@@ -120,30 +120,10 @@ func _test_world_hub_enter_and_collision() -> void:
 
 func _assert_hub_enter_clear_of_collision(world: Node, hub_enter: Area2D) -> void:
 	var hub_spr: Sprite2D = world.find_child("hub_station", true, false) as Sprite2D
-	_assert(hub_spr != null, "hub_station sprite exists for clearance check")
-	if hub_spr == null:
-		return
-	var hub_body: StaticBody2D = hub_spr.get_node_or_null("BuildingCollision") as StaticBody2D
-	_assert(hub_body != null, "hub_station BuildingCollision exists")
-	if hub_body == null:
-		return
-
-	var hub_aabb := _static_body_aabb(hub_body)
-	_assert(hub_aabb.has_area(), "hub BuildingCollision AABB has area")
+	_assert(hub_spr == null, "street map has no hub_station sprite")
 
 	var spawn_cap := _player_capsule_aabb(DEFAULT_WORLD_SPAWN)
-	_assert(
-		not spawn_cap.intersects(hub_aabb),
-		"default spawn capsule clear of hub BuildingCollision"
-	)
-
 	var enter_cap := _player_capsule_aabb(HUB_ENTER_POS)
-	_assert(
-		not enter_cap.intersects(hub_aabb),
-		"HubEnter center capsule clear of hub BuildingCollision"
-	)
-
-	# Also clear of other Forrenberg solids (tankstelle was overlapping spawn).
 	var props: Node = world.get_node_or_null("%Props")
 	for body in _forrenberg_building_bodies(props):
 		var aabb := _static_body_aabb(body)
@@ -165,10 +145,6 @@ func _assert_hub_enter_clear_of_collision(world: Node, hub_enter: Area2D) -> voi
 	_assert(
 		enter_cap.intersects(enter_aabb),
 		"player capsule at HubEnter center overlaps HubEnter area"
-	)
-	_assert(
-		not enter_aabb.intersects(hub_aabb) or _usable_enter_strip_ok(enter_aabb, hub_aabb),
-		"HubEnter has usable strip clear of hub BuildingCollision"
 	)
 
 

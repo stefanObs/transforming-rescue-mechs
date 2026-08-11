@@ -64,29 +64,19 @@ func _run() -> void:
 		)
 		_assert(not spr.z_as_relative, "%s z_as_relative=false" % spr.name)
 
-	_assert(landmark_count >= 8, "checked ≥8 landmark/house sprites (got %d)" % landmark_count)
+	_assert(landmark_count == 0, "street map has no landmark/house sprites (got %d)" % landmark_count)
 
 	if player:
-		var sample := _find_landmark(props, "kirche_seuzach")
-		if sample == null:
-			sample = _find_landmark(props, "hub_station")
-		if sample:
-			var south := sample.global_position + Vector2(0, 40)
-			player.global_position = south
-			if world.has_method("_sync_actor_z"):
-				world.call("_sync_actor_z")
-			else:
-				player.z_index = int(world_script.compute_actor_z(south.y))
-			_assert(
-				player.z_index > sample.z_index,
-				"player south of landmark draws in front (player z=%d prop z=%d)"
-				% [player.z_index, sample.z_index]
-			)
-
-	_assert_cluster_spacing(props, "birch")
-	_assert_cluster_spacing(props, "rietacker")
-	_assert_cluster_spacing(props, "ohringen")
-	_assert_forrenberg_hub_tank_spacing(props)
+		var south := Vector2(0, 40)
+		player.global_position = south
+		if world.has_method("_sync_actor_z"):
+			world.call("_sync_actor_z")
+		else:
+			player.z_index = int(world_script.compute_actor_z(south.y))
+		_assert(
+			player.z_index == int(world_script.compute_actor_z(south.y)),
+			"player z follows feet Y on empty street map (z=%d)" % player.z_index
+		)
 
 	world.queue_free()
 	_finish()

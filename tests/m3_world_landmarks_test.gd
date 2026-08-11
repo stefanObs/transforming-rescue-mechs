@@ -1,5 +1,5 @@
 extends SceneTree
-## M3 Seuzach geo-aligned world: landmarks, schools, kigas, forests, hills, Forrenberg hub.
+## M3 Seuzach street map: art on disk, world is roads-only (no landmarks/houses).
 
 const ART := "res://assets/art/"
 const REQUIRED_ART := [
@@ -89,80 +89,24 @@ func _run() -> void:
 		return
 
 	var all_sprites := _collect_sprites(props)
-
-	for landmark_id in [
-		"bahnhof",
-		"feuerwehr",
-		"badi_weiher",
-		"gemeindehaus",
-		"tankstelle",
-		"kirche_seuzach",
-		"kirche_st_martin",
-		"hub_station",
-		"sportplatz",
-		"turnhalle_ohringen",
-	]:
-		_assert(
-			_count_landmark(all_sprites, landmark_id) >= 1,
-			"landmark %s present" % landmark_id
-		)
-
-	_assert(_count_landmark(all_sprites, "kirche_ohringen") == 0, "no fake kirche_ohringen")
-
-	for cluster in ["birch", "rietacker", "ohringen"]:
-		var n := _count_school_cluster(all_sprites, cluster)
-		_assert(n >= 2, "school_cluster %s has >=2 props (got %d)" % [cluster, n])
-
-	for kiga_id in KIGA_IDS:
-		_assert(
-			_has_kindergarten(all_sprites, kiga_id),
-			"kindergarten %s present (landmark_id or kindergarten_id)" % kiga_id
-		)
-
-	var restaurant_n := _count_poi(all_sprites, "restaurant")
-	_assert(restaurant_n >= 1, "≥1 restaurant (got %d)" % restaurant_n)
-
-	var shop_n := _count_poi(all_sprites, "shop")
-	var laden_n := 0
-	for spr in all_sprites:
-		if spr.has_meta("landmark_id") and str(spr.get_meta("landmark_id")).begins_with("laden"):
-			laden_n += 1
-	var shop_or_laden := maxi(shop_n, laden_n)
-	_assert(shop_or_laden >= 2, "≥2 laden/shop (got shop=%d laden=%d)" % [shop_n, laden_n])
-
-	var playground_n := _count_poi(all_sprites, "playground")
-	_assert(playground_n >= 1, "≥1 playground (got %d)" % playground_n)
-
-	var gym_n := _count_poi(all_sprites, "gym")
-	_assert(gym_n >= 1, "≥1 turnhalle/gym (got %d)" % gym_n)
-
+	var landmark_n := 0
+	var house_n := 0
 	var forest_n := 0
 	for spr in all_sprites:
-		if spr.has_meta("terrain") and str(spr.get_meta("terrain")) == "forest":
-			forest_n += 1
-	_assert(forest_n >= 1, "≥1 forest prop (got %d)" % forest_n)
-
-	var house_n := 0
-	for spr in all_sprites:
+		if spr.has_meta("landmark_id"):
+			landmark_n += 1
 		if spr.has_meta("house_variant"):
 			house_n += 1
+		if spr.has_meta("terrain") and str(spr.get_meta("terrain")) == "forest":
+			forest_n += 1
+	_assert(landmark_n == 0, "street map has no landmark sprites (got %d)" % landmark_n)
 	_assert(house_n == 0, "no housing props in street-map reset (got %d)" % house_n)
+	_assert(forest_n == 0, "street map has no forest props (got %d)" % forest_n)
+	_assert(all_sprites.is_empty(), "street map Props has no sprites (got %d)" % all_sprites.size())
 
 	_assert_named_roads(world)
 
-	var ohringen: Node = props.get_node_or_null("DistrictOhringen")
-	_assert(ohringen != null, "DistrictOhringen node exists")
-	if ohringen:
-		_assert(
-			ohringen.get_child_count() >= 1,
-			"DistrictOhringen has children (got %d)" % ohringen.get_child_count()
-		)
-		_assert(
-			ohringen.has_meta("district") and str(ohringen.get_meta("district")) == "ohringen",
-			"DistrictOhringen meta district=ohringen"
-		)
-
-	_assert_geo_quadrants(all_sprites)
+	_assert(props.get_node_or_null("DistrictOhringen") == null, "no DistrictOhringen on street map")
 
 	var ground: Node = world.get_node_or_null("%Ground")
 	_assert(ground != null, "Ground node exists")
@@ -171,7 +115,7 @@ func _run() -> void:
 		for node in _collect_nodes(ground):
 			if node.has_meta("terrain") and str(node.get_meta("terrain")) == "hill":
 				hills += 1
-		_assert(hills >= 2, "≥2 hill markers (got %d)" % hills)
+		_assert(hills == 0, "street map has no hill markers (got %d)" % hills)
 
 	world.queue_free()
 	_finish()
