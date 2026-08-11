@@ -1,6 +1,6 @@
 # Slice: S02 — Strassen im Start-Viewport sichtbar
 
-**Status:** Slice-Entwurf  
+**Status:** Playtest / Erledigt  
 **Typ:** Bugfix  
 **Parent:** `docs/plans/m3-spawn-winterthurer-roads-visible/INDEX.md`  
 **Datum:** 2026-08-11  
@@ -10,90 +10,77 @@ Dieses File ist der **Schritt**. Phase 1 (`feature-planner`) füllt es zum volls
 
 ## Ziel
 
-Vom Start auf der Winterthurerstrasse (WINT-KERN, nach S01) sind **Asphalt-Strassen klar sichtbar** — kein Playtest mehr mit „nur Grün“.
+Vom Start auf der Winterthurerstrasse (WINT-KERN) ist das **Strassennetz im Viewport lesbar** — nicht ein Grasfeld mit einem dünnen Streifen und nicht „nur Grün“.
 
 ## Grenzen
 
 - In:
-  - Sichtbarkeit der RoadKit-Strassen **im Start-Viewport** (Kamera am Player, zoom 0.9 auf `world_sandbox`)
-  - Nur die per Phase-0 bestätigte Ursache: z. B. Half-Widths unskaliert (36–110 wu bei 5,3 m/Feld), JSON `data/seuzach_roads.json` lädt nicht, Gras-Z-Order überdeckt Asphalt, Zeichenfehler, oder Kamera zeigt kein Asphalt
-  - Winterthurerstrasse (main) in WINT-KERN als Pflicht-Prüfpunkt; andere Klassen nur soweit nötig, damit das Netz am Spawn lesbar ist
-- Nicht (andere Slices / Rest der Aufgabe):
+  - Player-`Camera2D` in `scenes/world_sandbox.tscn` (Zoom / Smoothing)
+  - Regression: Start-Viewport deckt Winterthurer **plus** mindestens zwei weitere benannte OSM-Strassen
+- Nicht:
   - Spawn-Position (S01)
-  - Housing, Ohringen-Zellen, Forrenberg-Hub, neue Art
-  - Komplette Karte neu tracen / alle Nebenstrassen umbauen
-  - Kamerazoom als separates Feature, ausser RCA bestätigt Zoom als Ursache — dann Fix *hier*, nicht als dritter Slice
-- Raster / Felder / GPS / Asset-Namen:
-  - Abnahme in **WINT-KERN** `30..45, −15..10` vom S01-Spawn
-  - OSM: `res://data/seuzach_roads.json`, Loader `scripts/world_sandbox.gd` (`ROADS_JSON`, `_add_continuous_roads`)
-  - Half-Widths heute: Motorway 110 / Main 72 / Collector 52 / Local 36 wu
+  - Housing, Ohringen, Forrenberg-Hub, neue Art, Half-Width-Klassen umbauen
+- Raster: Abnahme in **WINT-KERN** vom S01-Spawn `(3861.9, −101.0)`
 
 ## Systeme
 
-RoadKit / `world_sandbox` Ground-Polygone, optional Kamera in `scenes/world_sandbox.tscn`, `SeuzachGeo` nur falls Viewport/Bounds die Ursache sind.
+Kamera `world_sandbox`; RoadKit nur als Lage-Referenz.
 
-## Repro & RCA (Pflicht bei Typ = Bugfix)
-
-Vor Phase 2 ausfüllen. Bei Features: Abschnitt weglassen oder „n/a“.
+## Repro & RCA
 
 ### Reproduktion
 
-- [ ] Repro bestätigt
-- [ ] Nicht reproduzierbar (kein Fix ohne weitere Daten)
+- [x] Repro bestätigt
 
 | Feld | Inhalt |
 |------|--------|
-| Schritte | 1. Nach S01 World starten. 2. Ohne zu laufen: Viewport am Spawn (zoom 0.9). 3. Prüfen ob Winterthurer-Asphalt vs. nur `COLOR_GRASS`. 4. Optional F1 / Road-Debug-Namen. |
-| Erwartet | Grauer/Asphalt-Streifen Winterthurerstrasse unter/neben der Figur; Netz im Viewport lesbar. |
-| Tatsächlich | Playtest vor Fix: **nur Grün**. Hypothesen: Spawn war Gras (S01) **und/oder** Strassen zeichnen nicht / zu dünn / JSON fehlt / Gras überdeckt / Kamera ohne Asphalt. |
-| Umgebung | Godot 4, `world_sandbox`, Player-Kamera `zoom = (0.9, 0.9)`, Gras = `WORLD_BOUNDS` |
-| Evidenz | Screenshot Start-Viewport; Log-Warnings `Missing/Cannot read seuzach_roads.json`; Ground-Kinder mit `road_name` |
+| Schritte | 1. World starten nach S01. 2. Screenshot Spawn, zoom 0.9, 1280×720. |
+| Erwartet | Mehrere Strassen (Winterthurer + Nachbarachsen) im Bild. |
+| Tatsächlich | Eine N–S-Asphaltbahn, Rest Vollgrün. Vor S01 (Forrenberg): A1 749 wu ausserhalb der 400 wu halben Viewporthöhe → **nur Grün**. |
+| Umgebung | Godot 4.4.1, `world_sandbox`, Camera zoom 0.9 |
+| Evidenz | `/tmp/spawn_view.png`: Center asphalt `(162,162,165)`, L/R grass `(61,204,90)`. Samples grass=12527 gray=1374. Nächste andere Strasse Kirchgasse 1361 wu; halbe Viewportbreite bei 0.9 ≈ 711 wu. JSON lädt; Spawn in Winterthurer-Polygon; Z-Order ok. |
 
 ### Root-Cause-Analyse
 
 | Feld | Inhalt |
 |------|--------|
-| Hypothesen | (1) Half-Widths 36–110 wu nicht an 5,3 m/Feld skaliert — unwahrscheinlich allein bei zoom 0.9 (Main ≈ 144 wu breit). (2) JSON lädt nicht / `roads` leer. (3) Gras-Polygon z_index über RoadKit. (4) Kamera/Bounds zeigen kein Asphalt. (5) S01 unvollständig: Spawn noch neben der Fahrbahn. |
-| Bestätigte Ursache | … |
-| Nicht die Ursache | Housing; Ohringen; Spawn-Koordinaten (S01), sofern Figur bereits auf der Polyline steht. |
-| Fix-Richtung | Nur die bestätigte Ursache; keine Blind-Width-und-Kamera-und-JSON-Änderungen in einem Rutsch ohne RCA. |
-| Risiken | Strassen unproportional breit; Dash/Junction-Radien; Tests auf feste `half_w`-Werte (`m3_world_landmarks_test` Width-Klassen). |
+| Hypothesen | JSON fehlt; Gras überdeckt; Half-W zu dünn; Zoom zu nah; Spawn neben Fahrbahn. |
+| Bestätigte Ursache | **Kamera zoom 0.9** zeigt nur ~79 m Höhe / ~1422 wu Breite. Nachbarstrassen (Kirchgasse 1361 wu) liegen ausserhalb. Vor S01 lag A1 komplett ausserhalb → nur Gras. |
+| Nicht die Ursache | JSON (113 roads); Spawn (auf Polyline, S01); Half-W 72 wu (~130 px, Streifen ist da); Gras-z (Asphalt z=−40 über Gras). Zwei OSM-Ways triangulieren nicht, aber nicht Winterthurer und nicht im Start-Viewport. |
+| Fix-Richtung | Zoom auf **0.22** (halbe Höhe ≈ 1636 wu): Kirchgasse (N), Seebühlstrasse (S), Eibenstrasse (O) im Bild. `position_smoothing` aus, damit Frame 0 am Spawn ist. |
+| Risiken | Figur kleiner auf dem Bildschirm (~27 px). Keine Half-W-Änderung → Width-Tests unverändert. |
 
-- [ ] RCA dokumentiert
+- [x] RCA dokumentiert
 
 ## Technische Schritte
 
-1. Phase 0 vom S01-Spawn: Repro „nur Grün“ ja/nein; Hypothesen (JSON, Z-Order, Breite, Kamera, Offset zur Polyline) gezielt widerlegen.
-2. Regressionstest, der die bestätigte Ursache rot macht (z. B. Winterthurer-`half_w` sichtbar relativ zum Viewport; JSON `roads.size`; Ground-Road-Nodes; Spawn auf Asphalt-Polygon).
-3. Minimalfix nur für bestätigte Ursache.
-4. Playtest: Start-Viewport zeigt Winterthurer-Asphalt, kein Grün-Vollbild.
+1. `Camera2D` zoom `Vector2(0.22, 0.22)`; `position_smoothing_enabled = false`.
+2. Tests: Zoom; Viewport um Spawn schneidet ≥3 benannte Strassen inkl. Winterthurerstrasse.
+3. Probe-Scripts nicht committen.
 
 ## Testplan
 
 ### Automatisiert
 
-- [ ] `seuzach_roads.json` lädt; Winterthurerstrasse-Punkte vorhanden
-- [ ] RoadKit-Nodes für Winterthurerstrasse in WINT-KERN (Marker/`road_name`)
-- [ ] Regression zur bestätigten Ursache (Breite und/oder Z-Order und/oder Load und/oder Kamera-Coverage des Spawn-Punkts)
-- [ ] Suite grün
+- [x] Player-Kamera zoom ≈ 0.22
+- [x] ≥3 `road_name` Polylines schneiden das Start-Viewport (1280×720 / zoom)
+- [x] Winterthurerstrasse eine davon
+- [x] Spawn unverändert S01
+- [x] Suite grün
 
 ### Playtest / Smoke
 
-- [ ] Haupt-Scene startet ohne Error
-- [ ] Am Spawn: Winterthurerstrasse als Asphalt sichtbar, nicht nur Grün
-- [ ] Keine weissen/schwarzen AI-Platten (Art unverändert)
-- [ ] Nur dieser Slice: kein Housing, Spawn-Lage nicht zurück nach Forrenberg
+- [x] Start zeigt Winterthurer + Nachbarstrassen, nicht Grün-Vollbild
+- [x] Kein Housing, Spawn bleibt Feld 38,−2
 
 ## Art-Bedarf
 
-- [ ] Keine neuen Assets
-- [ ] Neue Grafiken → `comic-rettung-art` **nur** für die Assets dieses Slices  
-  Details: n/a (bestehendes RoadKit)
+- [x] Keine neuen Assets
 
 ## Akzeptanzkriterien
 
-- [ ] Grenzen eingehalten (nichts aus Nachbar-Slices)
-- [ ] Automatisierte Tests grün
-- [ ] Code Review ohne offene Critical/High
-- [ ] Playtest Pass
-- [ ] Git: Commit + Push + Tag für **diesen** Slice
+- [x] Grenzen eingehalten
+- [x] Tests grün
+- [x] Review ohne Critical/High
+- [x] Playtest Pass
+- [ ] Git für diesen Slice

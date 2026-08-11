@@ -93,6 +93,7 @@ func _run() -> void:
 			feld == spawn_feld,
 			"spawn %s is Feld %s (got %s)" % [str(spawn), str(spawn_feld), str(feld)]
 		)
+		_assert_spawn_viewport_shows_streets(player, world)
 	var status: Label = world.get_node_or_null("%StatusLabel") as Label
 	if status:
 		var feld_txt := "Feld %d,%d" % [spawn_feld.x, spawn_feld.y]
@@ -198,6 +199,50 @@ func _assert_winterthurer_world_spawn(spawn: Vector2, spawn_feld: Vector2i, worl
 		best_d <= 40.0,
 		"spawn distance to Winterthurerstrasse polyline ≤ 40 wu (got %.1f)" % best_d
 	)
+
+
+func _assert_spawn_viewport_shows_streets(player: Node2D, world: Node) -> void:
+	var cam: Camera2D = player.get_node_or_null("Camera2D") as Camera2D
+	_assert(cam != null, "Player Camera2D exists")
+	if cam == null:
+		return
+	_assert(cam.zoom.x <= 0.24 and cam.zoom.y <= 0.24, "spawn camera zoomed out enough to show streets (got %s)" % str(cam.zoom))
+	_assert(is_equal_approx(cam.zoom.x, 0.22) and is_equal_approx(cam.zoom.y, 0.22), "spawn camera zoom == (0.22, 0.22)")
+	_assert(not cam.position_smoothing_enabled, "spawn camera does not lag behind the player")
+	var view := _spawn_viewport_rect(player.global_position, cam.zoom)
+	var names: Dictionary = {}
+	var ground: Node = world.get_node_or_null("%Ground")
+	if ground:
+		for node in ground.get_children():
+			if not node.has_meta("road_name") or not node.has_meta("road_points"):
+				continue
+			var pts: PackedVector2Array = PackedVector2Array(node.get_meta("road_points"))
+			if _polyline_hits_rect(pts, view):
+				names[str(node.get_meta("road_name"))] = true
+	_assert(names.has("Winterthurerstrasse"), "start viewport includes Winterthurerstrasse")
+	_assert(names.size() >= 3, "start viewport shows ≥3 named streets (got %s)" % str(names.keys()))
+
+
+func _spawn_viewport_rect(center: Vector2, zoom: Vector2) -> Rect2:
+	var screen := Vector2(1280.0, 720.0)
+	var world_size := Vector2(screen.x / maxf(zoom.x, 0.01), screen.y / maxf(zoom.y, 0.01))
+	return Rect2(center - world_size * 0.5, world_size)
+
+
+func _polyline_hits_rect(pts: PackedVector2Array, rect: Rect2) -> bool:
+	for p in pts:
+		if rect.has_point(p):
+			return true
+	for i in range(pts.size() - 1):
+		if Geometry2D.segment_intersects_segment(pts[i], pts[i + 1], rect.position, rect.position + Vector2(rect.size.x, 0.0)) != null:
+			return true
+		if Geometry2D.segment_intersects_segment(pts[i], pts[i + 1], rect.position, rect.position + Vector2(0.0, rect.size.y)) != null:
+			return true
+		if Geometry2D.segment_intersects_segment(pts[i], pts[i + 1], rect.end, rect.end - Vector2(rect.size.x, 0.0)) != null:
+			return true
+		if Geometry2D.segment_intersects_segment(pts[i], pts[i + 1], rect.end, rect.end - Vector2(0.0, rect.size.y)) != null:
+			return true
+	return false
 
 
 func _assert_cell_mapping() -> void:

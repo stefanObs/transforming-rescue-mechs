@@ -1,6 +1,6 @@
 # Slices: m3-spawn-winterthurer-roads-visible
 
-**Status:** In Arbeit  
+**Status:** Erledigt  
 **Aufgabe:** Startpunkt auf die Karte / Winterthurerstrasse legen und Strassen im Start-Viewport sichtbar machen (Playtest: nur Grün).  
 **Datum:** 2026-08-11  
 **Raster / Zuschnitt:** Benanntes Quartier WINT-KERN (F1 10er-Nähe); kein Housing; Ohringen/Forrenberg nicht anfassen
@@ -22,7 +22,7 @@ Kirche = Ursprung (0, 0). 1 Feld = 100 wu = 5,3 m. Gras = `SeuzachGeo.WORLD_BOUN
 | ID | Datei | Titel | Hängt ab von | Status |
 |----|-------|-------|----------------|--------|
 | S01 | `S01-spawn-winterthurerstrasse.md` | Spawn auf Winterthurerstrasse (Dorfkern) | — | erledigt |
-| S02 | `S02-streets-visible-at-spawn.md` | Strassen im Start-Viewport sichtbar | S01 | offen |
+| S02 | `S02-streets-visible-at-spawn.md` | Strassen im Start-Viewport sichtbar | S01 | erledigt |
 
 Status je Slice: `offen` → `in Arbeit` → `erledigt` (nach Phase-4-Pass + Git-Tag).
 
