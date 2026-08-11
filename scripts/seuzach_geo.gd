@@ -1,0 +1,115 @@
+extends Object
+## WGS84 → Spielwelt. Kirche = Ursprung, +X Ost, +Y Süd.
+## 1 F1-Feld = 100 wu = 5,3 m (gemessenes Seuzach-Dorf ohne Ohringen).
+class_name SeuzachGeo
+
+const FIELD_METERS := 5.3
+const FIELD_WU := 100.0
+const UNITS_PER_METER := FIELD_WU / FIELD_METERS
+
+const CHURCH_LAT := 47.5335012
+const CHURCH_LON := 8.7261235
+
+## WGS84-Näherung bei Kirchen-Breite.
+const METERS_PER_DEG_LAT := 111320.0
+
+## Gemessene Dorf-Ecken (Seuzach ohne Ohringen).
+const VILLAGE_SOUTH_LAT := 47.528351
+const VILLAGE_SOUTH_LON := 8.730905
+const VILLAGE_NORTH_LAT := 47.543536
+const VILLAGE_NORTH_LON := 8.729953
+const VILLAGE_WEST_LAT := 47.536208
+const VILLAGE_WEST_LON := 8.725788
+const VILLAGE_EAST_LAT := 47.536171
+const VILLAGE_EAST_LON := 8.746202
+
+const BAHNHOF_LAT := 47.5354389
+const BAHNHOF_LON := 8.7393932
+const BIRCH_LAT := 47.5353419
+const BIRCH_LON := 8.7362524
+const RIETACKER_LAT := 47.5362833
+const RIETACKER_LON := 8.7271400
+const OHRINGEN_LAT := 47.5280584
+const OHRINGEN_LON := 8.7121325
+const FORRENBERG_LAT := 47.5263004
+const FORRENBERG_LON := 8.7353138
+const BADI_LAT := 47.5393193
+const BADI_LON := 8.7333710
+
+## z_index = ACTOR_Z_BASE + floor(y / Z_Y_DIV) + 1; Canvas-Max 4096.
+const Z_Y_DIV := 20.0
+## Gras / F1-Raster: Seuzach-Dorf + Ohringen + Forrenberg.
+const WORLD_BOUNDS := Rect2(Vector2(-25000, -24000), Vector2(57000, 42000))
+## Spawn etwas südlich der SOCAR Forrenberg (nicht auf der A1).
+const SPAWN_SOUTH_WU := 200.0
+const HUB_ENTER_SOUTH_WU := 320.0
+
+
+static func meters_per_deg_lon() -> float:
+	return METERS_PER_DEG_LAT * cos(deg_to_rad(CHURCH_LAT))
+
+
+static func gps_to_world(lat: float, lon: float) -> Vector2:
+	var x := (lon - CHURCH_LON) * meters_per_deg_lon() * UNITS_PER_METER
+	var y := (CHURCH_LAT - lat) * METERS_PER_DEG_LAT * UNITS_PER_METER
+	return Vector2(x, y)
+
+
+static func village_south() -> Vector2:
+	return gps_to_world(VILLAGE_SOUTH_LAT, VILLAGE_SOUTH_LON)
+
+
+static func village_north() -> Vector2:
+	return gps_to_world(VILLAGE_NORTH_LAT, VILLAGE_NORTH_LON)
+
+
+static func village_west() -> Vector2:
+	return gps_to_world(VILLAGE_WEST_LAT, VILLAGE_WEST_LON)
+
+
+static func village_east() -> Vector2:
+	return gps_to_world(VILLAGE_EAST_LAT, VILLAGE_EAST_LON)
+
+
+static func village_ns_fields() -> float:
+	return absf(village_north().y - village_south().y) / FIELD_WU
+
+
+static func village_ew_fields() -> float:
+	return absf(village_east().x - village_west().x) / FIELD_WU
+
+
+static func actor_z(world_y: float, z_base: int) -> int:
+	return z_base + int(floor(world_y / Z_Y_DIV)) + 1
+
+
+static func prop_z(world_y: float, z_base: int) -> int:
+	return z_base + int(floor(world_y / Z_Y_DIV))
+
+
+static func forrenberg_world() -> Vector2:
+	return gps_to_world(FORRENBERG_LAT, FORRENBERG_LON)
+
+
+static func default_world_spawn() -> Vector2:
+	return forrenberg_world() + Vector2(0.0, SPAWN_SOUTH_WU)
+
+
+static func hub_enter_pos() -> Vector2:
+	return forrenberg_world() + Vector2(0.0, HUB_ENTER_SOUTH_WU)
+
+
+static func birch_world() -> Vector2:
+	return gps_to_world(BIRCH_LAT, BIRCH_LON)
+
+
+static func rietacker_world() -> Vector2:
+	return gps_to_world(RIETACKER_LAT, RIETACKER_LON)
+
+
+static func ohringen_world() -> Vector2:
+	return gps_to_world(OHRINGEN_LAT, OHRINGEN_LON)
+
+
+static func bahnhof_world() -> Vector2:
+	return gps_to_world(BAHNHOF_LAT, BAHNHOF_LON)

@@ -106,6 +106,7 @@ func _run() -> void:
 	_assert_schools_off_roads(world, all_sprites)
 
 	_assert_named_roads(world)
+	_assert_field_scale()
 
 	var ohringen: Node = props.get_node_or_null("DistrictOhringen")
 	_assert(ohringen != null, "DistrictOhringen node exists")
@@ -131,10 +132,8 @@ func _assert_named_roads(world: Node) -> void:
 	var names: Dictionary = {}
 	var classes: Dictionary = {}
 	var widths: Dictionary = {}
-	var winter_x := 0.0
-	var stations_x := 0.0
-	var have_winter := false
-	var have_stations := false
+	var winter_min_x := 1.0e9
+	var stations_min_x := 1.0e9
 	for node in _collect_nodes(ground):
 		if not node.has_meta("road_name"):
 			continue
@@ -144,12 +143,14 @@ func _assert_named_roads(world: Node) -> void:
 			classes[str(node.get_meta("road_class"))] = true
 		if node.has_meta("half_w"):
 			widths[str(int(round(float(node.get_meta("half_w")))))] = true
-		if n == "Winterthurerstrasse":
-			winter_x = (node as Node2D).position.x
-			have_winter = true
-		if n == "Stationsstrasse":
-			stations_x = (node as Node2D).position.x
-			have_stations = true
+		if n == "Winterthurerstrasse" or n == "Stationsstrasse":
+			if node.has_meta("road_points"):
+				var pts: PackedVector2Array = node.get_meta("road_points")
+				for pt in pts:
+					if n == "Winterthurerstrasse":
+						winter_min_x = minf(winter_min_x, pt.x)
+					else:
+						stations_min_x = minf(stations_min_x, pt.x)
 	for required in [
 		"Winterthurerstrasse",
 		"Landstrasse",
@@ -170,54 +171,74 @@ func _assert_named_roads(world: Node) -> void:
 	_assert(classes.has("collector"), "road_class collector")
 	_assert(classes.has("local"), "road_class local")
 	_assert(widths.size() >= 3, "≥3 distinct road half_w (got %s)" % str(widths.keys()))
-	if have_winter and have_stations:
+	if winter_min_x < 1.0e8 and stations_min_x < 1.0e8:
 		_assert(
-			winter_x < stations_x,
-			"Winterthurerstrasse west of Stationsstrasse (wx=%.0f sx=%.0f)" % [winter_x, stations_x]
+			winter_min_x < stations_min_x,
+			"Winterthurerstrasse west of Stationsstrasse (wx=%.0f sx=%.0f)"
+			% [winter_min_x, stations_min_x]
 		)
-	_assert_road_reaches(ground, "Ohringerstrasse", -900.0, 200.0)
+	_assert(
+		SeuzachGeo.bahnhof_world().x > 10000.0,
+		"Bahnhof east of Kirche at field scale (x>10000, got %.0f)" % SeuzachGeo.bahnhof_world().x
+	)
+	_assert_road_reaches(ground, "Schaffhauserstrasse", -15000.0, 8000.0)
 	_assert_road_reaches(ground, "A1", -800.0, 700.0)
-	_assert_road_near(ground, "Forrenbergstrasse", Vector2(490, 600), 220.0)
+	_assert_road_near(ground, "A1", SeuzachGeo.forrenberg_world(), 800.0)
+	_assert_road_near(ground, "Stationsstrasse", SeuzachGeo.bahnhof_world(), 900.0)
+
+
+func _assert_field_scale() -> void:
+	var ns := SeuzachGeo.village_ns_fields()
+	var ew := SeuzachGeo.village_ew_fields()
+	_assert(ns >= 307.0 and ns <= 327.0, "Seuzach N–S ≈ 317 Felder (got %.1f)" % ns)
+	_assert(ew >= 281.0 and ew <= 301.0, "Seuzach E–W ≈ 291 Felder (got %.1f)" % ew)
+	_assert(is_equal_approx(SeuzachGeo.FIELD_METERS, 5.3), "1 Feld = 5,3 m")
+	_assert(is_equal_approx(SeuzachGeo.FIELD_WU, 100.0), "1 Feld = 100 wu")
+	var church := SeuzachGeo.gps_to_world(SeuzachGeo.CHURCH_LAT, SeuzachGeo.CHURCH_LON)
+	_assert(church.length() < 0.5, "Kirche is world origin (got %s)" % str(church))
 
 
 func _assert_road_reaches(ground: Node, road_name: String, x_lt: float, y_gt: float) -> void:
+	var hit := false
+	var saw := false
 	for node in _collect_nodes(ground):
 		if not node.has_meta("road_name") or str(node.get_meta("road_name")) != road_name:
 			continue
 		if not node.has_meta("road_points"):
 			_assert(false, "%s has road_points meta" % road_name)
 			return
+		saw = true
 		var pts: PackedVector2Array = node.get_meta("road_points")
-		var hit := false
 		for pt in pts:
 			if pt.x < x_lt and pt.y > y_gt:
 				hit = true
 				break
-		_assert(
-			hit,
-			"%s reaches Maps west/south (x<%.0f y>%.0f)" % [road_name, x_lt, y_gt]
-		)
-		return
-	_assert(false, "%s marker for reach check" % road_name)
+		if hit:
+			break
+	_assert(saw, "%s marker for reach check" % road_name)
+	_assert(
+		hit,
+		"%s reaches Maps west/south (x<%.0f y>%.0f)" % [road_name, x_lt, y_gt]
+	)
 
 
 func _assert_road_near(ground: Node, road_name: String, target: Vector2, max_dist: float) -> void:
+	var best := 1.0e9
+	var saw := false
 	for node in _collect_nodes(ground):
 		if not node.has_meta("road_name") or str(node.get_meta("road_name")) != road_name:
 			continue
 		if not node.has_meta("road_points"):
 			_assert(false, "%s has road_points meta" % road_name)
 			return
+		saw = true
 		var pts: PackedVector2Array = node.get_meta("road_points")
-		var best := 1.0e9
-		for pt in pts:
-			best = minf(best, pt.distance_to(target))
-		_assert(
-			best <= max_dist,
-			"%s passes near %s (got %.0f, want ≤%.0f)" % [road_name, str(target), best, max_dist]
-		)
-		return
-	_assert(false, "%s marker for near check" % road_name)
+		best = minf(best, _dist_to_polyline(target, pts))
+	_assert(saw, "%s marker for near check" % road_name)
+	_assert(
+		best <= max_dist,
+		"%s passes near %s (got %.0f, want ≤%.0f)" % [road_name, str(target), best, max_dist]
+	)
 
 
 func _assert_geo_quadrants(sprites: Array[Sprite2D]) -> void:
@@ -238,7 +259,7 @@ func _assert_geo_quadrants(sprites: Array[Sprite2D]) -> void:
 		)
 	if tank:
 		_assert(
-			tank.position.distance_to(Vector2(490, 600)) < 350.0,
+			tank.position.distance_to(SeuzachGeo.forrenberg_world()) < 800.0,
 			"tankstelle near Forrenberg hub"
 		)
 	if badi:
@@ -247,14 +268,26 @@ func _assert_geo_quadrants(sprites: Array[Sprite2D]) -> void:
 		_assert(bahnhof.position.x > 500.0, "bahnhof east (x>500, got %.0f)" % bahnhof.position.x)
 	if ohringen_school:
 		_assert(
-			ohringen_school.position.x < -500.0 and ohringen_school.position.y > 200.0,
+			ohringen_school.position.x < -15000.0 and ohringen_school.position.y > 8000.0,
 			"ohringen school SW (got %s)" % str(ohringen_school.position)
+		)
+		_assert(
+			ohringen_school.position.distance_to(SeuzachGeo.ohringen_world()) < 800.0,
+			"ohringen school near Nominatim GPS"
 		)
 	if birch and rietacker:
 		_assert(
 			birch.position.x > rietacker.position.x,
 			"birch east of rietacker (birch.x=%.0f rietacker.x=%.0f)"
 			% [birch.position.x, rietacker.position.x]
+		)
+		_assert(
+			birch.position.distance_to(SeuzachGeo.birch_world()) < 800.0,
+			"birch school near Nominatim GPS"
+		)
+		_assert(
+			rietacker.position.distance_to(SeuzachGeo.rietacker_world()) < 800.0,
+			"rietacker school near Nominatim GPS"
 		)
 
 

@@ -11,13 +11,39 @@ const COLOR_LABEL := Color(1.0, 1.0, 1.0, 0.95)
 const COLOR_LABEL_OUTLINE := Color(0.12, 0.12, 0.12, 0.92)
 
 var cell_size: float = DEFAULT_CELL
-var bounds: Rect2 = Rect2(Vector2(-1500, -1000), Vector2(3000, 2200))
-var major_every: int = 5
+var bounds: Rect2 = Rect2(Vector2(-25000, -24000), Vector2(57000, 42000))
+var major_every: int = 10
+var label_major_only: bool = true
+var clip_to_view: bool = true
+var view_pad_cells: int = 2
 
 
 func _ready() -> void:
 	z_as_relative = false
+	set_process(clip_to_view)
 	queue_redraw()
+
+
+func _process(_delta: float) -> void:
+	if clip_to_view:
+		queue_redraw()
+
+
+func _visible_world_rect() -> Rect2:
+	var vp := get_viewport()
+	if vp == null:
+		return bounds
+	var xf := get_canvas_transform()
+	if xf.determinant() == 0.0:
+		return bounds
+	var inv := xf.affine_inverse()
+	var size := get_viewport_rect().size
+	var a := inv * Vector2.ZERO
+	var b := inv * size
+	var rect := Rect2(a, Vector2.ZERO).expand(b)
+	var pad := cell_size * float(view_pad_cells)
+	rect = rect.grow(pad)
+	return bounds.intersection(rect)
 
 
 static func world_to_cell(pos: Vector2, size: float = DEFAULT_CELL) -> Vector2i:
@@ -34,10 +60,13 @@ func _draw() -> void:
 	var size := cell_size if cell_size > 0.001 else DEFAULT_CELL
 	if size < 1.0:
 		return
-	var x0 := floorf(bounds.position.x / size) * size
-	var y0 := floorf(bounds.position.y / size) * size
-	var x1 := bounds.end.x
-	var y1 := bounds.end.y
+	var draw_bounds := _visible_world_rect() if clip_to_view else bounds
+	if draw_bounds.size.x <= 1.0 or draw_bounds.size.y <= 1.0:
+		return
+	var x0 := floorf(draw_bounds.position.x / size) * size
+	var y0 := floorf(draw_bounds.position.y / size) * size
+	var x1 := draw_bounds.end.x
+	var y1 := draw_bounds.end.y
 	var x := x0
 	while x <= x1 + 0.001:
 		var ix := int(round(x / size))
@@ -74,6 +103,8 @@ func _draw() -> void:
 	var iy1 := floori((y1 - 0.001) / size)
 	for ix in range(ix0, ix1 + 1):
 		for iy in range(iy0, iy1 + 1):
+			if label_major_only and (ix % major_every != 0 or iy % major_every != 0):
+				continue
 			var text := "%d,%d" % [ix, iy]
 			var center := cell_center(Vector2i(ix, iy), size)
 			var text_size := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size)

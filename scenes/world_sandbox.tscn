@@ -10,7 +10,7 @@ script = ExtResource("1_world")
 unique_name_in_owner = true
 z_index = -100
 color = Color(0.302, 0.639, 1, 1)
-polygon = PackedVector2Array(-2000, -1500, 2000, -1500, 2000, 1500, -2000, 1500)
+polygon = PackedVector2Array(-25000, -24000, 32000, -24000, 32000, 18000, -25000, 18000)
 
 [node name="Ground" type="Node2D" parent="."]
 unique_name_in_owner = true
@@ -22,8 +22,8 @@ unique_name_in_owner = true
 [node name="Player" parent="." instance=ExtResource("2_player")]
 unique_name_in_owner = true
 z_as_relative = false
-z_index = 2751
-position = Vector2(490, 750)
+z_index = 2767
+position = Vector2(13033, 15324)
 
 [node name="Camera2D" type="Camera2D" parent="Player"]
 position_smoothing_enabled = true

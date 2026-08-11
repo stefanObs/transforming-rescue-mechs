@@ -75,19 +75,21 @@ func _test_actor_z_above_ground() -> void:
 	_assert(world_script != null, "world_sandbox.gd loads")
 	var base: int = int(world_script.ACTOR_Z_BASE)
 	_assert(base >= 100, "ACTOR_Z_BASE high enough above ground")
-	for y in [-500, -40, -1, 0, 100, 700]:
-		var z: int = world_script.compute_actor_z(float(y))
-		_assert(z == base + y + 1, "actor_z(%d) == %d+%d+1 (got %d)" % [y, base, y, z])
-		_assert(z > -30, "actor_z(%d)=%d always above ground max (-30)" % [y, z])
-		_assert(z <= 4096, "actor_z(%d)=%d within Godot canvas z max" % [y, z])
+	var div: float = SeuzachGeo.Z_Y_DIV
+	for y in [-20000.0, -40.0, -1.0, 0.0, 100.0, 15000.0]:
+		var z: int = world_script.compute_actor_z(y)
+		var expect: int = base + int(floor(y / div)) + 1
+		_assert(z == expect, "actor_z(%.0f) == %d (got %d)" % [y, expect, z])
+		_assert(z > -30, "actor_z(%.0f)=%d always above ground max (-30)" % [y, z])
+		_assert(z <= 4096, "actor_z(%.0f)=%d within Godot canvas z max" % [y, z])
 	var prop_base: int = int(world_script.PROP_Z_BASE)
 	_assert(prop_base == base, "props and actors share z BASE for Y-sort")
 	_assert(
-		world_script.compute_actor_z(10.0) > world_script.compute_prop_z(0.0),
+		world_script.compute_actor_z(40.0) > world_script.compute_prop_z(0.0),
 		"actor south of prop draws in front"
 	)
 	_assert(
-		world_script.compute_actor_z(-10.0) < world_script.compute_prop_z(0.0),
+		world_script.compute_actor_z(-40.0) < world_script.compute_prop_z(0.0),
 		"actor north of prop draws behind"
 	)
 	_assert(

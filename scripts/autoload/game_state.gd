@@ -5,7 +5,7 @@ signal coins_changed(new_amount: int)
 
 var coins: int = 0
 var current_character_id: String = "bolt"
-var world_spawn_position: Vector2 = Vector2(490, 750) # Forrenberg hub, south of collision
+var world_spawn_position: Vector2 = SeuzachGeo.default_world_spawn() # Forrenberg / A1
 var has_world_spawn: bool = false
 
 
@@ -30,5 +30,5 @@ func reset_for_new_game() -> void:
 	coins = 0
 	current_character_id = "bolt"
 	has_world_spawn = false
-	world_spawn_position = Vector2(490, 750)
+	world_spawn_position = SeuzachGeo.default_world_spawn()
 	coins_changed.emit(coins)

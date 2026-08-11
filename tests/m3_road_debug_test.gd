@@ -79,17 +79,20 @@ func _run() -> void:
 			_assert(grid_bounds.has_point(Vector2.ZERO), "grid covers Kirche origin (0,0)")
 			_assert(is_equal_approx(float(grid.get("cell_size")), 100.0), "DebugGrid.cell_size is 100")
 	var player: Node2D = world.get_node_or_null("%Player") as Node2D
+	var spawn := SeuzachGeo.default_world_spawn()
+	var spawn_feld: Vector2i = DebugGridLib.world_to_cell(spawn, 100.0)
 	if player:
 		var feld: Vector2i = DebugGridLib.world_to_cell(player.global_position, 100.0)
 		_assert(
-			feld == Vector2i(4, 7),
-			"spawn (490,750) is Feld 4,7 (got %s)" % str(feld)
+			feld == spawn_feld,
+			"spawn %s is Feld %s (got %s)" % [str(spawn), str(spawn_feld), str(feld)]
 		)
 	var status: Label = world.get_node_or_null("%StatusLabel") as Label
 	if status:
+		var feld_txt := "Feld %d,%d" % [spawn_feld.x, spawn_feld.y]
 		_assert(
-			status.text.contains("Feld 4,7") and status.text.contains("Raster 100"),
-			"status shows Feld 4,7 and Raster 100 (got %s)" % status.text
+			status.text.contains(feld_txt) and status.text.contains("Raster 100"),
+			"status shows %s and Raster 100 (got %s)" % [feld_txt, status.text]
 		)
 	var ground: Node = world.get_node_or_null("%Ground")
 	if ground:
@@ -199,21 +202,26 @@ func _tangent_at(world: Node, road_name: String, pos: Vector2) -> Vector2:
 	var ground: Node = world.get_node_or_null("%Ground")
 	if ground == null:
 		return Vector2.RIGHT
+	var best_d := 1.0e9
+	var best_t := Vector2.RIGHT
 	for node in ground.get_children():
 		if not node.has_meta("road_name") or str(node.get_meta("road_name")) != road_name:
 			continue
 		if not node.has_meta("road_points"):
 			continue
 		var pts: PackedVector2Array = PackedVector2Array(node.get_meta("road_points"))
-		return _nearest_segment_tangent(pts, pos)
-	return Vector2.RIGHT
+		var pair: Dictionary = _nearest_segment_tangent_dist(pts, pos)
+		if float(pair["d"]) < best_d:
+			best_d = float(pair["d"])
+			best_t = pair["t"]
+	return best_t
 
 
-func _nearest_segment_tangent(pts: PackedVector2Array, pos: Vector2) -> Vector2:
-	if pts.size() < 2:
-		return Vector2.RIGHT
+func _nearest_segment_tangent_dist(pts: PackedVector2Array, pos: Vector2) -> Dictionary:
 	var best_d := 1.0e9
 	var best_t := Vector2.RIGHT
+	if pts.size() < 2:
+		return {"d": best_d, "t": best_t}
 	for i in range(pts.size() - 1):
 		var a: Vector2 = pts[i]
 		var b: Vector2 = pts[i + 1]
@@ -226,7 +234,7 @@ func _nearest_segment_tangent(pts: PackedVector2Array, pos: Vector2) -> Vector2:
 		if d < best_d:
 			best_d = d
 			best_t = ab / sqrt(len2)
-	return best_t
+	return {"d": best_d, "t": best_t}
 
 
 func _collect_debug_labels(world: Node) -> Array[Node2D]:

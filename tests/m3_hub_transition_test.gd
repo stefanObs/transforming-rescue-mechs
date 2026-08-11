@@ -6,8 +6,8 @@ const WORLD_SCENE := "res://scenes/world_sandbox.tscn"
 const HUB_SCENE := "res://scenes/hub_station.tscn"
 const SPAWN_TOL := 2.0
 ## Must match world_sandbox / GameState / hub_station defaults (Forrenberg, south of hub).
-const DEFAULT_WORLD_SPAWN := Vector2(490, 750)
-const HUB_ENTER_POS := Vector2(490, 760)
+var DEFAULT_WORLD_SPAWN: Vector2 = SeuzachGeo.default_world_spawn()
+var HUB_ENTER_POS: Vector2 = SeuzachGeo.hub_enter_pos()
 ## player.tscn CapsuleShape2D: radius 14, height 40, offset (0, -12)
 ## Godot capsule half-height along Y is height/2 (=20) + ends; use half extents matching shape.
 const PLAYER_CAPSULE_OFFSET := Vector2(0, -12)

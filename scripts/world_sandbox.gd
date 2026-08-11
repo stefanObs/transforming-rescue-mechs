@@ -1,6 +1,6 @@
 extends Node2D
-## Sandbox world: street map only (grass + RoadKit). No houses or landmarks.
-## M3: Seuzach+Ohringen Strassennetz; HubEnter unsichtbar am Forrenberg-Spawn.
+## Sandbox world: street map (grass + RoadKit) + school clusters for orientation.
+## M3: Seuzach+Ohringen OSM-Netz auf 5,3 m/Feld; HubEnter unsichtbar am Forrenberg.
 
 const RoadKitLib := preload("res://scripts/road_kit.gd")
 const ART := "res://assets/art/"
@@ -13,10 +13,10 @@ const SCHOOL_SCALE := Vector2(0.22, 0.22)
 ## while staying above ground. Godot canvas z_index max is 4096.
 const ACTOR_Z_BASE := 2000
 const PROP_Z_BASE := 2000
-## Geo: +X east, +Y south; origin ≈ Reformierte Kirche. Hub at Tankstelle Forrenberg (A1).
-## Enter/spawn south of hub + tankstelle BuildingCollision (capsule clear).
-const HUB_ENTER_POS := Vector2(490, 760)
-const DEFAULT_WORLD_SPAWN := Vector2(490, 750)
+## Geo: +X east, +Y south; origin ≈ Reformierte Kirche. 1 Feld = 5,3 m = 100 wu.
+## Hub/Spawn: SOCAR Forrenberg (A1), etwas südlich der Tankstelle.
+var HUB_ENTER_POS: Vector2 = SeuzachGeo.hub_enter_pos()
+var DEFAULT_WORLD_SPAWN: Vector2 = SeuzachGeo.default_world_spawn()
 const COLOR_HILL := Color("4BB85A")
 const COLOR_HILL_2 := Color("3FA050")
 const COLOR_FOREST_FLOOR := Color("2F9A45")
@@ -25,11 +25,11 @@ const COLOR_FOREST_FLOOR := Color("2F9A45")
 
 static func compute_actor_z(y: float) -> int:
 	## +1 so the player wins same-row draw ties against props (tree order alone is fragile).
-	return ACTOR_Z_BASE + int(y) + 1
+	return SeuzachGeo.actor_z(y, ACTOR_Z_BASE)
 
 
 static func compute_prop_z(y: float) -> int:
-	return PROP_Z_BASE + int(y)
+	return SeuzachGeo.prop_z(y, PROP_Z_BASE)
 
 
 ## Texture-pixel Y offset so a centered sprite's bottom (feet) sits on the node origin.
@@ -51,10 +51,10 @@ const ROAD_HW_COLLECTOR := 52.0
 const ROAD_HW_LOCAL := 36.0
 const ROAD_HALF_W := ROAD_HW_MAIN
 const ROAD_DEBUG_Z := 3900
-const ROAD_DEBUG_SPACING := 420.0
+const ROAD_DEBUG_SPACING := 900.0
 const DEBUG_GRID_SCRIPT := preload("res://scripts/debug_grid.gd")
 const DEBUG_GRID_CELL := 100.0
-const DEBUG_GRID_BOUNDS := Rect2(Vector2(-1500, -1000), Vector2(3000, 2200))
+const ROADS_JSON := "res://data/seuzach_roads.json"
 
 @onready var _player: CharacterBody2D = %Player
 @onready var _hint: Label = %HintLabel
@@ -87,8 +87,11 @@ func _ready() -> void:
 	)
 	if _player and _player.has_signal("form_changed"):
 		_player.form_changed.connect(_on_form_changed)
-	if GameState.has_world_spawn and _player:
-		_player.global_position = GameState.consume_world_spawn()
+	if _player:
+		if GameState.has_world_spawn:
+			_player.global_position = GameState.consume_world_spawn()
+		else:
+			_player.global_position = DEFAULT_WORLD_SPAWN
 	_sync_actor_z()
 	_refresh_status()
 
@@ -217,7 +220,9 @@ func _add_debug_grid(overlay: Node2D) -> void:
 	grid.set_meta("road_debug_grid", true)
 	grid.set_meta("cell_size", DEBUG_GRID_CELL)
 	grid.cell_size = DEBUG_GRID_CELL
-	grid.bounds = DEBUG_GRID_BOUNDS
+	grid.bounds = SeuzachGeo.WORLD_BOUNDS
+	grid.major_every = 10
+	grid.label_major_only = true
 	overlay.add_child(grid)
 
 
@@ -256,13 +261,18 @@ func _build_flat_ground() -> void:
 		child.queue_free()
 
 	# Flat grass canvas — street map only (no hills, forest floors, or landmark props).
+	var b := SeuzachGeo.WORLD_BOUNDS
+	var p0 := b.position
+	var p1 := Vector2(b.end.x, b.position.y)
+	var p2 := b.end
+	var p3 := Vector2(b.position.x, b.end.y)
 	var base := Polygon2D.new()
 	base.color = COLOR_GRASS
 	base.z_index = -50
-	base.polygon = PackedVector2Array([
-		Vector2(-1500, -1000), Vector2(1500, -1000), Vector2(1500, 1200), Vector2(-1500, 1200),
-	])
+	base.polygon = PackedVector2Array([p0, p1, p2, p3])
 	_ground.add_child(base)
+	if _sky:
+		_sky.polygon = PackedVector2Array([p0, p1, p2, p3])
 
 	_add_continuous_roads()
 
@@ -291,98 +301,60 @@ func _add_hill_mound(center: Vector2, rx: float, ry: float, color: Color, z: int
 	_ground.add_child(marker)
 
 
+func _load_road_data() -> Dictionary:
+	if not FileAccess.file_exists(ROADS_JSON):
+		push_warning("Missing %s" % ROADS_JSON)
+		return {}
+	var file := FileAccess.open(ROADS_JSON, FileAccess.READ)
+	if file == null:
+		push_warning("Cannot read %s" % ROADS_JSON)
+		return {}
+	var parsed: Variant = JSON.parse_string(file.get_as_text())
+	if parsed is Dictionary:
+		return parsed as Dictionary
+	return {}
+
+
 func _add_continuous_roads() -> void:
-	## Connected Maps polylines (mitered). No footways. +X east, +Y south; Kirche ≈ (0,0).
-	var j_kern := Vector2(-125, -200)
-	var j_ohringen := Vector2(-1240, 360)
-	var j_forrenberg := Vector2(-125, 200)
-	var j_station := Vector2(160, -230)
-	var j_welsikon := Vector2(80, -340)
-	var j_stadler := Vector2(584, -292)
-	var j_bahnhof := Vector2(900, -130)
-	var j_a1_winter := Vector2(-110, 840)
-	var j_a1_forren := Vector2(510, 794)
-	var j_a1_h15 := Vector2(-900, 960)
-
-	_add_named_road("A1", "motorway", [
-		Vector2(-1400, 1020), j_a1_h15, Vector2(-400, 880), j_a1_winter,
-		Vector2(280, 810), j_a1_forren, Vector2(700, 780), Vector2(1250, 740),
-	])
-	_add_named_road("Winterthurerstrasse", "main", [
-		Vector2(-90, -760), Vector2(-110, -480), j_kern, j_forrenberg,
-		Vector2(-125, 500), Vector2(-125, 659), j_a1_winter,
-	])
-	_add_named_road("Ohringerstrasse", "main", [
-		Vector2(-1280, 420), j_ohringen, Vector2(-960, 80), Vector2(-614, -93),
-		j_kern, Vector2(0, -217), j_station,
-	])
-	_add_named_road("Stationsstrasse", "main", [
-		j_station, j_stadler, Vector2(759, -239), j_bahnhof,
-	])
-	_add_named_road("Welsikonerstrasse", "main", [
-		j_kern, j_welsikon, Vector2(257, -495), Vector2(520, -720),
-	])
-	_add_named_road("Schaffhauserstrasse", "main", [
-		Vector2(-1280, -80), j_ohringen, Vector2(-1100, 620), j_a1_h15,
-	])
-	_add_named_road("Rietstrasse", "main", [
-		Vector2(-1550, -140), Vector2(-1380, -138), Vector2(-1000, -80), Vector2(-614, -93),
-	])
-	_add_named_road("Landstrasse", "collector", [
-		j_welsikon, Vector2(407, -470), Vector2(500, -540),
-	])
-	_add_named_road("Reutlingerstrasse", "collector", [
-		Vector2(23, -123), Vector2(280, 20), Vector2(587, 55), Vector2(760, 80),
-	])
-	_add_named_road("Stadlerstrasse", "collector", [
-		j_stadler, Vector2(760, -180), Vector2(882, -71), Vector2(980, 40),
-	])
-	_add_named_road("Hettlingerstrasse", "collector", [
-		j_kern, Vector2(-40, -360), Vector2(14, -490), Vector2(-110, -640),
-	])
-	_add_named_road("Forrenbergstrasse", "collector", [
-		j_forrenberg, Vector2(160, 280), Vector2(280, 641), Vector2(490, 600), j_a1_forren,
-	])
-	_add_named_road("Kirchgasse", "local", [Vector2(23, -123), Vector2(0, 0), Vector2(96, -57)])
-	_add_named_road("Kirchhügelstrasse", "local", [j_kern, Vector2(23, -123), j_station])
-	_add_named_road("Strehlgasse", "local", [j_welsikon, Vector2(311, -330), Vector2(420, -340)])
-	_add_named_road("Rietackerstrasse", "local", [j_welsikon, Vector2(176, -308), j_station])
-	_add_named_road("Turnerstrasse", "local", [Vector2(-40, -360), Vector2(34, -371), j_welsikon])
-	_add_named_road("Püntenstrasse", "local", [Vector2(176, -308), Vector2(200, -250)])
-	_add_named_road("Bachwiesenstrasse", "local", [Vector2(400, -160), Vector2(620, -160), Vector2(760, -160)])
-	_add_named_road("Obstgartenstrasse", "local", [Vector2(529, -233), Vector2(479, -20)])
-	_add_named_road("Birchstrasse", "local", [Vector2(479, -20), j_stadler])
-	_add_named_road("Weiherstrasse", "local", [Vector2(257, -495), Vector2(393, -380), Vector2(460, -550)])
-	_add_named_road("Breitestrasse", "local", [j_forrenberg, Vector2(280, 90), Vector2(520, 100)])
-	_add_named_road("Seebühlstrasse", "local", [j_forrenberg, Vector2(280, 300), Vector2(500, 280)])
-	_add_named_road("Weidstrasse", "local", [Vector2(400, 40), Vector2(720, 40), Vector2(882, -20)])
-	_add_named_road("Münzerstrasse", "local", [Vector2(-614, -93), Vector2(-580, 243), j_forrenberg])
-	_add_named_road("Schulstrasse", "local", [Vector2(-918, 480), Vector2(-860, 560), Vector2(-860, 700)])
-	_add_named_road("Rebhogerstrasse", "local", [j_ohringen, Vector2(-918, 480)])
-	_add_named_road("Friedenstrasse", "local", [Vector2(-918, 480), Vector2(-944, 552)])
-
-	var pad_main := ROAD_HW_MAIN + 16.0
-	var pad_col := ROAD_HW_COLLECTOR + 16.0
-	var pad_loc := ROAD_HW_LOCAL + 14.0
-	var pad_a1 := ROAD_HW_MOTORWAY + 8.0
-	for pad in [
-		[j_kern, pad_main], [j_ohringen, pad_main], [j_forrenberg, pad_main],
-		[j_station, pad_main], [j_welsikon, pad_main], [j_stadler, pad_main],
-		[j_bahnhof, pad_col], [j_a1_winter, pad_a1], [j_a1_forren, pad_a1],
-		[j_a1_h15, pad_a1],
-		[Vector2(-614, -93), pad_main], [Vector2(23, -123), pad_loc],
-		[Vector2(-918, 480), pad_loc], [Vector2(479, -20), pad_loc],
-		[Vector2(176, -308), pad_loc], [Vector2(-40, -360), pad_col],
-	]:
-		RoadKitLib.add_junction(_ground, pad[0] as Vector2, float(pad[1]))
+	## OSM/Maps polylines at 5,3 m/Feld. No footways. +X east, +Y south; Kirche = (0,0).
+	var data := _load_road_data()
+	var roads: Array = data.get("roads", [])
+	for item in roads:
+		if not (item is Dictionary):
+			continue
+		var rec: Dictionary = item
+		var raw_pts: Array = rec.get("points", [])
+		var pts: Array = []
+		for p in raw_pts:
+			if p is Array and (p as Array).size() >= 2:
+				pts.append(Vector2(float(p[0]), float(p[1])))
+		_add_named_road(str(rec.get("name", "")), str(rec.get("class", "local")), pts)
+	var junctions: Array = data.get("junctions", [])
+	for j in junctions:
+		if j is Array and (j as Array).size() >= 3:
+			RoadKitLib.add_junction(
+				_ground, Vector2(float(j[0]), float(j[1])), float(j[2])
+			)
 
 
 func _road_opts(road_class: String) -> Dictionary:
 	match road_class:
 		"motorway":
-			return {"sidewalk": false, "centerline": true, "half_w": ROAD_HW_MOTORWAY}
+			return {
+				"sidewalk": false,
+				"centerline": true,
+				"half_w": ROAD_HW_MOTORWAY,
+				"dash_len": 90.0,
+				"gap_len": 70.0,
+			}
 		"main":
-			return {"sidewalk": true, "centerline": true, "half_w": ROAD_HW_MAIN}
+			return {
+				"sidewalk": true,
+				"centerline": true,
+				"half_w": ROAD_HW_MAIN,
+				"dash_len": 90.0,
+				"gap_len": 70.0,
+			}
 		"collector":
 			return {"sidewalk": true, "centerline": false, "half_w": ROAD_HW_COLLECTOR}
 		_:
@@ -429,74 +401,75 @@ func _place_landmarks() -> void:
 
 
 func _place_school_clusters() -> void:
-	## Birch — east campus, grass N of Stationsstrasse (Bahnhof/Birch orientation).
+	## Nominatim-Lagen + Offsets neben den OSM-Bändern (nicht auf Asphalt).
+	var birch := SeuzachGeo.birch_world()
 	_add_prop(
 		"landmark_schulhaus_birch_a.png",
-		Vector2(720, -460),
+		birch + Vector2(280.0, 0.0),
 		SCHOOL_SCALE,
 		{"landmark_id": "schulhaus_birch", "school_cluster": "birch", "district": "birch"},
 		"schulhaus_birch_a"
 	)
 	_add_prop(
 		"landmark_schulhaus_birch_b.png",
-		Vector2(900, -360),
+		birch + Vector2(-164.8, 226.4),
 		SCHOOL_SCALE,
 		{"landmark_id": "schulhaus_birch", "school_cluster": "birch", "district": "birch"},
 		"schulhaus_birch_b"
 	)
 	_add_prop(
 		"landmark_turnhalle_birch.png",
-		Vector2(800, -640),
+		birch + Vector2(-86.1, -266.4),
 		SCHOOL_SCALE,
 		{"landmark_id": "turnhalle_birch", "school_cluster": "birch", "district": "birch", "poi_type": "gym"},
 		"turnhalle_birch"
 	)
-	## Rietacker — grass pocket between Hettlinger (W) and Welsikoner (E), N of Kirchhügel.
+	var rietacker := SeuzachGeo.rietacker_world()
 	_add_prop(
 		"landmark_schulhaus_rietacker_a.png",
-		Vector2(140, -640),
+		rietacker + Vector2(280.0, 0.0),
 		SCHOOL_SCALE,
 		{"landmark_id": "schulhaus_rietacker", "school_cluster": "rietacker", "district": "rietacker"},
 		"schulhaus_rietacker_a"
 	)
 	_add_prop(
 		"landmark_schulhaus_rietacker_b.png",
-		Vector2(240, -800),
+		rietacker + Vector2(-164.8, 226.4),
 		SCHOOL_SCALE,
 		{"landmark_id": "schulhaus_rietacker", "school_cluster": "rietacker", "district": "rietacker"},
 		"schulhaus_rietacker_b"
 	)
 	_add_prop(
 		"landmark_turnhalle_rietacker.png",
-		Vector2(80, -920),
+		rietacker + Vector2(-86.1, -266.4),
 		SCHOOL_SCALE,
 		{"landmark_id": "turnhalle_rietacker", "school_cluster": "rietacker", "district": "rietacker", "poi_type": "gym"},
 		"turnhalle_rietacker"
 	)
-	## Ohringen — east of Schulstrasse, SW village (not on Münzer/A1).
 	var ohringen := Node2D.new()
 	ohringen.name = "DistrictOhringen"
 	ohringen.set_meta("district", "ohringen")
 	ohringen.position = Vector2.ZERO
 	_props.add_child(ohringen)
 	_prop_parent = ohringen
+	var ohringen_gps := SeuzachGeo.ohringen_world()
 	_add_prop(
 		"landmark_schulhaus_ohringen_a.png",
-		Vector2(-740, 400),
+		ohringen_gps + Vector2(280.0, 0.0),
 		SCHOOL_SCALE,
 		{"landmark_id": "schulhaus_ohringen", "school_cluster": "ohringen", "district": "ohringen"},
 		"schulhaus_ohringen_a"
 	)
 	_add_prop(
 		"landmark_schulhaus_ohringen_b.png",
-		Vector2(-560, 520),
+		ohringen_gps + Vector2(-164.8, 226.4),
 		SCHOOL_SCALE,
 		{"landmark_id": "schulhaus_ohringen", "school_cluster": "ohringen", "district": "ohringen"},
 		"schulhaus_ohringen_b"
 	)
 	_add_prop(
 		"landmark_turnhalle_ohringen.png",
-		Vector2(-640, 680),
+		ohringen_gps + Vector2(-86.1, -266.4),
 		SCHOOL_SCALE,
 		{"landmark_id": "turnhalle_ohringen", "school_cluster": "ohringen", "district": "ohringen", "poi_type": "gym"},
 		"turnhalle_ohringen"
