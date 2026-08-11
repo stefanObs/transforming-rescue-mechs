@@ -20,6 +20,11 @@ const BIRCH_TURNHALLE_SCALE_MULT := 1.00
 const RIETACKER_A_SCALE_MULT := 1.30
 const RIETACKER_B_SCALE_MULT := 1.25
 const RIETACKER_TURNHALLE_SCALE_MULT := 1.30
+## S03: Ohringen campus + kiga per-building multipliers on SCHOOL_SCALE (OSM footprint ratios).
+const OHRINGEN_A_SCALE_MULT := 1.35
+const OHRINGEN_B_SCALE_MULT := 0.83
+const OHRINGEN_TURNHALLE_SCALE_MULT := 0.75
+const KIGA_OHRINGEN_SCALE_MULT := 0.55
 ## Ground polygons sit at z ≈ −50…−34. Actors/props share one BASE so Y-sort works
 ## while staying above ground. Godot canvas z_index max is 4096.
 const ACTOR_Z_BASE := 2000
@@ -708,24 +713,25 @@ func _place_school_clusters() -> void:
 	ohringen.position = Vector2.ZERO
 	_props.add_child(ohringen)
 	_prop_parent = ohringen
+	## S03: Ohringen per-building scales; flip_h false, rotation 0 (authored facing OK).
 	_add_prop(
 		"landmark_schulhaus_ohringen_a.png",
 		SeuzachGeo.ohringen_schulhaus_a_world(),
-		SCHOOL_SCALE,
+		SCHOOL_SCALE * OHRINGEN_A_SCALE_MULT,
 		{"landmark_id": "schulhaus_ohringen", "school_cluster": "ohringen", "district": "ohringen"},
 		"schulhaus_ohringen_a"
 	)
 	_add_prop(
 		"landmark_schulhaus_ohringen_b.png",
 		SeuzachGeo.ohringen_schulhaus_b_world(),
-		SCHOOL_SCALE,
+		SCHOOL_SCALE * OHRINGEN_B_SCALE_MULT,
 		{"landmark_id": "schulhaus_ohringen", "school_cluster": "ohringen", "district": "ohringen"},
 		"schulhaus_ohringen_b"
 	)
 	_add_prop(
 		"landmark_turnhalle_ohringen.png",
 		SeuzachGeo.ohringen_turnhalle_world(),
-		SCHOOL_SCALE,
+		SCHOOL_SCALE * OHRINGEN_TURNHALLE_SCALE_MULT,
 		{"landmark_id": "turnhalle_ohringen", "school_cluster": "ohringen", "district": "ohringen", "poi_type": "gym"},
 		"turnhalle_ohringen"
 	)
@@ -764,7 +770,7 @@ func _place_kindergartens() -> void:
 	_add_prop(
 		"landmark_kiga_ohringen.png",
 		SeuzachGeo.kiga_ohringen_world(),
-		SCHOOL_SCALE,
+		SCHOOL_SCALE * KIGA_OHRINGEN_SCALE_MULT,
 		{
 			"landmark_id": "kiga_ohringen",
 			"kindergarten_id": "kiga_ohringen",
