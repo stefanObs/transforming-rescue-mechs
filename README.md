@@ -36,9 +36,11 @@ Frischen Standalone-Build erzeugen:
 |-----------|---------|
 | Linux | `./play-linux.sh` |
 | macOS | `./play-macos.sh` oder `play-macos.command` |
-| Windows | `play-windows.bat` |
+| Windows | `play-windows.bat` oder `Run_windows.bat` |
 
-Reihenfolge: frischer Export unter `build/` → Godot im `PATH`/`GODOT` → einmaliger Download nach `.tools/`.
+**Windows:** `play-windows.bat` / `Run_windows.bat` starten immer den **Projektmodus** (`godot --path`, aktuelle Figuren). Beim ersten Start wird importiert (`.godot/` ist nicht im Git). Optionaler alter Export nur mit `PLAY_USE_EXPORT=1`.
+
+**Linux/macOS:** frischer Export unter `build/` → Godot im `PATH`/`GODOT` → einmaliger Download nach `.tools/`.
 
 ## Konzept & Design
 

@@ -21,6 +21,7 @@ unique_name_in_owner = true
 
 [node name="Player" parent="." instance=ExtResource("2_player")]
 unique_name_in_owner = true
+z_as_relative = false
 z_index = 2751
 position = Vector2(490, 750)
 

@@ -89,6 +89,7 @@ func _run() -> void:
 				player.z_index == expected_z,
 				"Player z_index set in _ready (got %d want %d)" % [player.z_index, expected_z]
 			)
+			_assert(not player.z_as_relative, "Player z_as_relative=false so the figure is not buried")
 		world.queue_free()
 
 	if _failed == 0:
