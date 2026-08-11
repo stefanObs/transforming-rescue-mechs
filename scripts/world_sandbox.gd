@@ -13,6 +13,13 @@ const LANDMARK_SCALE := Vector2(0.55, 0.55)
 const FOREST_SCALE := Vector2(0.24, 0.24)
 const HUB_SCALE := Vector2(0.28, 0.28)
 const SCHOOL_SCALE := Vector2(0.50, 0.50)
+## S02: Birch/Rietacker per-building multipliers on SCHOOL_SCALE (OSM footprint ratios).
+const BIRCH_A_SCALE_MULT := 1.20
+const BIRCH_B_SCALE_MULT := 1.20
+const BIRCH_TURNHALLE_SCALE_MULT := 1.00
+const RIETACKER_A_SCALE_MULT := 1.30
+const RIETACKER_B_SCALE_MULT := 1.25
+const RIETACKER_TURNHALLE_SCALE_MULT := 1.30
 ## Ground polygons sit at z ≈ −50…−34. Actors/props share one BASE so Y-sort works
 ## while staying above ground. Godot canvas z_index max is 4096.
 const ACTOR_Z_BASE := 2000
@@ -652,45 +659,46 @@ func _place_landmarks() -> void:
 
 func _place_school_clusters() -> void:
 	## Birch + Rietacker + Ohringen: OSM building centroids.
+	## S02: Birch/Rietacker use per-building scales; flip_h left false (authored facing OK).
 	_add_prop(
 		"landmark_schulhaus_birch_a.png",
 		SeuzachGeo.birch_schulhaus_a_world(),
-		SCHOOL_SCALE,
+		SCHOOL_SCALE * BIRCH_A_SCALE_MULT,
 		{"landmark_id": "schulhaus_birch", "school_cluster": "birch", "district": "birch"},
 		"schulhaus_birch_a"
 	)
 	_add_prop(
 		"landmark_schulhaus_birch_b.png",
 		SeuzachGeo.birch_schulhaus_b_world(),
-		SCHOOL_SCALE,
+		SCHOOL_SCALE * BIRCH_B_SCALE_MULT,
 		{"landmark_id": "schulhaus_birch", "school_cluster": "birch", "district": "birch"},
 		"schulhaus_birch_b"
 	)
 	_add_prop(
 		"landmark_turnhalle_birch.png",
 		SeuzachGeo.birch_turnhalle_world(),
-		SCHOOL_SCALE,
+		SCHOOL_SCALE * BIRCH_TURNHALLE_SCALE_MULT,
 		{"landmark_id": "turnhalle_birch", "school_cluster": "birch", "district": "birch", "poi_type": "gym"},
 		"turnhalle_birch"
 	)
 	_add_prop(
 		"landmark_schulhaus_rietacker_a.png",
 		SeuzachGeo.rietacker_schulhaus_a_world(),
-		SCHOOL_SCALE,
+		SCHOOL_SCALE * RIETACKER_A_SCALE_MULT,
 		{"landmark_id": "schulhaus_rietacker", "school_cluster": "rietacker", "district": "rietacker"},
 		"schulhaus_rietacker_a"
 	)
 	_add_prop(
 		"landmark_schulhaus_rietacker_b.png",
 		SeuzachGeo.rietacker_schulhaus_b_world(),
-		SCHOOL_SCALE,
+		SCHOOL_SCALE * RIETACKER_B_SCALE_MULT,
 		{"landmark_id": "schulhaus_rietacker", "school_cluster": "rietacker", "district": "rietacker"},
 		"schulhaus_rietacker_b"
 	)
 	_add_prop(
 		"landmark_turnhalle_rietacker.png",
 		SeuzachGeo.rietacker_turnhalle_world(),
-		SCHOOL_SCALE,
+		SCHOOL_SCALE * RIETACKER_TURNHALLE_SCALE_MULT,
 		{"landmark_id": "turnhalle_rietacker", "school_cluster": "rietacker", "district": "rietacker", "poi_type": "gym"},
 		"turnhalle_rietacker"
 	)
@@ -929,7 +937,8 @@ func _add_prop(
 	pos: Vector2,
 	scale: Vector2,
 	metas: Dictionary = {},
-	node_name: String = ""
+	node_name: String = "",
+	flip_h: bool = false
 ) -> Sprite2D:
 	var path := ART + file_name
 	if not ResourceLoader.exists(path):
@@ -941,6 +950,7 @@ func _add_prop(
 	spr.scale = scale
 	spr.position = pos
 	spr.centered = true
+	spr.flip_h = flip_h
 	# Feet on origin so Y-sort matches visual front/back (no south-hanging facade).
 	spr.offset = Vector2(0.0, feet_offset_y(spr.texture))
 	spr.z_as_relative = false

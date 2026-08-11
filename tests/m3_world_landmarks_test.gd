@@ -203,7 +203,7 @@ func _assert_named_roads(world: Node) -> void:
 
 
 func _assert_landmark_scales(world: Node, sprites: Array[Sprite2D]) -> void:
-	## S01: global building scales restored; forests stay on FOREST_SCALE.
+	## S01 globals + S02 Birch/Rietacker per-building mults; Ohringen/kigas stay SCHOOL_SCALE.
 	var world_script: Script = world.get_script()
 	_assert(world_script != null, "world_sandbox script attached")
 	if world_script == null:
@@ -224,23 +224,51 @@ func _assert_landmark_scales(world: Node, sprites: Array[Sprite2D]) -> void:
 	var school_scale: Vector2 = consts.get("SCHOOL_SCALE")
 	var landmark_scale: Vector2 = consts.get("LANDMARK_SCALE")
 	var forest_scale: Vector2 = consts.get("FOREST_SCALE")
+	var birch_a_mult: float = float(consts.get("BIRCH_A_SCALE_MULT", 1.20))
+	var birch_b_mult: float = float(consts.get("BIRCH_B_SCALE_MULT", 1.20))
+	var birch_gym_mult: float = float(consts.get("BIRCH_TURNHALLE_SCALE_MULT", 1.00))
+	var riet_a_mult: float = float(consts.get("RIETACKER_A_SCALE_MULT", 1.30))
+	var riet_b_mult: float = float(consts.get("RIETACKER_B_SCALE_MULT", 1.25))
+	var riet_gym_mult: float = float(consts.get("RIETACKER_TURNHALLE_SCALE_MULT", 1.30))
+	_assert(absf(birch_a_mult - 1.20) < 0.02, "BIRCH_A_SCALE_MULT ≈ 1.20 (got %.3f)" % birch_a_mult)
+	_assert(absf(birch_b_mult - 1.20) < 0.02, "BIRCH_B_SCALE_MULT ≈ 1.20 (got %.3f)" % birch_b_mult)
+	_assert(absf(birch_gym_mult - 1.00) < 0.02, "BIRCH_TURNHALLE_SCALE_MULT ≈ 1.00 (got %.3f)" % birch_gym_mult)
+	_assert(absf(riet_a_mult - 1.30) < 0.02, "RIETACKER_A_SCALE_MULT ≈ 1.30 (got %.3f)" % riet_a_mult)
+	_assert(absf(riet_b_mult - 1.25) < 0.02, "RIETACKER_B_SCALE_MULT ≈ 1.25 (got %.3f)" % riet_b_mult)
+	_assert(absf(riet_gym_mult - 1.30) < 0.02, "RIETACKER_TURNHALLE_SCALE_MULT ≈ 1.30 (got %.3f)" % riet_gym_mult)
 
-	## Birch/Rietacker/Ohringen each have two schulhaus sprites sharing landmark_id.
+	var per_building_expected := {
+		"schulhaus_birch_a": school_scale * birch_a_mult,
+		"schulhaus_birch_b": school_scale * birch_b_mult,
+		"turnhalle_birch": school_scale * birch_gym_mult,
+		"schulhaus_rietacker_a": school_scale * riet_a_mult,
+		"schulhaus_rietacker_b": school_scale * riet_b_mult,
+		"turnhalle_rietacker": school_scale * riet_gym_mult,
+	}
 	var school_building_n := 0
+	var birch_rietacker_n := 0
+	var school_scale_n := 0
 	for spr in sprites:
 		if not spr.has_meta("landmark_id"):
 			continue
 		var lid := str(spr.get_meta("landmark_id"))
-		if lid in ["schulhaus_birch", "schulhaus_rietacker", "schulhaus_ohringen"]:
+		if spr.name in per_building_expected:
+			var expected: Vector2 = per_building_expected[spr.name]
+			_assert(
+				spr.scale.is_equal_approx(expected),
+				"%s scale == SCHOOL_SCALE * mult (got %s expect %s)"
+				% [spr.name, str(spr.scale), str(expected)]
+			)
+			birch_rietacker_n += 1
+			school_building_n += 1
+		elif lid == "schulhaus_ohringen" or lid == "turnhalle_ohringen":
 			_assert(
 				spr.scale.is_equal_approx(school_scale),
 				"%s scale == SCHOOL_SCALE (got %s)" % [spr.name, str(spr.scale)]
 			)
+			school_scale_n += 1
 			school_building_n += 1
 		elif lid in [
-			"turnhalle_birch",
-			"turnhalle_rietacker",
-			"turnhalle_ohringen",
 			"kiga_bachtobel",
 			"kiga_weid",
 			"kiga_schneckenwiese",
@@ -250,13 +278,16 @@ func _assert_landmark_scales(world: Node, sprites: Array[Sprite2D]) -> void:
 				spr.scale.is_equal_approx(school_scale),
 				"%s scale == SCHOOL_SCALE (got %s)" % [spr.name, str(spr.scale)]
 			)
+			school_scale_n += 1
 			school_building_n += 1
 		elif lid == "bahnhof" or lid == "badi_weiher":
 			_assert(
 				spr.scale.is_equal_approx(landmark_scale),
 				"%s scale == LANDMARK_SCALE (got %s)" % [spr.name, str(spr.scale)]
 			)
-	_assert(school_building_n == 13, "9 campus + 4 kiga at SCHOOL_SCALE (got %d)" % school_building_n)
+	_assert(birch_rietacker_n == 6, "6 Birch/Rietacker per-building scales (got %d)" % birch_rietacker_n)
+	_assert(school_scale_n == 7, "3 Ohringen + 4 kiga at SCHOOL_SCALE (got %d)" % school_scale_n)
+	_assert(school_building_n == 13, "9 campus + 4 kiga school buildings (got %d)" % school_building_n)
 	_assert(_count_landmark(sprites, "bahnhof") == 1, "bahnhof present for scale check")
 	_assert(_count_landmark(sprites, "badi_weiher") == 1, "badi present for scale check")
 	## 9 school/gym + 4 kiga + bahnhof + badi = 15 building landmarks
@@ -280,13 +311,13 @@ func _assert_landmark_scales(world: Node, sprites: Array[Sprite2D]) -> void:
 	_assert(birch_a != null and birch_a.texture != null, "birch sample for visual height")
 	if birch_a != null and birch_a.texture != null:
 		_assert(
-			birch_a.scale.is_equal_approx(school_scale),
-			"birch sample scale == SCHOOL_SCALE"
+			birch_a.scale.is_equal_approx(school_scale * birch_a_mult),
+			"birch sample scale == SCHOOL_SCALE * BIRCH_A_SCALE_MULT"
 		)
 		var visual_h := float(birch_a.texture.get_height()) * absf(birch_a.scale.y)
 		_assert(
-			visual_h >= 400.0 and visual_h <= 600.0,
-			"birch visual height ~400–600 wu at SCHOOL_SCALE (got %.1f)" % visual_h
+			visual_h >= 400.0 and visual_h <= 700.0,
+			"birch visual height ~400–700 wu at BIRCH_A scale (got %.1f)" % visual_h
 		)
 
 	var forest_checked := 0
@@ -458,6 +489,18 @@ func _assert_birch_campus(sprites: Array[Sprite2D]) -> void:
 		% gym.position.distance_to(SeuzachGeo.birch_turnhalle_world())
 	)
 	_assert(
+		a.scale.is_equal_approx(Vector2(0.60, 0.60)),
+		"schulhaus_birch_a scale ≈ 0.60 (got %s)" % str(a.scale)
+	)
+	_assert(
+		b.scale.is_equal_approx(Vector2(0.60, 0.60)),
+		"schulhaus_birch_b scale ≈ 0.60 (got %s)" % str(b.scale)
+	)
+	_assert(
+		gym.scale.is_equal_approx(Vector2(0.50, 0.50)),
+		"turnhalle_birch scale ≈ 0.50 (got %s)" % str(gym.scale)
+	)
+	_assert(
 		a.position.x > b.position.x + 400.0,
 		"birch_a east of birch_b by >400 wu (a.x=%.0f b.x=%.0f)"
 		% [a.position.x, b.position.x]
@@ -563,6 +606,18 @@ func _assert_rietacker_campus(sprites: Array[Sprite2D]) -> void:
 		gym.position.distance_to(SeuzachGeo.rietacker_turnhalle_world()) <= 80.0,
 		"turnhalle_rietacker within 80 wu of OSM getter (d=%.1f)"
 		% gym.position.distance_to(SeuzachGeo.rietacker_turnhalle_world())
+	)
+	_assert(
+		a.scale.is_equal_approx(Vector2(0.65, 0.65)),
+		"schulhaus_rietacker_a scale ≈ 0.65 (got %s)" % str(a.scale)
+	)
+	_assert(
+		b.scale.is_equal_approx(Vector2(0.625, 0.625)),
+		"schulhaus_rietacker_b scale ≈ 0.625 (got %s)" % str(b.scale)
+	)
+	_assert(
+		gym.scale.is_equal_approx(Vector2(0.65, 0.65)),
+		"turnhalle_rietacker scale ≈ 0.65 (got %s)" % str(gym.scale)
 	)
 	_assert(
 		gym.position.x < minf(a.position.x, b.position.x) - 800.0,
