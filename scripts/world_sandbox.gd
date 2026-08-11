@@ -402,25 +402,24 @@ func _place_landmarks() -> void:
 
 
 func _place_school_clusters() -> void:
-	## Nominatim-Lagen + Offsets neben den OSM-Bändern (nicht auf Asphalt).
-	var birch := SeuzachGeo.birch_world()
+	## Birch: OSM building centroids. Rietacker/Ohringen keep generic offsets (later slices).
 	_add_prop(
 		"landmark_schulhaus_birch_a.png",
-		birch + Vector2(280.0, 0.0),
+		SeuzachGeo.birch_schulhaus_a_world(),
 		SCHOOL_SCALE,
 		{"landmark_id": "schulhaus_birch", "school_cluster": "birch", "district": "birch"},
 		"schulhaus_birch_a"
 	)
 	_add_prop(
 		"landmark_schulhaus_birch_b.png",
-		birch + Vector2(-164.8, 226.4),
+		SeuzachGeo.birch_schulhaus_b_world(),
 		SCHOOL_SCALE,
 		{"landmark_id": "schulhaus_birch", "school_cluster": "birch", "district": "birch"},
 		"schulhaus_birch_b"
 	)
 	_add_prop(
 		"landmark_turnhalle_birch.png",
-		birch + Vector2(-86.1, -266.4),
+		SeuzachGeo.birch_turnhalle_world(),
 		SCHOOL_SCALE,
 		{"landmark_id": "turnhalle_birch", "school_cluster": "birch", "district": "birch", "poi_type": "gym"},
 		"turnhalle_birch"

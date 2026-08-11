@@ -27,6 +27,13 @@ const BAHNHOF_LAT := 47.5354389
 const BAHNHOF_LON := 8.7393932
 const BIRCH_LAT := 47.5353419
 const BIRCH_LON := 8.7362524
+## OSM building centroids on campus Birch (not the amenity=school yard centroid).
+const BIRCH_SCHULHAUS_A_LAT := 47.5352696
+const BIRCH_SCHULHAUS_A_LON := 8.7368319
+const BIRCH_SCHULHAUS_B_LAT := 47.5351495
+const BIRCH_SCHULHAUS_B_LON := 8.7362716
+const BIRCH_TURNHALLE_LAT := 47.5354751
+const BIRCH_TURNHALLE_LON := 8.7362554
 const RIETACKER_LAT := 47.5362833
 const RIETACKER_LON := 8.7271400
 const OHRINGEN_LAT := 47.5280584
@@ -105,6 +112,18 @@ static func hub_enter_pos() -> Vector2:
 
 static func birch_world() -> Vector2:
 	return gps_to_world(BIRCH_LAT, BIRCH_LON)
+
+
+static func birch_schulhaus_a_world() -> Vector2:
+	return gps_to_world(BIRCH_SCHULHAUS_A_LAT, BIRCH_SCHULHAUS_A_LON)
+
+
+static func birch_schulhaus_b_world() -> Vector2:
+	return gps_to_world(BIRCH_SCHULHAUS_B_LAT, BIRCH_SCHULHAUS_B_LON)
+
+
+static func birch_turnhalle_world() -> Vector2:
+	return gps_to_world(BIRCH_TURNHALLE_LAT, BIRCH_TURNHALLE_LON)
 
 
 static func rietacker_world() -> Vector2:

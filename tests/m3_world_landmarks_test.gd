@@ -99,9 +99,10 @@ func _run() -> void:
 	_assert(house_n == 0, "no housing props in street-map reset (got %d)" % house_n)
 	_assert(forest_n == 0, "street map has no forest props (got %d)" % forest_n)
 
-	for cluster in ["birch", "rietacker", "ohringen"]:
+	for cluster in ["rietacker", "ohringen"]:
 		var n := _count_school_cluster(all_sprites, cluster)
 		_assert(n >= 2, "school_cluster %s has >=2 props (got %d)" % [cluster, n])
+	_assert_birch_campus(all_sprites)
 	_assert_geo_quadrants(all_sprites)
 	_assert_schools_off_roads(world, all_sprites)
 
@@ -255,6 +256,119 @@ func _assert_road_near(ground: Node, road_name: String, target: Vector2, max_dis
 	)
 
 
+func _assert_birch_campus(sprites: Array[Sprite2D]) -> void:
+	var a := _find_named(sprites, "schulhaus_birch_a")
+	var b := _find_named(sprites, "schulhaus_birch_b")
+	var gym := _find_named(sprites, "turnhalle_birch")
+	_assert(a != null, "node schulhaus_birch_a exists")
+	_assert(b != null, "node schulhaus_birch_b exists")
+	_assert(gym != null, "node turnhalle_birch exists")
+	_assert(
+		is_equal_approx(SeuzachGeo.BIRCH_LAT, 47.5353419)
+		and is_equal_approx(SeuzachGeo.BIRCH_LON, 8.7362524),
+		"birch_world() GPS constants unchanged"
+	)
+	_assert(
+		SeuzachGeo.birch_world().is_equal_approx(
+			SeuzachGeo.gps_to_world(SeuzachGeo.BIRCH_LAT, SeuzachGeo.BIRCH_LON)
+		),
+		"birch_world() still maps BIRCH_LAT/LON"
+	)
+	_assert(
+		is_equal_approx(SeuzachGeo.BIRCH_SCHULHAUS_A_LAT, 47.5352696)
+		and is_equal_approx(SeuzachGeo.BIRCH_SCHULHAUS_A_LON, 8.7368319)
+		and is_equal_approx(SeuzachGeo.BIRCH_SCHULHAUS_B_LAT, 47.5351495)
+		and is_equal_approx(SeuzachGeo.BIRCH_SCHULHAUS_B_LON, 8.7362716)
+		and is_equal_approx(SeuzachGeo.BIRCH_TURNHALLE_LAT, 47.5354751)
+		and is_equal_approx(SeuzachGeo.BIRCH_TURNHALLE_LON, 8.7362554),
+		"Birch building GPS constants match S01 OSM table"
+	)
+	_assert(
+		SeuzachGeo.birch_schulhaus_a_world().distance_to(
+			SeuzachGeo.birch_world() + Vector2(821.8, 151.9)
+		) < 1.0,
+		"birch_a offset vs yard ≈ (821.8, 151.9)"
+	)
+	_assert(
+		SeuzachGeo.birch_schulhaus_b_world().distance_to(
+			SeuzachGeo.birch_world() + Vector2(27.2, 404.1)
+		) < 1.0,
+		"birch_b offset vs yard ≈ (27.2, 404.1)"
+	)
+	_assert(
+		SeuzachGeo.birch_turnhalle_world().distance_to(
+			SeuzachGeo.birch_world() + Vector2(4.3, -279.8)
+		) < 1.0,
+		"birch turnhalle offset vs yard ≈ (4.3, -279.8)"
+	)
+	var birch_n := _count_school_cluster(sprites, "birch")
+	_assert(birch_n == 3, "school_cluster birch has exactly 3 props (got %d)" % birch_n)
+	if a == null or b == null or gym == null:
+		return
+	_assert(
+		str(a.get_meta("landmark_id")) == "schulhaus_birch"
+		and str(a.get_meta("school_cluster")) == "birch"
+		and str(a.get_meta("district")) == "birch",
+		"schulhaus_birch_a metas"
+	)
+	_assert(
+		str(b.get_meta("landmark_id")) == "schulhaus_birch"
+		and str(b.get_meta("school_cluster")) == "birch"
+		and str(b.get_meta("district")) == "birch",
+		"schulhaus_birch_b metas"
+	)
+	_assert(
+		str(gym.get_meta("landmark_id")) == "turnhalle_birch"
+		and str(gym.get_meta("school_cluster")) == "birch"
+		and str(gym.get_meta("district")) == "birch"
+		and str(gym.get_meta("poi_type")) == "gym",
+		"turnhalle_birch metas"
+	)
+	_assert(
+		a.position.distance_to(SeuzachGeo.birch_schulhaus_a_world()) <= 80.0,
+		"schulhaus_birch_a within 80 wu of OSM getter (d=%.1f)"
+		% a.position.distance_to(SeuzachGeo.birch_schulhaus_a_world())
+	)
+	_assert(
+		b.position.distance_to(SeuzachGeo.birch_schulhaus_b_world()) <= 80.0,
+		"schulhaus_birch_b within 80 wu of OSM getter (d=%.1f)"
+		% b.position.distance_to(SeuzachGeo.birch_schulhaus_b_world())
+	)
+	_assert(
+		gym.position.distance_to(SeuzachGeo.birch_turnhalle_world()) <= 80.0,
+		"turnhalle_birch within 80 wu of OSM getter (d=%.1f)"
+		% gym.position.distance_to(SeuzachGeo.birch_turnhalle_world())
+	)
+	_assert(
+		a.position.x > b.position.x + 400.0,
+		"birch_a east of birch_b by >400 wu (a.x=%.0f b.x=%.0f)"
+		% [a.position.x, b.position.x]
+	)
+	_assert(
+		gym.position.y < minf(a.position.y, b.position.y) - 200.0,
+		"turnhalle north of birch a/b (gym.y=%.0f a.y=%.0f b.y=%.0f)"
+		% [gym.position.y, a.position.y, b.position.y]
+	)
+	var yard := SeuzachGeo.birch_world()
+	for spr in [a, b, gym]:
+		_assert(
+			spr.position.distance_to(yard) < 1400.0,
+			"%s within 1400 wu of birch_world (d=%.1f)"
+			% [spr.name, spr.position.distance_to(yard)]
+		)
+		_assert(
+			spr.has_meta("has_building_collision") and bool(spr.get_meta("has_building_collision")),
+			"%s has BuildingCollision" % spr.name
+		)
+		_assert(is_zero_approx(spr.rotation), "%s rotation is 0" % spr.name)
+	_assert_generic_campus_offset("schulhaus_rietacker_a", SeuzachGeo.rietacker_world(), Vector2(280.0, 0.0), sprites)
+	_assert_generic_campus_offset("schulhaus_rietacker_b", SeuzachGeo.rietacker_world(), Vector2(-164.8, 226.4), sprites)
+	_assert_generic_campus_offset("turnhalle_rietacker", SeuzachGeo.rietacker_world(), Vector2(-86.1, -266.4), sprites)
+	_assert_generic_campus_offset("schulhaus_ohringen_a", SeuzachGeo.ohringen_world(), Vector2(280.0, 0.0), sprites)
+	_assert_generic_campus_offset("schulhaus_ohringen_b", SeuzachGeo.ohringen_world(), Vector2(-164.8, 226.4), sprites)
+	_assert_generic_campus_offset("turnhalle_ohringen", SeuzachGeo.ohringen_world(), Vector2(-86.1, -266.4), sprites)
+
+
 func _assert_geo_quadrants(sprites: Array[Sprite2D]) -> void:
 	## +X east, +Y south; Kirche ~ (0,0); Forrenberg south; Badi north; Ohringen SW.
 	var hub := _find_landmark(sprites, "hub_station")
@@ -295,9 +409,10 @@ func _assert_geo_quadrants(sprites: Array[Sprite2D]) -> void:
 			"birch east of rietacker (birch.x=%.0f rietacker.x=%.0f)"
 			% [birch.position.x, rietacker.position.x]
 		)
+		## First schulhaus_birch is a (~836 wu east of the yard centroid). 800 wu is too tight.
 		_assert(
-			birch.position.distance_to(SeuzachGeo.birch_world()) < 800.0,
-			"birch school near Nominatim GPS"
+			birch.position.distance_to(SeuzachGeo.birch_world()) < 1400.0,
+			"birch school near Nominatim GPS (1400 wu covers OSM building a)"
 		)
 		_assert(
 			rietacker.position.distance_to(SeuzachGeo.rietacker_world()) < 800.0,
@@ -409,9 +524,30 @@ func _dist_to_segment(p: Vector2, a: Vector2, b: Vector2) -> float:
 	return p.distance_to(a + ab * t)
 
 
+func _assert_generic_campus_offset(
+	node_name: String, yard: Vector2, offset: Vector2, sprites: Array[Sprite2D]
+) -> void:
+	var spr := _find_named(sprites, node_name)
+	_assert(spr != null, "%s present for offset guard" % node_name)
+	if spr == null:
+		return
+	var want := yard + offset
+	_assert(
+		spr.position.distance_to(want) < 1.0,
+		"%s stays generic offset %s (d=%.3f)" % [node_name, str(offset), spr.position.distance_to(want)]
+	)
+
+
 func _find_landmark(sprites: Array[Sprite2D], landmark_id: String) -> Sprite2D:
 	for spr in sprites:
 		if spr.has_meta("landmark_id") and str(spr.get_meta("landmark_id")) == landmark_id:
+			return spr
+	return null
+
+
+func _find_named(sprites: Array[Sprite2D], node_name: String) -> Sprite2D:
+	for spr in sprites:
+		if str(spr.name) == node_name:
 			return spr
 	return null
 
