@@ -8,4 +8,8 @@
 
 `seuzach_rails.json` ist daraus generiert (`scripts/gen_seuzach_rails.py`): SBB-Linie 821 (Durchgang `track_ref=1`, Stations-Gleis 2, Perron 2) in denselben Weltkoordinaten und CLIP wie die Strassen.
 
+`seuzach_water_osm.json` ist ein Overpass-Dump (`waterway=stream|river|drain`, BBox 47.520–47.555 N, 8.700–8.760 E). Nicht mit Highway- oder Railway-Ways mischen.
+
+`seuzach_water.json` ist daraus generiert (`scripts/gen_seuzach_water.py`): benannte Bäche in CLIP (Chrebsbach, Welsikonerbach, Bachtobelgraben, Ohringerbach, …) in denselben Weltkoordinaten. Feldgräben (`ditch`) und der OSM-Riedbach (Eulach, ausserhalb CLIP) sind nicht enthalten.
+
 Kartendaten © OpenStreetMap-Mitwirkende, [ODbL](https://opendatacommons.org/licenses/odbl/).

@@ -112,6 +112,7 @@ func _run() -> void:
 	_assert_bahnhof(world, all_sprites)
 	_assert_railway(world, all_sprites)
 	_assert_badi(world, all_sprites)
+	_assert_streams(world, all_sprites)
 	_assert_geo_quadrants(all_sprites)
 	_assert_schools_off_roads(world, all_sprites)
 
@@ -1297,6 +1298,149 @@ func _assert_badi(world: Node, sprites: Array[Sprite2D]) -> void:
 				hills += 1
 		_assert(hills == 0, "no hill markers")
 		_assert_road_near(ground, "Landstrasse", SeuzachGeo.badi_world(), 2200.0)
+
+
+func _assert_streams(world: Node, sprites: Array[Sprite2D]) -> void:
+	_assert(
+		FileAccess.file_exists("res://data/seuzach_water.json"),
+		"data/seuzach_water.json exists"
+	)
+	_assert(_count_poi(sprites, "stream") == 0, "stream sprite POIs remain 0 (kit ≠ sprite)")
+	_assert(_find_landmark(sprites, "riedbach") == null, "no riedbach landmark sprite")
+	_assert(_find_landmark(sprites, "bach") == null, "no bach landmark sprite")
+	var house_n := 0
+	var forest_n := 0
+	for spr in sprites:
+		if spr.has_meta("house_variant"):
+			house_n += 1
+		if spr.has_meta("terrain") and str(spr.get_meta("terrain")) == "forest":
+			forest_n += 1
+	_assert(house_n == 0, "no housing props")
+	_assert(forest_n == 0, "no forest props")
+	for cluster in ["birch", "rietacker", "ohringen"]:
+		var n := _count_school_cluster(sprites, cluster)
+		_assert(n == 3, "school_cluster %s still has 3 props (got %d)" % [cluster, n])
+	for kiga_id in KIGA_IDS:
+		_assert(_has_kindergarten(sprites, str(kiga_id)), "%s still placed" % kiga_id)
+	_assert(_count_landmark(sprites, "bahnhof") == 1, "bahnhof count stays 1")
+	_assert(_count_landmark(sprites, "badi_weiher") == 1, "badi count stays 1")
+
+	var ground: Node = world.get_node_or_null("%Ground")
+	_assert(ground != null, "Ground for stream markers")
+	if ground == null:
+		return
+	_assert(ground.get_node_or_null("Streams") != null, "Streams holder under Ground")
+	var hills := 0
+	var stream_markers: Array[Node] = []
+	var water_n := 0
+	var rail_markers := 0
+	for node in _collect_nodes(ground):
+		if node.has_meta("terrain") and str(node.get_meta("terrain")) == "hill":
+			hills += 1
+		if node.has_meta("water_kit") and str(node.get_meta("water_kit")) == "water":
+			water_n += 1
+		if node.has_meta("poi_type") and str(node.get_meta("poi_type")) == "railway":
+			rail_markers += 1
+		if not node.has_meta("poi_type") or str(node.get_meta("poi_type")) != "stream":
+			continue
+		stream_markers.append(node)
+		_assert(not node.has_meta("road_name"), "stream marker has no road_name")
+		_assert(not node.has_meta("railway_name"), "stream marker has no railway_name")
+		_assert(
+			not _has_named_ancestor(node, "DistrictOhringen"),
+			"stream marker parent chain excludes DistrictOhringen"
+		)
+	_assert(hills == 0, "no hill markers")
+	_assert(water_n >= 1, "Ground water_kit=water ≥ 1 (got %d)" % water_n)
+	_assert(stream_markers.size() >= 1, "Ground stream markers ≥ 1 (got %d)" % stream_markers.size())
+	_assert(rail_markers >= 1, "railway markers remain (got %d)" % rail_markers)
+	var line2d := _count_line2d_nested(ground)
+	_assert(line2d == 0, "Ground has no Line2D (got %d)" % line2d)
+
+	var has_chreb := false
+	var has_wels := false
+	var has_bachtobel := false
+	var has_ohringer := false
+	var chreb_min_x := 1.0e9
+	var chreb_max_x := -1.0e9
+	var chreb_len := 0.0
+	var chreb_hw := 16.0
+	var wels_hw := 16.0
+	var best_chreb := 1.0e9
+	var best_wels := 1.0e9
+	var best_bt := 1.0e9
+	var best_ohr := 1.0e9
+	## Vertex of OSM way 13872507 (plan GPS 47.5330924/8.7386221 is that way's bbox center).
+	var chreb_sample := SeuzachGeo.gps_to_world(47.5341937, 8.7386451)
+	var wels_sample := SeuzachGeo.gps_to_world(47.5393883, 8.7320363)
+	var kiga_bt := SeuzachGeo.kiga_bachtobel_world()
+	var ohr := SeuzachGeo.ohringen_world()
+	for marker in stream_markers:
+		var sname := str(marker.get_meta("stream_name")) if marker.has_meta("stream_name") else ""
+		if sname == "Chrebsbach":
+			has_chreb = true
+			if marker.has_meta("half_w"):
+				chreb_hw = float(marker.get_meta("half_w"))
+		elif sname == "Welsikonerbach":
+			has_wels = true
+			if marker.has_meta("half_w"):
+				wels_hw = float(marker.get_meta("half_w"))
+		elif sname == "Bachtobelgraben":
+			has_bachtobel = true
+		elif sname == "Ohringerbach":
+			has_ohringer = true
+		if not marker.has_meta("stream_points"):
+			continue
+		var poly: PackedVector2Array = PackedVector2Array(marker.get_meta("stream_points"))
+		if poly.size() < 2:
+			continue
+		best_bt = minf(best_bt, _dist_to_polyline(kiga_bt, poly))
+		best_ohr = minf(best_ohr, _dist_to_polyline(ohr, poly))
+		if sname == "Chrebsbach":
+			chreb_len = maxf(chreb_len, _polyline_len(poly))
+			best_chreb = minf(best_chreb, _dist_to_polyline(chreb_sample, poly))
+			for p in poly:
+				chreb_min_x = minf(chreb_min_x, p.x)
+				chreb_max_x = maxf(chreb_max_x, p.x)
+		elif sname == "Welsikonerbach":
+			best_wels = minf(best_wels, _dist_to_polyline(wels_sample, poly))
+	_assert(has_chreb, "stream_name=Chrebsbach marker present")
+	_assert(
+		best_chreb <= chreb_hw + 80.0,
+		"Chrebsbach way 13872507 on/near band (d=%.1f, need ≤%.1f)" % [best_chreb, chreb_hw + 80.0]
+	)
+	_assert(
+		(chreb_min_x < 8000.0 and chreb_max_x > 15000.0) or chreb_len > 12000.0,
+		"Chrebsbach spans the village (x %.0f..%.0f len=%.0f)" % [chreb_min_x, chreb_max_x, chreb_len]
+	)
+	_assert(
+		has_wels or best_wels <= wels_hw + 80.0,
+		"Welsikonerbach marker or sample on band (marker=%s d=%.1f)" % [str(has_wels), best_wels]
+	)
+	if has_wels:
+		_assert(
+			best_wels <= wels_hw + 80.0,
+			"Welsikonerbach way 758678996 on/near band (d=%.1f)" % best_wels
+		)
+	_assert(
+		has_bachtobel or best_bt < 4000.0,
+		"Bachtobelgraben marker or kiga within 4000 wu (marker=%s d=%.0f)"
+		% [str(has_bachtobel), best_bt]
+	)
+	_assert(
+		has_ohringer or best_ohr < 5000.0,
+		"Ohringerbach marker or Ohringen within 5000 wu (marker=%s d=%.0f)"
+		% [str(has_ohringer), best_ohr]
+	)
+
+
+func _count_line2d_nested(node: Node) -> int:
+	var n := 0
+	if node is Line2D:
+		n += 1
+	for child in node.get_children():
+		n += _count_line2d_nested(child)
+	return n
 
 
 func _polyline_len(pts: PackedVector2Array) -> float:

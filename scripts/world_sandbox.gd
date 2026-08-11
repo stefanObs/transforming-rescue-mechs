@@ -4,6 +4,7 @@ extends Node2D
 
 const RoadKitLib := preload("res://scripts/road_kit.gd")
 const RailwayKitLib := preload("res://scripts/railway_kit.gd")
+const WaterKitLib := preload("res://scripts/water_kit.gd")
 const ART := "res://assets/art/"
 const HUB_SCENE := "res://scenes/hub_station.tscn"
 const PROP_SCALE := Vector2(0.22, 0.22)
@@ -58,7 +59,10 @@ const DEBUG_GRID_SCRIPT := preload("res://scripts/debug_grid.gd")
 const DEBUG_GRID_CELL := 100.0
 const ROADS_JSON := "res://data/seuzach_roads.json"
 const RAILS_JSON := "res://data/seuzach_rails.json"
+const WATER_JSON := "res://data/seuzach_water.json"
 const RAIL_HW := 38.0
+const STREAM_HW := 16.0
+const RIVER_HW := 24.0
 
 @onready var _player: CharacterBody2D = %Player
 @onready var _hint: Label = %HintLabel
@@ -278,6 +282,7 @@ func _build_flat_ground() -> void:
 	if _sky:
 		_sky.polygon = PackedVector2Array([p0, p1, p2, p3])
 
+	_add_continuous_streams()
 	_add_continuous_roads()
 	_add_continuous_rails()
 
@@ -387,6 +392,63 @@ func _load_rail_data() -> Dictionary:
 	if parsed is Dictionary:
 		return parsed as Dictionary
 	return {}
+
+
+func _load_water_data() -> Dictionary:
+	if not FileAccess.file_exists(WATER_JSON):
+		push_warning("Missing %s" % WATER_JSON)
+		return {}
+	var file := FileAccess.open(WATER_JSON, FileAccess.READ)
+	if file == null:
+		push_warning("Cannot read %s" % WATER_JSON)
+		return {}
+	var parsed: Variant = JSON.parse_string(file.get_as_text())
+	if parsed is Dictionary:
+		return parsed as Dictionary
+	return {}
+
+
+func _add_continuous_streams() -> void:
+	## OSM named brooks under Ground, below RoadKit asphalt. No collision, no road_name.
+	var data := _load_water_data()
+	var streams_root := Node2D.new()
+	streams_root.name = "Streams"
+	_ground.add_child(streams_root)
+	var streams: Array = data.get("streams", [])
+	for item in streams:
+		if not (item is Dictionary):
+			continue
+		var rec: Dictionary = item
+		var pts := _points_from_json(rec.get("points", []))
+		if pts.size() < 2:
+			continue
+		var waterway := str(rec.get("waterway", "stream"))
+		var half_w := RIVER_HW if waterway == "river" else STREAM_HW
+		WaterKitLib.add_polyline(streams_root, pts, {"half_w": half_w})
+		var mid: Vector2 = pts[int(pts.size() / 2)] as Vector2
+		_add_stream_marker(str(rec.get("name", "")), waterway, mid, half_w, pts)
+
+
+func _add_stream_marker(
+	stream_name: String,
+	waterway: String,
+	pos: Vector2,
+	half_w: float,
+	points: Array
+) -> void:
+	var marker := Node2D.new()
+	marker.name = "Stream_%s_%d_%d" % [stream_name.replace(" ", "_"), int(pos.x), int(pos.y)]
+	marker.position = pos
+	marker.set_meta("stream_name", stream_name)
+	marker.set_meta("waterway", waterway)
+	marker.set_meta("half_w", half_w)
+	marker.set_meta("poi_type", "stream")
+	if not points.is_empty():
+		var packed := PackedVector2Array()
+		for pt in points:
+			packed.append(pt as Vector2)
+		marker.set_meta("stream_points", packed)
+	_ground.add_child(marker)
 
 
 func _add_continuous_rails() -> void:
