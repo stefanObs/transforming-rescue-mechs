@@ -66,6 +66,10 @@ const KIGA_WEID_LON := 8.7379167
 ## Not schoolyard way 1071502860, not Forrenberg hub, not Ohringen.
 const KIGA_SCHNECKENWIESE_LAT := 47.5347527
 const KIGA_SCHNECKENWIESE_LON := 8.7310559
+## OSM way 52373683 Schulstrasse 5 Oberohringen (building=POI), not campus ways
+## 52373582 / 52373583 / 917552680, not Forrenberg hub.
+const KIGA_OHRINGEN_LAT := 47.5278851
+const KIGA_OHRINGEN_LON := 8.7126832
 
 ## z_index = ACTOR_Z_BASE + floor(y / Z_Y_DIV) + 1; Canvas-Max 4096.
 const Z_Y_DIV := 20.0
@@ -196,3 +200,7 @@ static func kiga_weid_world() -> Vector2:
 
 static func kiga_schneckenwiese_world() -> Vector2:
 	return gps_to_world(KIGA_SCHNECKENWIESE_LAT, KIGA_SCHNECKENWIESE_LON)
+
+
+static func kiga_ohringen_world() -> Vector2:
+	return gps_to_world(KIGA_OHRINGEN_LAT, KIGA_OHRINGEN_LON)

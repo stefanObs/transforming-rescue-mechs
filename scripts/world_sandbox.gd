@@ -477,7 +477,7 @@ func _place_school_clusters() -> void:
 
 
 func _place_kindergartens() -> void:
-	## S04 Bachtobel + S05 Weid + S06 Schneckenwiese. Ohringen-Kiga comes later.
+	## S04 Bachtobel + S05 Weid + S06 Schneckenwiese under %Props; S07 Ohringen-Kiga under DistrictOhringen.
 	_add_prop(
 		"landmark_kiga_bachtobel.png",
 		SeuzachGeo.kiga_bachtobel_world(),
@@ -503,6 +503,20 @@ func _place_kindergartens() -> void:
 		},
 		"kiga_schneckenwiese"
 	)
+	var district := _props.get_node_or_null("DistrictOhringen")
+	_prop_parent = district if district else _props
+	_add_prop(
+		"landmark_kiga_ohringen.png",
+		SeuzachGeo.kiga_ohringen_world(),
+		SCHOOL_SCALE,
+		{
+			"landmark_id": "kiga_ohringen",
+			"kindergarten_id": "kiga_ohringen",
+			"district": "ohringen",
+		},
+		"kiga_ohringen"
+	)
+	_prop_parent = _props
 
 
 func _add_hub_enter_zone() -> void:
