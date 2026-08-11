@@ -7,7 +7,7 @@ alwaysApply: true
 
 Der verbindliche Stil ist **C — Comic-Rettung** (`docs/STYLE-BIBLE-C.md`).
 
-Wenn der User Grafiken, Sprites, Tiles, UI-Art, Moodboards, Transformationen, Walk-Frames, Landmarken oder Animationsframes will:
+Wenn der User Grafiken, Sprites, Tiles, UI-Art, Moodboards, Transformationen, Walk-Frames, Landmarken oder Animationsframes will — **nur die Assets des aktuellen Slices** (`docs/plans/<aufgabe>/S*.md`):
 
 1. Den Projekt-Subagenten **comic-rettung-art** (`.cursor/agents/comic-rettung-art.md`) beauftragen / dessen Workflow befolgen — inkl. Learnings zu Facing, Walk-Pad, Seuzach+Ohringen
 2. Referenzbilder unter `docs/design-refs/c-*.png` verwenden (`GenerateImage` → `reference_image_paths`); bei Landmarken zusätzlich reale Ortsrefs (Street View / Fotos) nennen, aber stilisiert in C
@@ -19,6 +19,6 @@ Wenn der User Grafiken, Sprites, Tiles, UI-Art, Moodboards, Transformationen, Wa
 5. Neue PNGs: ggf. `godot --headless --path . --import` bevor Tests `ResourceLoader.exists` erwarten
 6. Playtest (`godot-playtester`) prüft Transparenz / weiße oder schwarze AI-Platten
 7. Facing-Dir-Art muss dem statischen generierten Look entsprechen (kein Lean/Turn darüber im Spiel)
-8. Ausreichend **verschiedene** Häuser; Schulen als **Gebäudecluster**; Feuerwehr/Badi/Bahnhof an Seuzach; **Ohringen gehört zu Seuzach**
+8. Ausreichend **verschiedene** Häuser über die Slices hinweg; Schulen als **Gebäudecluster** (ein Campus pro Slice); Feuerwehr/Badi/Bahnhof an Seuzach; **Ohringen gehört zu Seuzach** (eigene Rasterzellen)
 
-Nach abgeschlossener Art-Lieferung: committen, pushen, versionieren (siehe `git-release`-Regel).
+Nach abgeschlossener Art-Lieferung **dieses Slices**: committen, pushen, versionieren (siehe `git-release`-Regel).

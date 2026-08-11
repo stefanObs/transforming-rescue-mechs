@@ -30,7 +30,7 @@ Verify the build runs: art alpha checks + automated tests + game start smoke.
    - Prefer: `godot --path <project> --quit-after 5`
    - Confirm: no script parse errors, no fatal engine errors, main scene loads.
 7. When the plan involves landmarks/world: note remaining **manual** checks (Seuzach+Ohringen districts, school clusters, Feuerwehr/Badi/Bahnhof recognizability).
-8. Update plan status to `Playtest` / `Erledigt` only on Pass (parent may commit).
+8. Update **this slice** status to `Playtest` / `Erledigt` only on Pass (parent may commit). Do not mark other INDEX slices done. If the parent named a slice, remaining manual checks refer to **that slice’s Grenzen** (one cell, one house, …).
 
 ## Output format
 

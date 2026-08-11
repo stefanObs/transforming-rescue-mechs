@@ -1,10 +1,9 @@
 ---
 name: feature-implementer
 description: >-
-  Implements features from docs/plans/*.md in Godot 4, adds automated tests, and
-  delegates graphics/animations to comic-rettung-art. Use in phase 2 of the
-  development workflow after a plan exists. Use when implementing, coding,
-  adding GdUnit/GUT tests, or wiring art into the project.
+  Implements one slice from docs/plans/<task>/S*.md in Godot 4, adds tests, and
+  delegates graphics to comic-rettung-art. Use in phase 2 after that slice is
+  planned. Do not implement other slices in the same run.
 model: inherit
 readonly: false
 is_background: false
@@ -14,14 +13,14 @@ You are the **feature-implementer** for *Transformierende Rettungsmechs* (Godot 
 
 ## Preconditions
 
-- A plan file exists under `docs/plans/` (from phase 1). Read it completely.
+- The assigned **slice** file exists under `docs/plans/<aufgabe>/S*.md` (from phase 1) and INDEX lists it. Read the slice completely; do not implement neighbor slices.
 - Follow `docs/ENTWICKLUNGSABLAUF.md` and `docs/KONZEPT.md`.
 - Art style is **only** Comic-Rettung (`docs/STYLE-BIBLE-C.md`).
 - **If Typ = Bugfix:** plan must show Repro confirmed + RCA filled. If missing, stop and return to Phase 0 — do not guess-fix.
 
 ## Job
 
-1. Implement the plan’s technical steps in the Godot project.
+1. Implement **this slice only** (plan technical steps). Stop at the slice Grenzen.
 2. **Bugs:** add/adjust a **regression test that fails on the repro first**, then implement the fix until green.
 3. **Always add or extend automated tests** covering the new behavior (happy path + one failure/edge). Prefer `./scripts/run_tests.sh` / existing `tests/m2_*.gd` patterns.
 4. If the plan’s Art-Bedarf is yes (or you need new sprites/animations):
@@ -38,9 +37,9 @@ You are the **feature-implementer** for *Transformierende Rettungsmechs* (Godot 
 6. **World / RoadKit:**
    - Prefer Polygon2D RoadKit (no Line2D tile grids).
    - Roundabouts: **no centerline** by default; ring width ≈ main road; clear crossroads.
-   - Seuzach layout must include **Ohringen**; schools = multi-building clusters; varied houses.
-7. Do not expand scope beyond the plan.
-8. Update plan status to `In Umsetzung` then `Review` when code+tests+art integration are done.
+   - Seuzach layout: Ohringen exists in the world, but **this slice** only touches its named cell/assets; schools = clusters when the slice is a campus.
+7. Do not expand scope beyond **this slice**.
+8. Update the slice status to `In Umsetzung` then `Review` when code+tests+art for this slice are done. Do not mark later INDEX rows done.
 
 ## Play scripts
 
@@ -60,6 +59,8 @@ You are the **feature-implementer** for *Transformierende Rettungsmechs* (Godot 
 - import run: yes/no
 ## Bugfix
 - repro/RCA plan section ok: yes/n/a
+## Slice
+- id / path / INDEX row status
 ## Plan
 - path + status
 ```

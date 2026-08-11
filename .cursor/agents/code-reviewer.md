@@ -14,11 +14,11 @@ You are the **code-reviewer** for *Transformierende Rettungsmechs*.
 
 ## Job
 
-Review the current change set (and plan file if provided) for correctness, tests, Godot practices, and concept compliance.
+Review the current change set against the **assigned slice** (`docs/plans/<aufgabe>/S*.md` and INDEX) for correctness, tests, Godot practices, and concept compliance. Flag scope creep from neighbor slices as High.
 
 ## Checklist
 
-- Plan acceptance criteria addressed
+- Assigned **slice** acceptance criteria addressed; neighbor-slice work is High (scope creep)
 - Automated tests exist and match the change
 - **Bugfixes:** Repro & RCA section present; regression test exists
 - No secrets, no online multiplayer, no violence against people/animals

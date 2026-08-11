@@ -1,23 +1,22 @@
-# Plan: <kurzname> / Slice <id>
+# Slice: <id> — <titel>
 
-**Status:** Entwurf | Freigegeben | In Umsetzung | Review | Playtest | Erledigt  
+**Status:** Slice-Entwurf | Freigegeben | In Umsetzung | Review | Playtest | Erledigt  
 **Typ:** Feature | Bugfix | Art  
+**Parent:** `docs/plans/<kurzname>/INDEX.md`  
 **Datum:** YYYY-MM-DD  
-**Owner:** …  
-**Parent-INDEX:** `docs/plans/<aufgabe>/INDEX.md`  
-**Slice-Datei:** `docs/plans/<aufgabe>/S<nn>-<slug>.md`  
 **Hängt ab von:** — | S01 | …
 
-Neue Aufgaben liegen unter `docs/plans/<aufgabe>/` (INDEX + ein File pro Schritt). Dieses Template füllt `feature-planner` **in die Slice-Datei**. Alte flache `docs/plans/<name>.md` nur historisch.
+Dieses File ist der **Schritt**. Phase 1 (`feature-planner`) füllt es zum vollständigen Plan; Phase 2–4 gelten nur für **diesen** Slice.
 
 ## Ziel
 
-…
+<ein Satz, lieferbar allein>
 
-## Scope
+## Grenzen
 
 - In:
-- Nicht:
+- Nicht (andere Slices / Rest der Aufgabe):
+- Raster / Felder / GPS / Asset-Namen:
 
 ## Systeme
 
@@ -50,7 +49,7 @@ Vor Phase 2 ausfüllen. Bei Features: Abschnitt weglassen oder „n/a“.
 | Fix-Richtung | … |
 | Risiken | … |
 
-- [ ] RCA dokumentiert und reviewed (kurz vom Hauptagenten ok)
+- [ ] RCA dokumentiert
 
 ## Technische Schritte
 
@@ -62,24 +61,22 @@ Vor Phase 2 ausfüllen. Bei Features: Abschnitt weglassen oder „n/a“.
 ### Automatisiert
 
 - [ ] …
-- [ ] Bei Bugfix: Regressionstest bildet die Repro ab (zuerst rot, nach Fix grün)
 
 ### Playtest / Smoke
 
 - [ ] Haupt-Scene startet ohne Error
-- [ ] …
-- [ ] Bei Bugfix: manuelle Repro-Schritte schlagen nach Fix nicht mehr fehl
+- [ ] Nur dieser Slice sichtbar/prüfbar (keine stillen Extra-Lieferungen)
 
 ## Art-Bedarf
 
 - [ ] Keine neuen Assets
-- [ ] Neue Grafiken/Animationen → Subagent `comic-rettung-art`  
+- [ ] Neue Grafiken → `comic-rettung-art` **nur** für die Assets dieses Slices  
   Details: …
 
 ## Akzeptanzkriterien
 
-- [ ] …
-- [ ] Bei Bugfix: Repro + RCA erledigt
+- [ ] Grenzen eingehalten (nichts aus Nachbar-Slices)
 - [ ] Automatisierte Tests grün
 - [ ] Code Review ohne offene Critical/High
 - [ ] Playtest Pass
+- [ ] Git: Commit + Push + Tag für **diesen** Slice

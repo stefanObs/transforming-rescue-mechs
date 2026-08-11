@@ -5,7 +5,7 @@ alwaysApply: true
 
 # Git: Commit, Push, Tag
 
-Wenn eine Aufgabe inhaltlich fertig ist (Konzept, Feature, Fix, Docs):
+Wenn ein **Slice** (nicht erst die ganze User-Aufgabe) Phase 4 bestanden hat — Konzept, Feature, Fix, Docs, Art:
 
 1. **Commit** mit klarer Message (why), relevante Dateien stagen
 2. **Push** auf `origin` der aktuellen Branch
@@ -16,6 +16,7 @@ Wenn eine Aufgabe inhaltlich fertig ist (Konzept, Feature, Fix, Docs):
 - SemVer: `vMAJOR.MINOR.PATCH` (z. B. `v0.1.0`)
 - Konzept-/Prototyp-Phase: `v0.x.y` erhöhen
 - Erste spielbare Version: Richtung `v1.0.0`
+- Ein Slice der gleichen Aufgabe: meist PATCH; neues Konzept/Feature-Slice: MINOR in der `v0.x`-Phase
 - Bei rein dokumentarischen Konzept-Updates: meist MINOR oder PATCH (z. B. `v0.1.0` → `v0.2.0` bei größerem Konzept-Update, PATCH bei Korrekturen)
 - Tags annotiert bevorzugen: `git tag -a vX.Y.Z -m "..."` 
 

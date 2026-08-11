@@ -1,5 +1,5 @@
 ---
-description: Entwicklungsablauf mit Subagenten; bei Fehlern zuerst Repro + Root-Cause vor dem Fix
+description: Entwicklungsablauf — zuerst Zerlegung (task-slicer), dann voller Ablauf pro Slice
 alwaysApply: true
 ---
 
@@ -7,14 +7,18 @@ alwaysApply: true
 
 Strikt `docs/ENTWICKLUNGSABLAUF.md` befolgen:
 
-0. **Bei Fehlern (Pflicht vor dem Fix):** reproduzieren + Root-Cause-Analyse dokumentieren (Plan-Abschnitt „Repro & RCA“)
-1. **Plan** → `docs/plans/<kurzname>.md` (`feature-planner` oder Hauptagent)
-2. **Umsetzen** → `feature-implementer` inkl. Tests (Bug: zuerst Regressionstest); Art über `comic-rettung-art`
-3. **Code Review** → `code-reviewer`; Bug-Findings erneut über Phase 0, dann fixen, Review wiederholen
-4. **Playtest** → `godot-playtester` (Tests + Spielstart); Failures mit Repro-Schritten zurück in Phase 0
+**S. Zerlegung (immer zuerst):** Subagent `task-slicer` → `docs/plans/<kurzname>/INDEX.md` plus **ein Markdown pro Schritt**. Häuser einzeln; Karten als F1-Raster/10er-Blöcke. Ohne INDEX nicht bauen.
 
-Erst nach Phase-4-Pass: Commit, Push, Tag (`git-release`-Regel).
+Dann **jeden Slice nacheinander** mit dem vollen Ablauf:
 
-Keine Blind-Fixes. Phasen nicht überspringen, außer dokumentierter Hotfix (Repro trotzdem anstreben).
+0. **Bei Fehlern:** Repro + RCA im Slice-File
+1. **Plan** → dasselbe Slice-Markdown (`feature-planner`)
+2. **Umsetzen** → `feature-implementer` (nur dieser Slice); Art → `comic-rettung-art`
+3. **Code Review** → `code-reviewer`; Bug-Findings über Phase 0, dann Review wiederholen
+4. **Playtest** → `godot-playtester`; Failures mit Repro zurück in Phase 0
 
-Agent-Learnings (Facing, Walk, Scale, RoadKit, Seuzach+Ohringen, Alpha/Import) stehen in `.cursor/agents/*.md` — bei Art-Aufgaben besonders `comic-rettung-art` beachten.
+Nach Phase-4-Pass **dieses Slices:** Commit, Push, Tag (`git-release`). Erst dann der nächste Slice.
+
+Keine Blind-Fixes. Phasen nicht überspringen, außer dokumentierter Hotfix (dann INDEX mit einem Slice; Repro trotzdem anstreben).
+
+Agent-Learnings: `.cursor/agents/*.md` — Zerlegung `task-slicer`, Art `comic-rettung-art`.
