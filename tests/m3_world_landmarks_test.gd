@@ -142,41 +142,11 @@ func _run() -> void:
 			forest_n += 1
 	_assert(forest_n >= 1, "≥1 forest prop (got %d)" % forest_n)
 
-	var variants: Dictionary = {}
-	for spr in all_sprites:
-		if spr.has_meta("house_variant"):
-			variants[str(spr.get_meta("house_variant"))] = true
-	_assert(
-		variants.size() >= 4,
-		"≥4 distinct house_variant values (got %d: %s)" % [variants.size(), str(variants.keys())]
-	)
-	for required_variant in ["mfh", "flachdach", "reihen"]:
-		_assert(
-			variants.has(required_variant),
-			"house_variant %s present" % required_variant
-		)
-
 	var house_n := 0
-	var roof_types: Dictionary = {}
 	for spr in all_sprites:
 		if spr.has_meta("house_variant"):
 			house_n += 1
-		if spr.has_meta("roof_type"):
-			roof_types[str(spr.get_meta("roof_type"))] = true
-	_assert(house_n >= 20, "≥20 housing props (got %d)" % house_n)
-	_assert(roof_types.has("flat"), "roof_type flat present (Flachdach)")
-	_assert(roof_types.has("gabled"), "roof_type gabled present")
-
-	var house_pos_keys: Dictionary = {}
-	var dup_houses := 0
-	for spr in all_sprites:
-		if not spr.has_meta("house_variant"):
-			continue
-		var key := "%d_%d" % [int(spr.global_position.x), int(spr.global_position.y)]
-		if house_pos_keys.has(key):
-			dup_houses += 1
-		house_pos_keys[key] = true
-	_assert(dup_houses == 0, "no duplicate housing positions (got %d)" % dup_houses)
+	_assert(house_n == 0, "no housing props in street-map reset (got %d)" % house_n)
 
 	_assert_named_roads(world)
 
@@ -213,9 +183,27 @@ func _assert_named_roads(world: Node) -> void:
 	if ground == null:
 		return
 	var names: Dictionary = {}
+	var classes: Dictionary = {}
+	var widths: Dictionary = {}
+	var winter_x := 0.0
+	var stations_x := 0.0
+	var have_winter := false
+	var have_stations := false
 	for node in _collect_nodes(ground):
-		if node.has_meta("road_name"):
-			names[str(node.get_meta("road_name"))] = true
+		if not node.has_meta("road_name"):
+			continue
+		var n := str(node.get_meta("road_name"))
+		names[n] = true
+		if node.has_meta("road_class"):
+			classes[str(node.get_meta("road_class"))] = true
+		if node.has_meta("half_w"):
+			widths[str(int(round(float(node.get_meta("half_w")))))] = true
+		if n == "Winterthurerstrasse":
+			winter_x = (node as Node2D).position.x
+			have_winter = true
+		if n == "Stationsstrasse":
+			stations_x = (node as Node2D).position.x
+			have_stations = true
 	for required in [
 		"Winterthurerstrasse",
 		"Landstrasse",
@@ -223,14 +211,64 @@ func _assert_named_roads(world: Node) -> void:
 		"Stationsstrasse",
 		"Reutlingerstrasse",
 		"Forrenbergstrasse",
+		"Welsikonerstrasse",
+		"Schaffhauserstrasse",
 		"A1",
 	]:
 		_assert(names.has(required), "road marker %s present" % required)
-	# Maps: two distinct N–S arteries (west Winterthurer, central Landstrasse).
-	_assert(
-		names.has("Winterthurerstrasse") and names.has("Landstrasse"),
-		"separate Winterthurerstrasse + Landstrasse N–S"
-	)
+	_assert(classes.has("motorway"), "road_class motorway (A1)")
+	_assert(classes.has("main"), "road_class main")
+	_assert(classes.has("collector"), "road_class collector")
+	_assert(classes.has("local"), "road_class local")
+	_assert(widths.size() >= 3, "≥3 distinct road half_w (got %s)" % str(widths.keys()))
+	if have_winter and have_stations:
+		_assert(
+			winter_x < stations_x,
+			"Winterthurerstrasse west of Stationsstrasse (wx=%.0f sx=%.0f)" % [winter_x, stations_x]
+		)
+	_assert_road_reaches(ground, "Ohringerstrasse", -900.0, 200.0)
+	_assert_road_reaches(ground, "A1", -800.0, 700.0)
+	_assert_road_near(ground, "Forrenbergstrasse", Vector2(490, 600), 220.0)
+
+
+func _assert_road_reaches(ground: Node, road_name: String, x_lt: float, y_gt: float) -> void:
+	for node in _collect_nodes(ground):
+		if not node.has_meta("road_name") or str(node.get_meta("road_name")) != road_name:
+			continue
+		if not node.has_meta("road_points"):
+			_assert(false, "%s has road_points meta" % road_name)
+			return
+		var pts: PackedVector2Array = node.get_meta("road_points")
+		var hit := false
+		for pt in pts:
+			if pt.x < x_lt and pt.y > y_gt:
+				hit = true
+				break
+		_assert(
+			hit,
+			"%s reaches Maps west/south (x<%.0f y>%.0f)" % [road_name, x_lt, y_gt]
+		)
+		return
+	_assert(false, "%s marker for reach check" % road_name)
+
+
+func _assert_road_near(ground: Node, road_name: String, target: Vector2, max_dist: float) -> void:
+	for node in _collect_nodes(ground):
+		if not node.has_meta("road_name") or str(node.get_meta("road_name")) != road_name:
+			continue
+		if not node.has_meta("road_points"):
+			_assert(false, "%s has road_points meta" % road_name)
+			return
+		var pts: PackedVector2Array = node.get_meta("road_points")
+		var best := 1.0e9
+		for pt in pts:
+			best = minf(best, pt.distance_to(target))
+		_assert(
+			best <= max_dist,
+			"%s passes near %s (got %.0f, want ≤%.0f)" % [road_name, str(target), best, max_dist]
+		)
+		return
+	_assert(false, "%s marker for near check" % road_name)
 
 
 func _assert_geo_quadrants(sprites: Array[Sprite2D]) -> void:

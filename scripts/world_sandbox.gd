@@ -44,7 +44,12 @@ const COLOR_GRASS := Color("3DCC5A")
 ## Soft organic patches (not a checker tile pattern).
 const COLOR_GRASS_PATCH := Color("36C053")
 const COLOR_GRASS_PATCH_2 := Color("45D468")
-const ROAD_HALF_W := 78.0
+## Road half-widths (Maps hierarchy). No footways.
+const ROAD_HW_MOTORWAY := 110.0
+const ROAD_HW_MAIN := 72.0
+const ROAD_HW_COLLECTOR := 52.0
+const ROAD_HW_LOCAL := 36.0
+const ROAD_HALF_W := ROAD_HW_MAIN
 
 @onready var _player: CharacterBody2D = %Player
 @onready var _hint: Label = %HintLabel
@@ -210,155 +215,235 @@ func _add_hill_mound(center: Vector2, rx: float, ry: float, color: Color, z: int
 
 
 func _add_continuous_roads() -> void:
-	# Maps/OSM-aligned Seuzach network (stilisiert). Named markers for tests.
-	var main_opts := {
-		"sidewalk": true,
-		"centerline": true,
-		"half_w": ROAD_HALF_W,
-	}
-	var branch_opts := {
-		"sidewalk": true,
-		"centerline": false,
-		"half_w": ROAD_HALF_W * 0.85,
-	}
-	var lane_opts := {
-		"sidewalk": true,
-		"centerline": false,
-		"half_w": ROAD_HALF_W * 0.72,
-	}
-	var a1_opts := {
-		"sidewalk": false,
-		"centerline": true,
-		"half_w": ROAD_HALF_W * 1.25,
-	}
+	## Street map only (no houses). Polylines from Google Maps + Nominatim, four widths.
+	## +X east, +Y south; Kirche ≈ (0,0). Junctions snapped so the T-plan reads as a map.
+	## J_KERN = Winterthurer × Ohringer (north of Kirchhügel). No footways.
 
-	# Winterthurerstrasse — primary N–S on the west side (Maps).
-	_add_named_road(
-		"Winterthurerstrasse",
-		Vector2(-140, -720),
-		Vector2(-80, 720),
-		main_opts
-	)
+	var j_kern := Vector2(-125, -200)
+	var j_ohringen := Vector2(-1240, 360)
+	var j_forrenberg := Vector2(-125, 200)
+	var j_station := Vector2(160, -230)
 
-	# Landstrasse — central N–S through Dorfkern toward Badi/Halden (Maps).
-	_add_named_road(
-		"Landstrasse",
-		Vector2(160, -720),
-		Vector2(200, 620),
-		main_opts
-	)
-
-	# Ohringerstrasse — E–W toward Ohringen (west) and kern (Maps secondary).
-	_add_named_road(
-		"Ohringerstrasse",
-		Vector2(-1050, 40),
-		Vector2(420, -60),
-		main_opts
-	)
-
-	# Stationsstrasse — toward Bahnhof (east).
-	_add_named_road(
-		"Stationsstrasse",
-		Vector2(220, -80),
-		Vector2(980, -120),
-		branch_opts
-	)
-
-	# Kirchgasse — stub to Kirchhügel.
-	_add_named_road(
-		"Kirchgasse",
-		Vector2(160, -20),
-		Vector2(-40, 20),
-		lane_opts
-	)
-
-	# Strehlgasse — toward Feuerwehr / Gemeindehaus (N).
-	_add_named_road(
-		"Strehlgasse",
-		Vector2(180, -180),
-		Vector2(280, -380),
-		lane_opts
-	)
-
-	# Bachwiesenstrasse — Birch school area (E).
-	_add_named_road(
-		"Bachwiesenstrasse",
-		Vector2(220, -100),
-		Vector2(760, -200),
-		lane_opts
-	)
-
-	# Weiherstrasse / Landstrasse spur — Badi Weiher (N).
-	_add_named_road(
-		"Weiherstrasse",
-		Vector2(200, -240),
-		Vector2(460, -560),
-		branch_opts
-	)
-
-	# Welsikonerstrasse — NE residential connector.
-	_add_named_road(
-		"Welsikonerstrasse",
-		Vector2(200, -300),
-		Vector2(520, -420),
-		lane_opts
-	)
-
-	# Breitestrasse — short E–W residential in kern.
-	_add_named_road(
-		"Breitestrasse",
-		Vector2(-40, 120),
-		Vector2(360, 100),
-		lane_opts
-	)
-
-	# Reutlingerstrasse / Forrenbergstrasse — SE toward St. Martin + Forrenberg/A1.
-	_add_named_road(
-		"Reutlingerstrasse",
-		Vector2(200, 80),
-		Vector2(520, 380),
-		branch_opts
-	)
-	_add_named_road(
-		"Forrenbergstrasse",
-		Vector2(420, 380),
-		Vector2(490, 600),
-		branch_opts
-	)
-
-	# Schulstrasse — Ohringen school access.
-	_add_named_road(
-		"Schulstrasse",
-		Vector2(-980, 380),
-		Vector2(-820, 700),
-		lane_opts
-	)
-
-	# A1 motorway strip south of Forrenberg.
+	# A1 — motorway south of both villages (widest, no sidewalk). Maps: E–W, interchange west.
 	_add_named_road(
 		"A1",
-		Vector2(-200, 800),
-		Vector2(1100, 800),
-		a1_opts
+		"motorway",
+		[
+			Vector2(-1400, 1020),
+			Vector2(-900, 960),
+			Vector2(-400, 880),
+			Vector2(-110, 840),
+			Vector2(280, 810),
+			Vector2(700, 780),
+			Vector2(1250, 740),
+		]
 	)
 
-	# Roundabout near Landstrasse / Badi approach (stilisiert).
-	RoadKitLib.add_roundabout(_ground, Vector2(280, -280), 130.0, ROAD_HALF_W, {
-		"sidewalk": true,
-	})
-	_add_road_marker("Kreisel_Landstrasse", Vector2(280, -280))
+	# Winterthurerstrasse — main N–S west of Kirchhügel, south toward A1 (Nominatim x≈−125).
+	_add_named_road(
+		"Winterthurerstrasse",
+		"main",
+		[
+			Vector2(-90, -760),
+			Vector2(-110, -480),
+			j_kern,
+			j_forrenberg,
+			Vector2(-125, 500),
+			Vector2(-125, 659),
+			Vector2(-110, 840),
+		]
+	)
+
+	# Ohringerstrasse — main E–W: Ohringen (west, slightly south) across fields into the kern.
+	_add_named_road(
+		"Ohringerstrasse",
+		"main",
+		[
+			Vector2(-1280, 420),
+			j_ohringen,
+			Vector2(-960, 80),
+			Vector2(-614, -93),
+			j_kern,
+			Vector2(0, -217),
+			j_station,
+		]
+	)
+
+	# Stationsstrasse — main east from the kern to Bahnhof Seuzach.
+	_add_named_road(
+		"Stationsstrasse",
+		"main",
+		[
+			j_station,
+			Vector2(584, -292),
+			Vector2(759, -239),
+			Vector2(900, -130),
+		]
+	)
+
+	# Welsikonerstrasse — main NE from the kern toward Weiher / Welsikon.
+	_add_named_road(
+		"Welsikonerstrasse",
+		"main",
+		[
+			j_kern,
+			Vector2(80, -340),
+			Vector2(257, -495),
+			Vector2(520, -720),
+		]
+	)
+
+	# Schaffhauserstrasse — main N–S through Ohringen (H15), south to the A1 interchange.
+	_add_named_road(
+		"Schaffhauserstrasse",
+		"main",
+		[
+			Vector2(-1280, -80),
+			j_ohringen,
+			Vector2(-1100, 620),
+			Vector2(-720, 960),
+		]
+	)
+
+	# Landstrasse — collector north of the kern, to Badi Weiher (not a second village N–S).
+	_add_named_road(
+		"Landstrasse",
+		"collector",
+		[
+			Vector2(80, -340),
+			Vector2(407, -470),
+			Vector2(500, -540),
+		]
+	)
+
+	# Reutlingerstrasse — collector east of the kern (Nominatim ~ (587, 55)).
+	_add_named_road(
+		"Reutlingerstrasse",
+		"collector",
+		[
+			Vector2(-40, -40),
+			Vector2(280, 20),
+			Vector2(587, 55),
+			Vector2(760, 80),
+		]
+	)
+
+	# Stadlerstrasse — collector by the railway / Bahnhof.
+	_add_named_road(
+		"Stadlerstrasse",
+		"collector",
+		[
+			Vector2(584, -292),
+			Vector2(760, -180),
+			Vector2(882, -71),
+			Vector2(980, 40),
+		]
+	)
+
+	# Hettlingerstrasse — collector north of the kern toward Hettlingen.
+	_add_named_road(
+		"Hettlingerstrasse",
+		"collector",
+		[
+			j_kern,
+			Vector2(-40, -360),
+			Vector2(14, -490),
+			Vector2(-110, -640),
+		]
+	)
+
+	# Forrenbergstrasse — collector from Winterthurer south to hub / A1.
+	_add_named_road(
+		"Forrenbergstrasse",
+		"collector",
+		[
+			j_forrenberg,
+			Vector2(160, 280),
+			Vector2(280, 641),
+			Vector2(490, 600),
+			Vector2(510, 790),
+		]
+	)
+
+	# Local streets (quartier, still car-width — no footways).
+	_add_named_road("Kirchgasse", "local", [Vector2(96, -57), Vector2(0, 0)])
+	_add_named_road(
+		"Strehlgasse",
+		"local",
+		[Vector2(80, -340), Vector2(311, -330), Vector2(420, -340)]
+	)
+	_add_named_road(
+		"Bachwiesenstrasse",
+		"local",
+		[Vector2(400, -200), Vector2(620, -190), Vector2(760, -160)]
+	)
+	_add_named_road(
+		"Weiherstrasse",
+		"local",
+		[Vector2(257, -495), Vector2(393, -380), Vector2(460, -550)]
+	)
+	_add_named_road(
+		"Breitestrasse",
+		"local",
+		[Vector2(j_forrenberg.x, 80), Vector2(280, 90), Vector2(520, 100)]
+	)
+	_add_named_road(
+		"Schulstrasse",
+		"local",
+		[j_ohringen, Vector2(-1040, 400), Vector2(-860, 560)]
+	)
+	_add_named_road(
+		"Seebühlstrasse",
+		"local",
+		[Vector2(j_forrenberg.x, 280), Vector2(280, 300), Vector2(500, 280)]
+	)
+	_add_named_road(
+		"Weidstrasse",
+		"local",
+		[Vector2(400, 40), Vector2(720, 40), Vector2(882, -20)]
+	)
 
 
-func _add_named_road(road_name: String, a: Vector2, b: Vector2, opts: Dictionary) -> void:
-	RoadKitLib.add_straight(_ground, a, b, opts)
-	_add_road_marker(road_name, (a + b) * 0.5)
+func _road_opts(road_class: String) -> Dictionary:
+	match road_class:
+		"motorway":
+			return {"sidewalk": false, "centerline": true, "half_w": ROAD_HW_MOTORWAY}
+		"main":
+			return {"sidewalk": true, "centerline": true, "half_w": ROAD_HW_MAIN}
+		"collector":
+			return {"sidewalk": true, "centerline": false, "half_w": ROAD_HW_COLLECTOR}
+		_:
+			return {"sidewalk": true, "centerline": false, "half_w": ROAD_HW_LOCAL}
 
 
-func _add_road_marker(road_name: String, pos: Vector2) -> void:
+func _add_named_road(road_name: String, road_class: String, points: Array) -> void:
+	if points.size() < 2:
+		return
+	var opts := _road_opts(road_class)
+	for i in range(points.size() - 1):
+		RoadKitLib.add_straight(_ground, points[i] as Vector2, points[i + 1] as Vector2, opts)
+	var mid: Vector2 = points[int(points.size() / 2)] as Vector2
+	_add_road_marker(road_name, mid, road_class, float(opts["half_w"]), points)
+
+
+func _add_road_marker(
+	road_name: String,
+	pos: Vector2,
+	road_class: String,
+	half_w: float,
+	points: Array = []
+) -> void:
 	var marker := Node2D.new()
 	marker.name = "Road_%s" % road_name.replace(" ", "_")
 	marker.position = pos
 	marker.set_meta("road_name", road_name)
+	marker.set_meta("road_class", road_class)
+	marker.set_meta("half_w", half_w)
+	if not points.is_empty():
+		var packed := PackedVector2Array()
+		for pt in points:
+			packed.append(pt as Vector2)
+		marker.set_meta("road_points", packed)
 	_ground.add_child(marker)
 
 
@@ -624,14 +709,14 @@ func _place_landmarks() -> void:
 	)
 	_add_prop(
 		"landmark_wald_b.png",
-		Vector2(450, 920),
+		Vector2(200, 1120),
 		LANDMARK_SCALE,
 		{"landmark_id": "wald_weiherholz", "district": "forrenberg", "terrain": "forest"},
 		"wald_weiherholz"
 	)
 	_add_prop(
 		"landmark_wald_a.png",
-		Vector2(780, 900),
+		Vector2(1050, 1100),
 		LANDMARK_SCALE,
 		{"landmark_id": "wald_eggenzahn", "district": "forrenberg", "terrain": "forest"},
 		"wald_eggenzahn"
@@ -691,94 +776,6 @@ func _place_landmarks() -> void:
 	)
 
 	_prop_parent = _props
-	_place_housing_blocks()
-
-
-func _place_housing_blocks() -> void:
-	## Realistic mix: EFH (a–d), farm, MFH, Flachdach, Reihen — denser along Maps streets.
-	## Keep spacing ≥~120 so Y-sort / occlusion stay readable.
-	var kern := [
-		["house_a.png", Vector2(-220, -120), "a", "gabled"],
-		["house_b.png", Vector2(-40, 160), "b", "gabled"],
-		["house_c.png", Vector2(320, 180), "c", "gabled"],
-		["house_d.png", Vector2(40, 240), "d", "gabled"],
-		["house_reihen.png", Vector2(-280, 200), "reihen", "gabled"],
-		["house_reihen.png", Vector2(380, 80), "reihen", "gabled"],
-		["house_flachdach.png", Vector2(280, -140), "flachdach", "flat"],
-		["house_mfh.png", Vector2(-100, 280), "mfh", "gabled"],
-		["house_a.png", Vector2(420, 200), "a", "gabled"],
-		["house_flachdach.png", Vector2(-320, 40), "flachdach", "flat"],
-	]
-	for item in kern:
-		_add_house(str(item[0]), item[1] as Vector2, str(item[2]), str(item[3]), "dorfkern")
-
-	# Bahnhof / Stationsstrasse — more MFH + Flachdach (Maps denser east).
-	var bahnhof := [
-		["house_mfh.png", Vector2(720, -200), "mfh", "gabled"],
-		["house_mfh.png", Vector2(980, -40), "mfh", "gabled"],
-		["house_flachdach.png", Vector2(840, 80), "flachdach", "flat"],
-		["house_reihen.png", Vector2(640, 40), "reihen", "gabled"],
-		["house_b.png", Vector2(1080, -160), "b", "gabled"],
-		["house_flachdach.png", Vector2(920, -220), "flachdach", "flat"],
-	]
-	for item in bahnhof:
-		_add_house(str(item[0]), item[1] as Vector2, str(item[2]), str(item[3]), "bahnhof")
-
-	# Birch / Bachwiesen — EFH + Reihen.
-	var birch := [
-		["house_reihen.png", Vector2(480, -80), "reihen", "gabled"],
-		["house_a.png", Vector2(880, -280), "a", "gabled"],
-		["house_c.png", Vector2(400, -200), "c", "gabled"],
-		["house_flachdach.png", Vector2(900, -80), "flachdach", "flat"],
-	]
-	for item in birch:
-		_add_house(str(item[0]), item[1] as Vector2, str(item[2]), str(item[3]), "birch")
-
-	# Süd / Reutlinger–Forrenberg — Flachdach + EFH toward A1.
-	var sued := [
-		["house_flachdach.png", Vector2(300, 280), "flachdach", "flat"],
-		["house_flachdach.png", Vector2(600, 500), "flachdach", "flat"],
-		["house_d.png", Vector2(140, 360), "d", "gabled"],
-		["house_reihen.png", Vector2(360, 440), "reihen", "gabled"],
-		["house_mfh.png", Vector2(680, 360), "mfh", "gabled"],
-	]
-	for item in sued:
-		_add_house(str(item[0]), item[1] as Vector2, str(item[2]), str(item[3]), "forrenberg")
-
-	# Ohringen / Unterohringen — farm + EFH + some Reihen/MFH.
-	var ohringen: Node2D = _props.get_node_or_null("DistrictOhringen") as Node2D
-	var prev: Node2D = _prop_parent
-	if ohringen:
-		_prop_parent = ohringen
-	var ohr := [
-		["house_farm.png", Vector2(-1100, 300), "farm", "gabled"],
-		["house_a.png", Vector2(-760, -40), "a", "gabled"],
-		["house_b.png", Vector2(-640, 360), "b", "gabled"],
-		["house_c.png", Vector2(-1120, 520), "c", "gabled"],
-		["house_reihen.png", Vector2(-680, 640), "reihen", "gabled"],
-		["house_flachdach.png", Vector2(-960, 240), "flachdach", "flat"],
-		["house_mfh.png", Vector2(-560, 500), "mfh", "gabled"],
-		["house_d.png", Vector2(-820, 280), "d", "gabled"],
-	]
-	for item in ohr:
-		_add_house(str(item[0]), item[1] as Vector2, str(item[2]), str(item[3]), "ohringen")
-	_prop_parent = prev if prev != null else _props
-
-
-func _add_house(
-	file_name: String,
-	pos: Vector2,
-	variant: String,
-	roof_type: String,
-	district: String
-) -> void:
-	var metas := {
-		"house_variant": variant,
-		"roof_type": roof_type,
-		"district": district,
-	}
-	var node_name := "house_%s_%d_%d" % [variant, int(pos.x), int(pos.y)]
-	_add_prop(file_name, pos, PROP_SCALE, metas, node_name)
 
 
 func _add_hub_enter_zone() -> void:

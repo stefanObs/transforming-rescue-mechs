@@ -35,7 +35,7 @@ func _run() -> void:
 		_assert(ground_polys >= 1, "ground has flat polygons")
 		_assert(ground_lines == 0, "ground has no Line2D (got %d)" % ground_lines)
 		# Organic ground + RoadKit dashes/ring — not a diamond flood.
-		_assert(ground_polys <= 360, "ground poly count organic (got %d, want <=360)" % ground_polys)
+		_assert(ground_polys <= 700, "ground poly count organic (got %d, want <=700)" % ground_polys)
 		var kit_roads := 0
 		var kit_stripes := 0
 		if ground:
