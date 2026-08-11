@@ -118,7 +118,7 @@ Ohne ausgefülltes Slice-File **keine** Implementierung (außer dokumentierter H
 - Umsetzung laut **Slice-File**, nicht laut gesamter User-Story
 - Bei Bugs: Fix erst starten, wenn Slice „Repro bestätigt“ + RCA ausgefüllt ist; zuerst **Regressionstest**, der die Repro rot macht, dann Fix bis grün
 - **Automatisierte Tests** mitliefern (Godot-Test-Framework des Repos; bis dahin `*.gd`-Tests / `./scripts/run_tests.sh`)
-- Bei Grafiken oder Animationen **immer** Subagent `comic-rettung-art` hinzuziehen (Referenzen `docs/design-refs/c-*.png`, Style-Bible C) — **nur** die im Slice genannten Assets
+- Bei Grafiken oder Animationen **immer** Subagent `comic-rettung-art` hinzuziehen (Referenzen `docs/design-refs/c-*.png` inkl. `c-iso-city-map.png` für Welt/Karte/Gebäude, Style-Bible C) — **nur** die im Slice genannten Assets
 - Art unter `assets/art/`: `process_art_alpha.py` + `verify_art_alpha.py` (Pflicht, keine weißen Sprite-Platten)
 - Keine Stil-A/B-Assets
 - Am Ende: kurze Handoff-Liste (geänderte Dateien, wie Tests starten)

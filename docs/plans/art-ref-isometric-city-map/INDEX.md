@@ -1,6 +1,6 @@
 # Slices: art-ref-isometric-city-map
 
-**Status:** Entwurf  
+**Status:** Erledigt  
 **Aufgabe:** Iso-Stadt-Kartenbild als zusätzliche Grafik-Orientierung ablegen und in Stil-C-Workflow (Bible, Art-Subagent, Regeln) verdrahten — ohne Bestands-Art neu zu erzeugen.  
 **Datum:** 2026-08-11  
 **Raster / Zuschnitt:** n/a (Prozess/Art-Referenz; keine Karten- oder Häuser-Slices)
@@ -18,7 +18,7 @@ Der Hauptagent arbeitet **nur den nächsten offenen Slice** mit dem vollen Ablau
 | ID | Datei | Titel | Hängt ab von | Status |
 |----|-------|-------|----------------|--------|
 | S01 | `S01-save-iso-city-map-ref.md` | Iso-Stadt-Kartenbild unter `docs/design-refs/` speichern | — | erledigt |
-| S02 | `S02-wire-iso-city-ref-into-c.md` | Ref in Style-Bible C, Art-Subagent und Cursor-Regel verdrahten | S01 | offen |
+| S02 | `S02-wire-iso-city-ref-into-c.md` | Ref in Style-Bible C, Art-Subagent und Cursor-Regel verdrahten | S01 | erledigt |
 
 Status je Slice: `offen` → `in Arbeit` → `erledigt` (nach Phase-4-Pass + Git-Tag).
 

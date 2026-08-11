@@ -14,8 +14,11 @@ Diese Dateien sind die visuelle Wahrheit. Neue Assets müssen dazu passen:
 | Basis / Erdstation | [`design-refs/c-basis.png`](design-refs/c-basis.png) |
 | Mech-Form (Bolt) | [`design-refs/c-mech.png`](design-refs/c-mech.png) |
 | Fahrzeug-Form | [`design-refs/c-fahrzeug.png`](design-refs/c-fahrzeug.png) |
+| Iso-Stadt / Karte / Gebäude (Orientierung) | [`design-refs/c-iso-city-map.png`](design-refs/c-iso-city-map.png) |
 
 Subagent: `.cursor/agents/comic-rettung-art.md` — lädt diese Bilder vor jeder Generierung und übergibt sie als `reference_image_paths`.
+
+**Iso-Stadt-Karte:** Zusätzliche Orientierung für **Welt, Karte, Straßennetz, Häuserblöcke** (¾-Iso-Übersicht, chunky Gebäude, Straßen als klare Bänder, lesbare Stadtstruktur). Sie **ersetzt Stil C nicht**. Übernehmen: Blockmasse, Rasterlesbarkeit, buntes Dorf/Stadt-Layout. Nicht übernehmen: fotorealistisches 3D, AR-32-Rohlook, weiche Plastik-Städte, Verzicht auf dicke Konturen/Cel. Charaktere weiter über Mech-/Fahrzeug-Refs.
 
 ## Stilregeln
 

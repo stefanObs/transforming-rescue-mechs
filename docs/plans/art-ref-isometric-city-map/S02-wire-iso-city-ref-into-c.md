@@ -1,6 +1,6 @@
 # Slice: S02 — Ref in Style-Bible C, Art-Subagent und Cursor-Regel verdrahten
 
-**Status:** Slice-Entwurf  
+**Status:** Erledigt  
 **Typ:** Feature  
 **Parent:** `docs/plans/art-ref-isometric-city-map/INDEX.md`  
 **Datum:** 2026-08-11  
@@ -49,15 +49,15 @@ n/a (Prozess-Feature)
 
 ### Automatisiert
 
-- [ ] `rg` / Datei-Check: `c-iso-city-map` kommt in `docs/STYLE-BIBLE-C.md`, `.cursor/agents/comic-rettung-art.md` und `.cursor/rules/comic-rettung-art.mdc` vor
-- [ ] Keine Diffs unter `assets/art/`
-- [ ] Bestehende Test-Suite unverändert grün (keine Pflicht-neuen GDScript-Tests)
+- [x] `rg` / Datei-Check: `c-iso-city-map` kommt in `docs/STYLE-BIBLE-C.md`, `.cursor/agents/comic-rettung-art.md` und `.cursor/rules/comic-rettung-art.mdc` vor
+- [x] Keine Diffs unter `assets/art/`
+- [x] Bestehende Test-Suite unverändert grün (keine Pflicht-neuen GDScript-Tests)
 
 ### Playtest / Smoke
 
-- [ ] Haupt-Scene startet ohne Error
-- [ ] Nur dieser Slice: Docs/Agent/Regel nennen die Ref; Spielgrafik unverändert
-- [ ] Reviewer kann anhand Bible-Absatz sagen, was von der Magnific-Karte übernommen wird und was nicht (C bleibt)
+- [x] Haupt-Scene startet ohne Error
+- [x] Nur dieser Slice: Docs/Agent/Regel nennen die Ref; Spielgrafik unverändert
+- [x] Reviewer kann anhand Bible-Absatz sagen, was von der Magnific-Karte übernommen wird und was nicht (C bleibt)
 
 ## Art-Bedarf
 
@@ -67,9 +67,9 @@ n/a (Prozess-Feature)
 
 ## Akzeptanzkriterien
 
-- [ ] Grenzen eingehalten (nichts aus Nachbar-Slices; keine Art-Regeneration)
-- [ ] Bible + Art-Agent + Cursor-Regel nennen `c-iso-city-map` und den Vorrang von Stil C
-- [ ] Automatisierte Tests grün
-- [ ] Code Review ohne offene Critical/High
-- [ ] Playtest Pass (Smoke: Scene startet; Prozess-Doku stimmig)
+- [x] Grenzen eingehalten (nichts aus Nachbar-Slices; keine Art-Regeneration)
+- [x] Bible + Art-Agent + Cursor-Regel nennen `c-iso-city-map` und den Vorrang von Stil C
+- [x] Automatisierte Tests grün
+- [x] Code Review ohne offene Critical/High
+- [x] Playtest Pass (Smoke: Scene startet; Prozess-Doku stimmig)
 - [ ] Git: Commit + Push + Tag für **diesen** Slice

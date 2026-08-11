@@ -10,7 +10,7 @@ Der verbindliche Stil ist **C — Comic-Rettung** (`docs/STYLE-BIBLE-C.md`).
 Wenn der User Grafiken, Sprites, Tiles, UI-Art, Moodboards, Transformationen, Walk-Frames, Landmarken oder Animationsframes will — **nur die Assets des aktuellen Slices** (`docs/plans/<aufgabe>/S*.md`):
 
 1. Den Projekt-Subagenten **comic-rettung-art** (`.cursor/agents/comic-rettung-art.md`) beauftragen / dessen Workflow befolgen — inkl. Learnings zu Facing, Walk-Pad, Seuzach+Ohringen
-2. Referenzbilder unter `docs/design-refs/c-*.png` verwenden (`GenerateImage` → `reference_image_paths`); bei Landmarken zusätzlich reale Ortsrefs (Street View / Fotos) nennen, aber stilisiert in C
+2. Referenzbilder unter `docs/design-refs/c-*.png` verwenden (`GenerateImage` → `reference_image_paths`); bei Welt/Karte/Häusern/Landmarken zusätzlich `docs/design-refs/c-iso-city-map.png` (Iso-Stadt-Orientierung: Blockmasse, Straßenbänder, lesbare Karte) **zusammen mit** `c-umgebung`/`c-basis` — Stil C (Kontur, Cel) bleibt führend, kein 3D-Plastik. Bei Landmarken zusätzlich reale Ortsrefs (Street View / Fotos) nennen, aber stilisiert in C
 3. Keine Assets in Stil A oder B erzeugen
 4. Nach Art unter `assets/art/`:
    - `python3 scripts/process_art_alpha.py`
