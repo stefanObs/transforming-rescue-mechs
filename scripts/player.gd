@@ -7,13 +7,13 @@ enum Facing { N, NE, E, SE, S, SW, W, NW }
 
 signal form_changed(new_form: Form)
 
-const SPEED_ROBOT := 140.0
-const SPEED_VEHICLE := 260.0
-const SPEED_VEHICLE_RUSH := 360.0
+const SPEED_ROBOT := 350.0
+const SPEED_VEHICLE := 650.0
+const SPEED_VEHICLE_RUSH := 900.0
 ## Lockout covers full 6-frame anim at TRANSFORM_FPS plus a small buffer.
 const TRANSFORM_FPS := 8.0
 const TRANSFORM_LOCKOUT := 0.9
-const WALK_FPS := 9.0
+const WALK_FPS := 14.0
 ## ~1000px art → ~85px on screen (readable vs ~210px houses).
 const SPRITE_SCALE := Vector2(0.085, 0.085)
 ## Slightly larger during transform so intermediate frames read clearly.
