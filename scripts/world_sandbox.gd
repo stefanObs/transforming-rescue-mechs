@@ -14,7 +14,8 @@ const SCHOOL_SCALE := Vector2(0.22, 0.22)
 const ACTOR_Z_BASE := 2000
 const PROP_Z_BASE := 2000
 ## Geo: +X east, +Y south; origin ≈ Reformierte Kirche. 1 Feld = 5,3 m = 100 wu.
-## Hub/Spawn: SOCAR Forrenberg (A1), etwas südlich der Tankstelle.
+## HubEnter: SOCAR Forrenberg (A1), etwas südlich der Tankstelle.
+## Default-Spawn: Winterthurerstrasse in WINT-KERN (Dorfkern, Kirche-Ost).
 var HUB_ENTER_POS: Vector2 = SeuzachGeo.hub_enter_pos()
 var DEFAULT_WORLD_SPAWN: Vector2 = SeuzachGeo.default_world_spawn()
 const COLOR_HILL := Color("4BB85A")

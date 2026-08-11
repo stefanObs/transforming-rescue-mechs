@@ -5,7 +5,7 @@ extends SceneTree
 const WORLD_SCENE := "res://scenes/world_sandbox.tscn"
 const HUB_SCENE := "res://scenes/hub_station.tscn"
 const SPAWN_TOL := 2.0
-## Must match world_sandbox / GameState / hub_station defaults (Forrenberg, south of hub).
+## Default world spawn is Winterthurerstrasse (WINT-KERN), not HubEnter at Forrenberg.
 var DEFAULT_WORLD_SPAWN: Vector2 = SeuzachGeo.default_world_spawn()
 var HUB_ENTER_POS: Vector2 = SeuzachGeo.hub_enter_pos()
 ## player.tscn CapsuleShape2D: radius 14, height 40, offset (0, -12)
@@ -91,6 +91,14 @@ func _test_world_hub_enter_and_collision() -> void:
 		_assert(
 			hub_enter.global_position.distance_to(HUB_ENTER_POS) <= SPAWN_TOL,
 			"HubEnter centered at HUB_ENTER_POS"
+		)
+		_assert(
+			HUB_ENTER_POS.distance_to(SeuzachGeo.hub_enter_pos()) <= SPAWN_TOL,
+			"HubEnter stays at SeuzachGeo.hub_enter_pos()"
+		)
+		_assert(
+			DEFAULT_WORLD_SPAWN.distance_to(HUB_ENTER_POS) > 40.0,
+			"default world spawn is not HubEnter (Forrenberg)"
 		)
 
 	var props: Node = world.get_node_or_null("%Props")

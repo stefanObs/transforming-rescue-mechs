@@ -5,7 +5,7 @@ signal coins_changed(new_amount: int)
 
 var coins: int = 0
 var current_character_id: String = "bolt"
-var world_spawn_position: Vector2 = SeuzachGeo.default_world_spawn() # Forrenberg / A1
+var world_spawn_position: Vector2 = SeuzachGeo.default_world_spawn() # Winterthurerstrasse / WINT-KERN
 var has_world_spawn: bool = false
 
 

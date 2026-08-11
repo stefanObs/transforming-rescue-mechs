@@ -81,8 +81,14 @@ func _run() -> void:
 	var player: Node2D = world.get_node_or_null("%Player") as Node2D
 	var spawn := SeuzachGeo.default_world_spawn()
 	var spawn_feld: Vector2i = DebugGridLib.world_to_cell(spawn, 100.0)
+	_assert_winterthurer_world_spawn(spawn, spawn_feld, world)
 	if player:
 		var feld: Vector2i = DebugGridLib.world_to_cell(player.global_position, 100.0)
+		_assert(
+			player.global_position.distance_to(spawn) <= 2.0,
+			"Player at world start is at default_world_spawn (got %s want %s)"
+			% [str(player.global_position), str(spawn)]
+		)
 		_assert(
 			feld == spawn_feld,
 			"spawn %s is Feld %s (got %s)" % [str(spawn), str(spawn_feld), str(feld)]
@@ -93,6 +99,10 @@ func _run() -> void:
 		_assert(
 			status.text.contains(feld_txt) and status.text.contains("Raster 100"),
 			"status shows %s and Raster 100 (got %s)" % [feld_txt, status.text]
+		)
+		_assert(
+			status.text.contains("Feld 38,-2"),
+			"status shows Feld 38,-2 for WINT-KERN spawn (got %s)" % status.text
 		)
 	var ground: Node = world.get_node_or_null("%Ground")
 	if ground:
@@ -138,6 +148,56 @@ func _run() -> void:
 
 	world.queue_free()
 	_finish()
+
+
+func _assert_winterthurer_world_spawn(spawn: Vector2, spawn_feld: Vector2i, world: Node) -> void:
+	var winter_vertex := Vector2(3861.9, -101.0)
+	var old_forrenberg := SeuzachGeo.forrenberg_world() + Vector2(0.0, 200.0)
+	_assert(
+		spawn.distance_to(winter_vertex) < 0.05,
+		"default_world_spawn is Winterthurer vertex (got %s)" % str(spawn)
+	)
+	_assert(
+		spawn.is_equal_approx(SeuzachGeo.winterthurer_spawn()),
+		"default_world_spawn matches winterthurer_spawn()"
+	)
+	_assert(
+		spawn_feld == Vector2i(38, -2),
+		"default spawn is Feld 38,-2 (got %s)" % str(spawn_feld)
+	)
+	_assert(
+		spawn_feld.x >= 30 and spawn_feld.x <= 45 and spawn_feld.y >= -15 and spawn_feld.y <= 10,
+		"default spawn Feld %s is in WINT-KERN 30..45, −15..10" % str(spawn_feld)
+	)
+	_assert(
+		SeuzachGeo.WORLD_BOUNDS.has_point(spawn),
+		"default spawn is inside WORLD_BOUNDS"
+	)
+	_assert(
+		spawn.distance_to(old_forrenberg) > 40.0,
+		"default spawn is not forrenberg_world()+(0,200) (got %s old %s)"
+		% [str(spawn), str(old_forrenberg)]
+	)
+	var ground: Node = world.get_node_or_null("%Ground")
+	_assert(ground != null, "Ground exists for Winterthurerstrasse distance")
+	if ground == null:
+		return
+	var best_d := 1.0e9
+	var saw_winter := false
+	for node in ground.get_children():
+		if not node.has_meta("road_name") or str(node.get_meta("road_name")) != "Winterthurerstrasse":
+			continue
+		if not node.has_meta("road_points"):
+			continue
+		saw_winter = true
+		var pts: PackedVector2Array = PackedVector2Array(node.get_meta("road_points"))
+		var pair: Dictionary = _nearest_segment_tangent_dist(pts, spawn)
+		best_d = minf(best_d, float(pair["d"]))
+	_assert(saw_winter, "Winterthurerstrasse road_points exist on Ground")
+	_assert(
+		best_d <= 40.0,
+		"spawn distance to Winterthurerstrasse polyline ≤ 40 wu (got %.1f)" % best_d
+	)
 
 
 func _assert_cell_mapping() -> void:

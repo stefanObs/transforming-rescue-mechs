@@ -40,8 +40,8 @@ const BADI_LON := 8.7333710
 const Z_Y_DIV := 20.0
 ## Gras / F1-Raster: Seuzach-Dorf + Ohringen + Forrenberg.
 const WORLD_BOUNDS := Rect2(Vector2(-25000, -24000), Vector2(57000, 42000))
-## Spawn etwas südlich der SOCAR Forrenberg (nicht auf der A1).
-const SPAWN_SOUTH_WU := 200.0
+## OSM Winterthurerstrasse vertex in WINT-KERN (Feld 38, −2); Kirche = (0,0).
+const WINTERTHURER_SPAWN := Vector2(3861.9, -101.0)
 const HUB_ENTER_SOUTH_WU := 320.0
 
 
@@ -91,8 +91,12 @@ static func forrenberg_world() -> Vector2:
 	return gps_to_world(FORRENBERG_LAT, FORRENBERG_LON)
 
 
+static func winterthurer_spawn() -> Vector2:
+	return WINTERTHURER_SPAWN
+
+
 static func default_world_spawn() -> Vector2:
-	return forrenberg_world() + Vector2(0.0, SPAWN_SOUTH_WU)
+	return winterthurer_spawn()
 
 
 static func hub_enter_pos() -> Vector2:

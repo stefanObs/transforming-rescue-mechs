@@ -185,6 +185,7 @@ func _assert_named_roads(world: Node) -> void:
 	_assert_road_reaches(ground, "A1", -800.0, 700.0)
 	_assert_road_near(ground, "A1", SeuzachGeo.forrenberg_world(), 800.0)
 	_assert_road_near(ground, "Stationsstrasse", SeuzachGeo.bahnhof_world(), 900.0)
+	_assert_road_near(ground, "Winterthurerstrasse", SeuzachGeo.default_world_spawn(), 40.0)
 
 
 func _assert_field_scale() -> void:
@@ -196,6 +197,19 @@ func _assert_field_scale() -> void:
 	_assert(is_equal_approx(SeuzachGeo.FIELD_WU, 100.0), "1 Feld = 100 wu")
 	var church := SeuzachGeo.gps_to_world(SeuzachGeo.CHURCH_LAT, SeuzachGeo.CHURCH_LON)
 	_assert(church.length() < 0.5, "Kirche is world origin (got %s)" % str(church))
+	var spawn := SeuzachGeo.default_world_spawn()
+	var ix := int(floor(spawn.x / SeuzachGeo.FIELD_WU))
+	var iy := int(floor(spawn.y / SeuzachGeo.FIELD_WU))
+	_assert(
+		spawn.is_equal_approx(Vector2(3861.9, -101.0)),
+		"default_world_spawn is Winterthurer vertex (got %s)" % str(spawn)
+	)
+	_assert(ix >= 30 and ix <= 45 and iy >= -15 and iy <= 10, "spawn Feld (%d,%d) in WINT-KERN" % [ix, iy])
+	_assert(SeuzachGeo.WORLD_BOUNDS.has_point(spawn), "default spawn inside WORLD_BOUNDS")
+	_assert(
+		spawn.distance_to(SeuzachGeo.forrenberg_world() + Vector2(0.0, 200.0)) > 40.0,
+		"default spawn is not Forrenberg + (0, 200)"
+	)
 
 
 func _assert_road_reaches(ground: Node, road_name: String, x_lt: float, y_gt: float) -> void:
