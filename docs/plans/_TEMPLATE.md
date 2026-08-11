@@ -1,6 +1,6 @@
 # Plan: <kurzname> / Slice <id>
 
-**Status:** Entwurf | Freigegeben | In Umsetzung | Review | Playtest | Erledigt  
+**Status:** Entwurf | Erledigt  
 **Typ:** Feature | Bugfix | Art  
 **Datum:** YYYY-MM-DD  
 **Owner:** …  
@@ -8,7 +8,7 @@
 **Slice-Datei:** `docs/plans/<aufgabe>/S<nn>-<slug>.md`  
 **Hängt ab von:** — | S01 | …
 
-Neue Aufgaben: INDEX + kurze Feature-Stubs vom `task-slicer`. Dieses Template füllt `feature-planner` **in dieselbe Slice-Datei** (Tests/Review/Git bleiben der Ablauf, keine Extra-Slices). Alte flache `docs/plans/<name>.md` nur historisch.
+Neue Aufgaben: INDEX + Feature-Stubs vom `task-slicer` (typisch **zwei verwandte** Inkremente). `feature-planner` füllt dieses Template **nur wenn nötig** (Bugs/Art/Multi-System/unklarer Scope) in dieselbe Slice-Datei. Offensichtliche Stubs: Planner **überspringen**; Implementer ergänzt Testplan/Akzeptanz. Tests/Review/Git bleiben der Ablauf, keine Extra-Slices. INDEX trägt `offen` → `in Arbeit` → `erledigt` — dieses File nicht durch Phasen jagen. Alte flache `docs/plans/<name>.md` nur historisch.
 
 ## Ziel
 

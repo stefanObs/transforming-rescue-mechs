@@ -1,5 +1,5 @@
 ---
-description: Entwicklungsablauf — zuerst Zerlegung (task-slicer), dann voller Ablauf pro Slice
+description: Entwicklungsablauf — Zerlegung (~2 verwandte Inkremente), dann Loop pro Slice ohne Doppelarbeit
 alwaysApply: true
 ---
 
@@ -7,18 +7,20 @@ alwaysApply: true
 
 Strikt `docs/ENTWICKLUNGSABLAUF.md` befolgen:
 
-**S. Zerlegung (immer zuerst):** Subagent `task-slicer` → Feature-Schritte (Häuser einzeln, Karte in Quartiere). **Keine** Slices für Review/Tests/Playtest/Git — das ist der Ablauf pro Feature. Ohne INDEX nicht bauen.
+**S. Zerlegung (immer zuerst):** Subagent `task-slicer` → Feature-Schritte. Default: **zwei verwandte** / **zwei zusammengehörige** spieler-sichtbare Inkremente pro Slice (~2×), wenn sie Systeme teilen und zusammen review-/playtestbar sind. **Keine** Slices für Review/Tests/Playtest/Git/RCA — das ist der Ablauf pro Feature. Ohne INDEX nicht bauen.
 
-Dann **jeden Slice nacheinander** mit dem vollen Ablauf:
+Dann **jeden Slice nacheinander**:
 
 0. **Bei Fehlern:** Repro + RCA im Slice-File
-1. **Plan** → dasselbe Slice-Markdown (`feature-planner`)
-2. **Umsetzen** → `feature-implementer` (nur dieser Slice); Art → `comic-rettung-art`
-3. **Code Review** → `code-reviewer`; Bug-Findings über Phase 0, dann Review wiederholen
-4. **Playtest** → `godot-playtester`; Failures mit Repro zurück in Phase 0
+1. **Plan** → `feature-planner` **nur wenn nötig** (Bugs/RCA, Art, Multi-System, unklarer Scope). **Überspringen**, wenn der Stub Feature+In+Nicht hat und die Änderung offensichtlich ist (Docs-Wording, Konstanten, Single-File)
+2. **Umsetzen** → `feature-implementer` (nur dieser Slice); Art → `comic-rettung-art`; Suite **einmal** grün und im Handoff
+3. **Code Review** → `code-reviewer` (Pflicht für spielsichtbare Arbeit, nicht mit Playtest zusammenlegen); Bug-Findings über Phase 0, dann Review wiederholen
+4. **Playtest** → `godot-playtester`; **keine doppelte Suite** / kein Art-Alpha-Replay, wenn Implementer grün und Review ohne Folge-Code/Art. Docs-only: **kein Godot**. Failures mit Repro zurück in Phase 0
+
+INDEX-Status nur: `offen` → `in Arbeit` (Implement-Start) → `erledigt` (nach Pass+Git). Kein Slice-File-Phasen-Churn.
 
 Nach Phase-4-Pass **dieses Slices:** Commit, Push, Tag (`git-release`). Erst dann der nächste Slice.
 
-Keine Blind-Fixes. Phasen nicht überspringen, außer dokumentierter Hotfix (dann INDEX mit einem Slice; Repro trotzdem anstreben).
+Keine Blind-Fixes. Phasen 3+4 nicht überspringen für spielsichtbare Arbeit, außer dokumentierter Hotfix (dann INDEX mit einem Slice; Repro trotzdem anstreben).
 
 Agent-Learnings: `.cursor/agents/*.md` — Zerlegung `task-slicer`, Art `comic-rettung-art`.

@@ -13,6 +13,9 @@ python3 tests/play_windows_launcher_test.py
 echo "---- tests/iso_map_interaction_docs_test.py ----"
 python3 tests/iso_map_interaction_docs_test.py
 
+echo "---- tests/entwicklungsablauf_docs_test.py ----"
+python3 tests/entwicklungsablauf_docs_test.py
+
 FAILED=0
 for test_script in tests/smoke_test.gd tests/m1_test.gd tests/m2_test.gd tests/m2_world_test.gd tests/m2_player_visual_test.gd tests/m2_transform_test.gd tests/m2_turn_test.gd tests/m2_facing_test.gd tests/m2_road_kit_test.gd tests/m2_railway_kit_test.gd tests/m2_water_kit_test.gd tests/m2_walk_test.gd tests/m3_world_landmarks_test.gd tests/m3_hub_transition_test.gd tests/m3_building_occlusion_test.gd tests/m3_road_debug_test.gd; do
   echo "---- $test_script ----"

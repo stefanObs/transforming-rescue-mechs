@@ -3,9 +3,9 @@
 **Status:** Entwurf | In Arbeit | Erledigt  
 **Aufgabe:** <User-Ziel in einem Satz>  
 **Datum:** YYYY-MM-DD  
-**Zuschnitt:** <z. B. ein Haus pro Slice; F1-Quartiere; ein Feature>
+**Zuschnitt:** <Default: zwei verwandte / zwei zusammengehörige Inkremente pro Slice; Prozess = ein Thema>
 
-Feature-Schritte, keine Prozess-Schritte. Pro Zeile folgt der volle Entwicklungsablauf (Plan → Implement inkl. Tests → Review → Playtest → Git).
+Feature-Schritte, keine Prozess-Schritte. Pro Zeile folgt der Ablauf (Plan nur wenn nötig → Implement inkl. Tests → Review → Playtest → Git).
 
 ## Reihenfolge
 
@@ -14,7 +14,7 @@ Feature-Schritte, keine Prozess-Schritte. Pro Zeile folgt der volle Entwicklungs
 | S01 | `S01-<slug>.md` | … | — | offen |
 | S02 | `S02-<slug>.md` | … | S01 | offen |
 
-Status: `offen` → `in Arbeit` → `erledigt` (nach Phase-4-Pass + Git).
+Status nur: `offen` → `in Arbeit` (Implement-Start) → `erledigt` (nach Phase-4-Pass + Git). Kein Slice-File-Phasen-Churn.
 
 ## Nicht in dieser Aufgabe
 
