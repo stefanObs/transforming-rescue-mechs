@@ -59,6 +59,9 @@ const BADI_LON := 8.7333710
 ## OSM way 142728231 Bachtobelstrasse 17 building centroid (not amenity node, not Forrenberg hub).
 const KIGA_BACHTOBEL_LAT := 47.5376225
 const KIGA_BACHTOBEL_LON := 8.7380927
+## OSM way 131647378 Weidstrasse 16 (building=POI), not Forrenberg hub, not Ohringen.
+const KIGA_WEID_LAT := 47.5330589
+const KIGA_WEID_LON := 8.7379167
 
 ## z_index = ACTOR_Z_BASE + floor(y / Z_Y_DIV) + 1; Canvas-Max 4096.
 const Z_Y_DIV := 20.0
@@ -181,3 +184,7 @@ static func bahnhof_world() -> Vector2:
 
 static func kiga_bachtobel_world() -> Vector2:
 	return gps_to_world(KIGA_BACHTOBEL_LAT, KIGA_BACHTOBEL_LON)
+
+
+static func kiga_weid_world() -> Vector2:
+	return gps_to_world(KIGA_WEID_LAT, KIGA_WEID_LON)

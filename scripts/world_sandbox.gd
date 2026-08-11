@@ -477,13 +477,20 @@ func _place_school_clusters() -> void:
 
 
 func _place_kindergartens() -> void:
-	## S04: only Kindergarten Bachtobel. Weid / Schneckenwiese / Ohringen come later.
+	## S04 Bachtobel + S05 Weid. Schneckenwiese / Ohringen-Kiga come later.
 	_add_prop(
 		"landmark_kiga_bachtobel.png",
 		SeuzachGeo.kiga_bachtobel_world(),
 		SCHOOL_SCALE,
 		{"landmark_id": "kiga_bachtobel", "kindergarten_id": "kiga_bachtobel", "district": "bachtobel"},
 		"kiga_bachtobel"
+	)
+	_add_prop(
+		"landmark_kiga_weid.png",
+		SeuzachGeo.kiga_weid_world(),
+		SCHOOL_SCALE,
+		{"landmark_id": "kiga_weid", "kindergarten_id": "kiga_weid", "district": "weid"},
+		"kiga_weid"
 	)
 
 
