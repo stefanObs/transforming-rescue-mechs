@@ -89,24 +89,26 @@ func _run() -> void:
 		return
 
 	var all_sprites := _collect_sprites(props)
-	var landmark_n := 0
 	var house_n := 0
 	var forest_n := 0
 	for spr in all_sprites:
-		if spr.has_meta("landmark_id"):
-			landmark_n += 1
 		if spr.has_meta("house_variant"):
 			house_n += 1
 		if spr.has_meta("terrain") and str(spr.get_meta("terrain")) == "forest":
 			forest_n += 1
-	_assert(landmark_n == 0, "street map has no landmark sprites (got %d)" % landmark_n)
 	_assert(house_n == 0, "no housing props in street-map reset (got %d)" % house_n)
 	_assert(forest_n == 0, "street map has no forest props (got %d)" % forest_n)
-	_assert(all_sprites.is_empty(), "street map Props has no sprites (got %d)" % all_sprites.size())
+
+	for cluster in ["birch", "rietacker", "ohringen"]:
+		var n := _count_school_cluster(all_sprites, cluster)
+		_assert(n >= 2, "school_cluster %s has >=2 props (got %d)" % [cluster, n])
+	_assert_geo_quadrants(all_sprites)
+	_assert_schools_off_roads(world, all_sprites)
 
 	_assert_named_roads(world)
 
-	_assert(props.get_node_or_null("DistrictOhringen") == null, "no DistrictOhringen on street map")
+	var ohringen: Node = props.get_node_or_null("DistrictOhringen")
+	_assert(ohringen != null, "DistrictOhringen node exists")
 
 	var ground: Node = world.get_node_or_null("%Ground")
 	_assert(ground != null, "Ground node exists")
@@ -157,6 +159,9 @@ func _assert_named_roads(world: Node) -> void:
 		"Forrenbergstrasse",
 		"Welsikonerstrasse",
 		"Schaffhauserstrasse",
+		"Rietstrasse",
+		"Birchstrasse",
+		"Kirchhügelstrasse",
 		"A1",
 	]:
 		_assert(names.has(required), "road marker %s present" % required)
@@ -251,6 +256,110 @@ func _assert_geo_quadrants(sprites: Array[Sprite2D]) -> void:
 			"birch east of rietacker (birch.x=%.0f rietacker.x=%.0f)"
 			% [birch.position.x, rietacker.position.x]
 		)
+
+
+func _assert_schools_off_roads(world: Node, sprites: Array[Sprite2D]) -> void:
+	var ground: Node = world.get_node_or_null("%Ground")
+	_assert(ground != null, "Ground for school-vs-road clearance")
+	if ground == null:
+		return
+	var roads: Array[Dictionary] = []
+	for node in _collect_nodes(ground):
+		if not node.has_meta("road_name") or not node.has_meta("road_points"):
+			continue
+		var pts: PackedVector2Array = PackedVector2Array(node.get_meta("road_points"))
+		if pts.size() < 2:
+			continue
+		roads.append({
+			"name": str(node.get_meta("road_name")),
+			"half_w": float(node.get_meta("half_w")) if node.has_meta("half_w") else 36.0,
+			"points": pts,
+		})
+	_assert(not roads.is_empty(), "named road polylines present for school clearance")
+	for spr in sprites:
+		if not spr.has_meta("school_cluster"):
+			continue
+		var aabb := _school_aabb(spr)
+		for road in roads:
+			var half_w := float(road["half_w"])
+			var pts: PackedVector2Array = road["points"]
+			var d_feet := _dist_to_polyline(spr.position, pts)
+			var d_aabb := _dist_aabb_to_polyline(aabb, pts)
+			var need_feet := half_w + 14.0 + 50.0
+			var need_aabb := half_w + 14.0
+			_assert(
+				d_feet >= need_feet,
+				"%s must sit off %s (d=%.0f, need ≥%.0f)"
+				% [spr.name, str(road["name"]), d_feet, need_feet]
+			)
+			_assert(
+				d_aabb >= need_aabb,
+				"%s facade must sit off %s (aabb d=%.0f, need ≥%.0f)"
+				% [spr.name, str(road["name"]), d_aabb, need_aabb]
+			)
+
+
+func _school_aabb(spr: Sprite2D) -> Rect2:
+	## Feet on origin, facade extends up (smaller Y) and sideways.
+	if spr.texture == null:
+		return Rect2(spr.position, Vector2.ZERO)
+	var tw := float(spr.texture.get_width()) * absf(spr.scale.x)
+	var th := float(spr.texture.get_height()) * absf(spr.scale.y)
+	return Rect2(Vector2(spr.position.x - tw * 0.5, spr.position.y - th), Vector2(tw, th))
+
+
+func _dist_to_polyline(p: Vector2, pts: PackedVector2Array) -> float:
+	if pts.is_empty():
+		return 1.0e9
+	var best := p.distance_to(pts[0])
+	for i in range(pts.size() - 1):
+		best = minf(best, _dist_to_segment(p, pts[i], pts[i + 1]))
+	return best
+
+
+func _dist_aabb_to_polyline(rect: Rect2, pts: PackedVector2Array) -> float:
+	if pts.size() < 2:
+		return 1.0e9
+	var best := 1.0e9
+	for i in range(pts.size() - 1):
+		best = minf(best, _dist_aabb_to_segment(rect, pts[i], pts[i + 1]))
+		if best <= 0.0:
+			return 0.0
+	return best
+
+
+func _dist_aabb_to_segment(rect: Rect2, a: Vector2, b: Vector2) -> float:
+	var c0 := rect.position
+	var c1 := rect.position + Vector2(rect.size.x, 0.0)
+	var c2 := rect.position + rect.size
+	var c3 := rect.position + Vector2(0.0, rect.size.y)
+	var edges: Array[Vector2] = [c0, c1, c2, c3, c0]
+	for i in range(4):
+		if Geometry2D.segment_intersects_segment(a, b, edges[i], edges[i + 1]) != null:
+			return 0.0
+	var best := 1.0e9
+	for c in [c0, c1, c2, c3]:
+		best = minf(best, _dist_to_segment(c, a, b))
+	best = minf(best, _dist_point_to_rect(a, rect))
+	best = minf(best, _dist_point_to_rect(b, rect))
+	return best
+
+
+func _dist_point_to_rect(p: Vector2, rect: Rect2) -> float:
+	var q := Vector2(
+		clampf(p.x, rect.position.x, rect.position.x + rect.size.x),
+		clampf(p.y, rect.position.y, rect.position.y + rect.size.y)
+	)
+	return p.distance_to(q)
+
+
+func _dist_to_segment(p: Vector2, a: Vector2, b: Vector2) -> float:
+	var ab := b - a
+	var len2 := ab.length_squared()
+	if len2 < 0.001:
+		return p.distance_to(a)
+	var t := clampf((p - a).dot(ab) / len2, 0.0, 1.0)
+	return p.distance_to(a + ab * t)
 
 
 func _find_landmark(sprites: Array[Sprite2D], landmark_id: String) -> Sprite2D:

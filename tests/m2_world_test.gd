@@ -48,6 +48,12 @@ func _run() -> void:
 						kit_stripes += 1
 		_assert(kit_roads >= 2, "RoadKit road pieces present (got %d)" % kit_roads)
 		_assert(kit_stripes >= 2, "RoadKit stripe dashes present (got %d)" % kit_stripes)
+		var kit_junctions := 0
+		if ground:
+			for child in ground.get_children():
+				if child.has_meta("road_kit") and str(child.get_meta("road_kit")) == "junction":
+					kit_junctions += 1
+		_assert(kit_junctions >= 4, "junction pads cover crossings (got %d)" % kit_junctions)
 		var road_polys := 0
 		if ground:
 			for child in ground.get_children():
@@ -67,7 +73,7 @@ func _run() -> void:
 						var path := str(tex.resource_path)
 						_assert(not path.ends_with("tile_grass.png"), "props must not use tile_grass")
 						_assert(not path.ends_with("tile_road.png"), "props must not use tile_road")
-		_assert(prop_sprites == 0, "street map has no landmark props (got %d)" % prop_sprites)
+		_assert(prop_sprites >= 1, "school orientation props present (got %d)" % prop_sprites)
 		var player: Node = world.get_node_or_null("%Player")
 		_assert(player != null, "Player exists")
 		if player:

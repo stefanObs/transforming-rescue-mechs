@@ -97,8 +97,8 @@ func _test_world_hub_enter_and_collision() -> void:
 	_assert(props != null, "Props node exists")
 	var collision_count := _count_building_collisions(props)
 	_assert(
-		collision_count == 0,
-		"street map has no building collision (got %d)" % collision_count
+		collision_count >= 1,
+		"school props have building collision (got %d)" % collision_count
 	)
 
 	var player: CharacterBody2D = world.get_node_or_null("%Player") as CharacterBody2D

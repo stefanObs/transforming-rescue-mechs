@@ -17,6 +17,7 @@ const Z_SIDEWALK := -41
 const Z_ROAD := -40
 const Z_STRIPE := -39
 const Z_ISLAND := -38
+const Z_JUNCTION := -38
 const ROUNDABOUT_SEGS := 48
 
 
@@ -69,6 +70,111 @@ static func add_straight(parent: Node2D, a: Vector2, b: Vector2, opts: Dictionar
 ## Alias of add_straight for iso/diagonal segments (same geometry API).
 static func add_diagonal(parent: Node2D, a: Vector2, b: Vector2, opts: Dictionary = {}) -> void:
 	add_straight(parent, a, b, opts)
+
+
+## Continuous ribbon along `points` with mitered corners (no grass wedges at bends).
+static func add_polyline(parent: Node2D, points: Array, opts: Dictionary = {}) -> void:
+	if parent == null:
+		return
+	var pts := _clean_poly_points(points)
+	if pts.size() < 2:
+		return
+	var half_w: float = float(opts.get("half_w", DEFAULT_HALF_W))
+	var sidewalk_w: float = float(opts.get("sidewalk_w", DEFAULT_SIDEWALK_W))
+	var want_sidewalk: bool = bool(opts.get("sidewalk", false))
+	var want_centerline: bool = bool(opts.get("centerline", false))
+
+	if want_sidewalk and sidewalk_w > 0.0:
+		_add_poly_strip(
+			parent, pts, half_w, half_w + sidewalk_w, COLOR_SIDEWALK, Z_SIDEWALK, "sidewalk"
+		)
+		_add_poly_strip(
+			parent, pts, -(half_w + sidewalk_w), -half_w, COLOR_SIDEWALK, Z_SIDEWALK, "sidewalk"
+		)
+	_add_poly_strip(parent, pts, -half_w, half_w, COLOR_ROAD, Z_ROAD, "road")
+	if want_centerline:
+		for i in range(pts.size() - 1):
+			var a: Vector2 = pts[i]
+			var b: Vector2 = pts[i + 1]
+			var delta := b - a
+			var length := delta.length()
+			if length < 0.001:
+				continue
+			var tangent := delta / length
+			var normal := Vector2(-tangent.y, tangent.x)
+			_add_dashed_line(parent, a, b, tangent, normal, opts)
+
+
+## Asphalt disc covering a T/cross so sidewalks do not stripe through the junction.
+static func add_junction(parent: Node2D, center: Vector2, radius: float) -> void:
+	if parent == null or radius <= 1.0:
+		return
+	var poly := Polygon2D.new()
+	poly.color = COLOR_ROAD
+	poly.z_index = Z_JUNCTION
+	poly.polygon = _circle_points(center, radius, 28)
+	poly.set_meta("road_kit", "junction")
+	parent.add_child(poly)
+
+
+static func _clean_poly_points(points: Array) -> PackedVector2Array:
+	var pts := PackedVector2Array()
+	for raw in points:
+		var p: Vector2 = raw as Vector2
+		if pts.is_empty() or pts[pts.size() - 1].distance_to(p) > 0.5:
+			pts.append(p)
+	return pts
+
+
+static func _add_poly_strip(
+	parent: Node2D,
+	pts: PackedVector2Array,
+	offset_a: float,
+	offset_b: float,
+	color: Color,
+	z: int,
+	meta: String
+) -> void:
+	var left := PackedVector2Array()
+	var right := PackedVector2Array()
+	for i in range(pts.size()):
+		left.append(_miter_offset(pts, i, offset_a))
+		right.append(_miter_offset(pts, i, offset_b))
+	var poly_pts := PackedVector2Array()
+	for p in left:
+		poly_pts.append(p)
+	for i in range(right.size() - 1, -1, -1):
+		poly_pts.append(right[i])
+	var poly := Polygon2D.new()
+	poly.color = color
+	poly.z_index = z
+	poly.polygon = poly_pts
+	poly.set_meta("road_kit", meta)
+	parent.add_child(poly)
+
+
+static func _miter_offset(pts: PackedVector2Array, i: int, offset: float) -> Vector2:
+	var n0 := Vector2.ZERO
+	var n1 := Vector2.ZERO
+	if i == 0:
+		var t := (pts[1] - pts[0]).normalized()
+		return pts[0] + Vector2(-t.y, t.x) * offset
+	if i == pts.size() - 1:
+		var t := (pts[i] - pts[i - 1]).normalized()
+		return pts[i] + Vector2(-t.y, t.x) * offset
+	var t0 := (pts[i] - pts[i - 1]).normalized()
+	var t1 := (pts[i + 1] - pts[i]).normalized()
+	n0 = Vector2(-t0.y, t0.x)
+	n1 = Vector2(-t1.y, t1.x)
+	var m := n0 + n1
+	if m.length() < 0.001:
+		return pts[i] + n0 * offset
+	m = m.normalized()
+	var den := m.dot(n0)
+	if absf(den) < 0.18:
+		den = 0.18 * signf(den)
+	var miter := clampf(offset / den, -absf(offset) * 3.5, absf(offset) * 3.5)
+	return pts[i] + m * miter
 
 
 ## Ring road around center; radius is ring midline. opts: sidewalk, centerline (default off —

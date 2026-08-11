@@ -188,193 +188,89 @@ func _add_hill_mound(center: Vector2, rx: float, ry: float, color: Color, z: int
 
 
 func _add_continuous_roads() -> void:
-	## Street map only (no houses). Polylines from Google Maps + Nominatim, four widths.
-	## +X east, +Y south; Kirche ≈ (0,0). Junctions snapped so the T-plan reads as a map.
-	## J_KERN = Winterthurer × Ohringer (north of Kirchhügel). No footways.
-
+	## Connected Maps polylines (mitered). No footways. +X east, +Y south; Kirche ≈ (0,0).
 	var j_kern := Vector2(-125, -200)
 	var j_ohringen := Vector2(-1240, 360)
 	var j_forrenberg := Vector2(-125, 200)
 	var j_station := Vector2(160, -230)
+	var j_welsikon := Vector2(80, -340)
+	var j_stadler := Vector2(584, -292)
+	var j_bahnhof := Vector2(900, -130)
+	var j_a1_winter := Vector2(-110, 840)
+	var j_a1_forren := Vector2(510, 794)
+	var j_a1_h15 := Vector2(-900, 960)
 
-	# A1 — motorway south of both villages (widest, no sidewalk). Maps: E–W, interchange west.
-	_add_named_road(
-		"A1",
-		"motorway",
-		[
-			Vector2(-1400, 1020),
-			Vector2(-900, 960),
-			Vector2(-400, 880),
-			Vector2(-110, 840),
-			Vector2(280, 810),
-			Vector2(700, 780),
-			Vector2(1250, 740),
-		]
-	)
+	_add_named_road("A1", "motorway", [
+		Vector2(-1400, 1020), j_a1_h15, Vector2(-400, 880), j_a1_winter,
+		Vector2(280, 810), j_a1_forren, Vector2(700, 780), Vector2(1250, 740),
+	])
+	_add_named_road("Winterthurerstrasse", "main", [
+		Vector2(-90, -760), Vector2(-110, -480), j_kern, j_forrenberg,
+		Vector2(-125, 500), Vector2(-125, 659), j_a1_winter,
+	])
+	_add_named_road("Ohringerstrasse", "main", [
+		Vector2(-1280, 420), j_ohringen, Vector2(-960, 80), Vector2(-614, -93),
+		j_kern, Vector2(0, -217), j_station,
+	])
+	_add_named_road("Stationsstrasse", "main", [
+		j_station, j_stadler, Vector2(759, -239), j_bahnhof,
+	])
+	_add_named_road("Welsikonerstrasse", "main", [
+		j_kern, j_welsikon, Vector2(257, -495), Vector2(520, -720),
+	])
+	_add_named_road("Schaffhauserstrasse", "main", [
+		Vector2(-1280, -80), j_ohringen, Vector2(-1100, 620), j_a1_h15,
+	])
+	_add_named_road("Rietstrasse", "main", [
+		Vector2(-1550, -140), Vector2(-1380, -138), Vector2(-1000, -80), Vector2(-614, -93),
+	])
+	_add_named_road("Landstrasse", "collector", [
+		j_welsikon, Vector2(407, -470), Vector2(500, -540),
+	])
+	_add_named_road("Reutlingerstrasse", "collector", [
+		Vector2(23, -123), Vector2(280, 20), Vector2(587, 55), Vector2(760, 80),
+	])
+	_add_named_road("Stadlerstrasse", "collector", [
+		j_stadler, Vector2(760, -180), Vector2(882, -71), Vector2(980, 40),
+	])
+	_add_named_road("Hettlingerstrasse", "collector", [
+		j_kern, Vector2(-40, -360), Vector2(14, -490), Vector2(-110, -640),
+	])
+	_add_named_road("Forrenbergstrasse", "collector", [
+		j_forrenberg, Vector2(160, 280), Vector2(280, 641), Vector2(490, 600), j_a1_forren,
+	])
+	_add_named_road("Kirchgasse", "local", [Vector2(23, -123), Vector2(0, 0), Vector2(96, -57)])
+	_add_named_road("Kirchhügelstrasse", "local", [j_kern, Vector2(23, -123), j_station])
+	_add_named_road("Strehlgasse", "local", [j_welsikon, Vector2(311, -330), Vector2(420, -340)])
+	_add_named_road("Rietackerstrasse", "local", [j_welsikon, Vector2(176, -308), j_station])
+	_add_named_road("Turnerstrasse", "local", [Vector2(-40, -360), Vector2(34, -371), j_welsikon])
+	_add_named_road("Püntenstrasse", "local", [Vector2(176, -308), Vector2(200, -250)])
+	_add_named_road("Bachwiesenstrasse", "local", [Vector2(400, -160), Vector2(620, -160), Vector2(760, -160)])
+	_add_named_road("Obstgartenstrasse", "local", [Vector2(529, -233), Vector2(479, -20)])
+	_add_named_road("Birchstrasse", "local", [Vector2(479, -20), j_stadler])
+	_add_named_road("Weiherstrasse", "local", [Vector2(257, -495), Vector2(393, -380), Vector2(460, -550)])
+	_add_named_road("Breitestrasse", "local", [j_forrenberg, Vector2(280, 90), Vector2(520, 100)])
+	_add_named_road("Seebühlstrasse", "local", [j_forrenberg, Vector2(280, 300), Vector2(500, 280)])
+	_add_named_road("Weidstrasse", "local", [Vector2(400, 40), Vector2(720, 40), Vector2(882, -20)])
+	_add_named_road("Münzerstrasse", "local", [Vector2(-614, -93), Vector2(-580, 243), j_forrenberg])
+	_add_named_road("Schulstrasse", "local", [Vector2(-918, 480), Vector2(-860, 560), Vector2(-860, 700)])
+	_add_named_road("Rebhogerstrasse", "local", [j_ohringen, Vector2(-918, 480)])
+	_add_named_road("Friedenstrasse", "local", [Vector2(-918, 480), Vector2(-944, 552)])
 
-	# Winterthurerstrasse — main N–S west of Kirchhügel, south toward A1 (Nominatim x≈−125).
-	_add_named_road(
-		"Winterthurerstrasse",
-		"main",
-		[
-			Vector2(-90, -760),
-			Vector2(-110, -480),
-			j_kern,
-			j_forrenberg,
-			Vector2(-125, 500),
-			Vector2(-125, 659),
-			Vector2(-110, 840),
-		]
-	)
-
-	# Ohringerstrasse — main E–W: Ohringen (west, slightly south) across fields into the kern.
-	_add_named_road(
-		"Ohringerstrasse",
-		"main",
-		[
-			Vector2(-1280, 420),
-			j_ohringen,
-			Vector2(-960, 80),
-			Vector2(-614, -93),
-			j_kern,
-			Vector2(0, -217),
-			j_station,
-		]
-	)
-
-	# Stationsstrasse — main east from the kern to Bahnhof Seuzach.
-	_add_named_road(
-		"Stationsstrasse",
-		"main",
-		[
-			j_station,
-			Vector2(584, -292),
-			Vector2(759, -239),
-			Vector2(900, -130),
-		]
-	)
-
-	# Welsikonerstrasse — main NE from the kern toward Weiher / Welsikon.
-	_add_named_road(
-		"Welsikonerstrasse",
-		"main",
-		[
-			j_kern,
-			Vector2(80, -340),
-			Vector2(257, -495),
-			Vector2(520, -720),
-		]
-	)
-
-	# Schaffhauserstrasse — main N–S through Ohringen (H15), south to the A1 interchange.
-	_add_named_road(
-		"Schaffhauserstrasse",
-		"main",
-		[
-			Vector2(-1280, -80),
-			j_ohringen,
-			Vector2(-1100, 620),
-			Vector2(-720, 960),
-		]
-	)
-
-	# Landstrasse — collector north of the kern, to Badi Weiher (not a second village N–S).
-	_add_named_road(
-		"Landstrasse",
-		"collector",
-		[
-			Vector2(80, -340),
-			Vector2(407, -470),
-			Vector2(500, -540),
-		]
-	)
-
-	# Reutlingerstrasse — collector east of the kern (Nominatim ~ (587, 55)).
-	_add_named_road(
-		"Reutlingerstrasse",
-		"collector",
-		[
-			Vector2(-40, -40),
-			Vector2(280, 20),
-			Vector2(587, 55),
-			Vector2(760, 80),
-		]
-	)
-
-	# Stadlerstrasse — collector by the railway / Bahnhof.
-	_add_named_road(
-		"Stadlerstrasse",
-		"collector",
-		[
-			Vector2(584, -292),
-			Vector2(760, -180),
-			Vector2(882, -71),
-			Vector2(980, 40),
-		]
-	)
-
-	# Hettlingerstrasse — collector north of the kern toward Hettlingen.
-	_add_named_road(
-		"Hettlingerstrasse",
-		"collector",
-		[
-			j_kern,
-			Vector2(-40, -360),
-			Vector2(14, -490),
-			Vector2(-110, -640),
-		]
-	)
-
-	# Forrenbergstrasse — collector from Winterthurer south to hub / A1.
-	_add_named_road(
-		"Forrenbergstrasse",
-		"collector",
-		[
-			j_forrenberg,
-			Vector2(160, 280),
-			Vector2(280, 641),
-			Vector2(490, 600),
-			Vector2(510, 790),
-		]
-	)
-
-	# Local streets (quartier, still car-width — no footways).
-	_add_named_road("Kirchgasse", "local", [Vector2(96, -57), Vector2(0, 0)])
-	_add_named_road(
-		"Strehlgasse",
-		"local",
-		[Vector2(80, -340), Vector2(311, -330), Vector2(420, -340)]
-	)
-	_add_named_road(
-		"Bachwiesenstrasse",
-		"local",
-		[Vector2(400, -200), Vector2(620, -190), Vector2(760, -160)]
-	)
-	_add_named_road(
-		"Weiherstrasse",
-		"local",
-		[Vector2(257, -495), Vector2(393, -380), Vector2(460, -550)]
-	)
-	_add_named_road(
-		"Breitestrasse",
-		"local",
-		[Vector2(j_forrenberg.x, 80), Vector2(280, 90), Vector2(520, 100)]
-	)
-	_add_named_road(
-		"Schulstrasse",
-		"local",
-		[j_ohringen, Vector2(-1040, 400), Vector2(-860, 560)]
-	)
-	_add_named_road(
-		"Seebühlstrasse",
-		"local",
-		[Vector2(j_forrenberg.x, 280), Vector2(280, 300), Vector2(500, 280)]
-	)
-	_add_named_road(
-		"Weidstrasse",
-		"local",
-		[Vector2(400, 40), Vector2(720, 40), Vector2(882, -20)]
-	)
+	var pad_main := ROAD_HW_MAIN + 16.0
+	var pad_col := ROAD_HW_COLLECTOR + 16.0
+	var pad_loc := ROAD_HW_LOCAL + 14.0
+	var pad_a1 := ROAD_HW_MOTORWAY + 8.0
+	for pad in [
+		[j_kern, pad_main], [j_ohringen, pad_main], [j_forrenberg, pad_main],
+		[j_station, pad_main], [j_welsikon, pad_main], [j_stadler, pad_main],
+		[j_bahnhof, pad_col], [j_a1_winter, pad_a1], [j_a1_forren, pad_a1],
+		[j_a1_h15, pad_a1],
+		[Vector2(-614, -93), pad_main], [Vector2(23, -123), pad_loc],
+		[Vector2(-918, 480), pad_loc], [Vector2(479, -20), pad_loc],
+		[Vector2(176, -308), pad_loc], [Vector2(-40, -360), pad_col],
+	]:
+		RoadKitLib.add_junction(_ground, pad[0] as Vector2, float(pad[1]))
 
 
 func _road_opts(road_class: String) -> Dictionary:
@@ -393,8 +289,7 @@ func _add_named_road(road_name: String, road_class: String, points: Array) -> vo
 	if points.size() < 2:
 		return
 	var opts := _road_opts(road_class)
-	for i in range(points.size() - 1):
-		RoadKitLib.add_straight(_ground, points[i] as Vector2, points[i + 1] as Vector2, opts)
+	RoadKitLib.add_polyline(_ground, points, opts)
 	var mid: Vector2 = points[int(points.size() / 2)] as Vector2
 	_add_road_marker(road_name, mid, road_class, float(opts["half_w"]), points)
 
@@ -421,11 +316,88 @@ func _add_road_marker(
 
 
 func _place_landmarks() -> void:
-	## Street map: no landmark/house sprites. Invisible HubEnter stays at Forrenberg spawn.
+	## Street map + school clusters for orientation (Maps). No houses/hub facade.
 	for child in _props.get_children():
 		child.free()
 	_prop_parent = _props
 	_add_hub_enter_zone()
+	_place_school_clusters()
+
+
+func _place_school_clusters() -> void:
+	## Birch — east campus, grass N of Stationsstrasse (Bahnhof/Birch orientation).
+	_add_prop(
+		"landmark_schulhaus_birch_a.png",
+		Vector2(720, -460),
+		SCHOOL_SCALE,
+		{"landmark_id": "schulhaus_birch", "school_cluster": "birch", "district": "birch"},
+		"schulhaus_birch_a"
+	)
+	_add_prop(
+		"landmark_schulhaus_birch_b.png",
+		Vector2(900, -360),
+		SCHOOL_SCALE,
+		{"landmark_id": "schulhaus_birch", "school_cluster": "birch", "district": "birch"},
+		"schulhaus_birch_b"
+	)
+	_add_prop(
+		"landmark_turnhalle_birch.png",
+		Vector2(800, -640),
+		SCHOOL_SCALE,
+		{"landmark_id": "turnhalle_birch", "school_cluster": "birch", "district": "birch", "poi_type": "gym"},
+		"turnhalle_birch"
+	)
+	## Rietacker — grass pocket between Hettlinger (W) and Welsikoner (E), N of Kirchhügel.
+	_add_prop(
+		"landmark_schulhaus_rietacker_a.png",
+		Vector2(140, -640),
+		SCHOOL_SCALE,
+		{"landmark_id": "schulhaus_rietacker", "school_cluster": "rietacker", "district": "rietacker"},
+		"schulhaus_rietacker_a"
+	)
+	_add_prop(
+		"landmark_schulhaus_rietacker_b.png",
+		Vector2(240, -800),
+		SCHOOL_SCALE,
+		{"landmark_id": "schulhaus_rietacker", "school_cluster": "rietacker", "district": "rietacker"},
+		"schulhaus_rietacker_b"
+	)
+	_add_prop(
+		"landmark_turnhalle_rietacker.png",
+		Vector2(80, -920),
+		SCHOOL_SCALE,
+		{"landmark_id": "turnhalle_rietacker", "school_cluster": "rietacker", "district": "rietacker", "poi_type": "gym"},
+		"turnhalle_rietacker"
+	)
+	## Ohringen — east of Schulstrasse, SW village (not on Münzer/A1).
+	var ohringen := Node2D.new()
+	ohringen.name = "DistrictOhringen"
+	ohringen.set_meta("district", "ohringen")
+	ohringen.position = Vector2.ZERO
+	_props.add_child(ohringen)
+	_prop_parent = ohringen
+	_add_prop(
+		"landmark_schulhaus_ohringen_a.png",
+		Vector2(-740, 400),
+		SCHOOL_SCALE,
+		{"landmark_id": "schulhaus_ohringen", "school_cluster": "ohringen", "district": "ohringen"},
+		"schulhaus_ohringen_a"
+	)
+	_add_prop(
+		"landmark_schulhaus_ohringen_b.png",
+		Vector2(-560, 520),
+		SCHOOL_SCALE,
+		{"landmark_id": "schulhaus_ohringen", "school_cluster": "ohringen", "district": "ohringen"},
+		"schulhaus_ohringen_b"
+	)
+	_add_prop(
+		"landmark_turnhalle_ohringen.png",
+		Vector2(-640, 680),
+		SCHOOL_SCALE,
+		{"landmark_id": "turnhalle_ohringen", "school_cluster": "ohringen", "district": "ohringen", "poi_type": "gym"},
+		"turnhalle_ohringen"
+	)
+	_prop_parent = _props
 
 
 
