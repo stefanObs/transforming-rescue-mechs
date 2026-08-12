@@ -658,7 +658,7 @@ func _add_road_marker(
 
 
 func _place_landmarks() -> void:
-	## Street map + school clusters + kindergartens + Bahnhof + Badi + spawn housing + forest silhouettes.
+	## Street map + school clusters + kindergartens + Bahnhof + Badi + corridor housing + forest silhouettes.
 	## No hub facade.
 	for child in _props.get_children():
 		child.free()
@@ -673,7 +673,7 @@ func _place_landmarks() -> void:
 
 
 func _place_spawn_housing() -> void:
-	## Winterthurerstrasse both sides near default spawn — Style-C house_*.png at HOUSE_SCALE.
+	## S01 Winterthurer spawn + S02 Kirche / Schneckenwiese near-corridors — Style-C house_*.png.
 	_prop_parent = _props
 	var spawn := SeuzachGeo.winterthurer_spawn()
 	var variants: Array[String] = [
@@ -685,26 +685,81 @@ func _place_spawn_housing() -> void:
 		"house_mfh",
 		"house_reihen",
 	]
-	var spacing := 250.0
-	var spawn_radius := 900.0
-	var min_house_sep := 200.0
-	var min_spawn_sep := 160.0
-	var min_landmark_sep := 320.0
 	var roads := _named_road_polylines()
-	var winter: Array[Dictionary] = []
-	for road in roads:
-		if str(road.get("name", "")) == "Winterthurerstrasse":
-			winter.append(road)
-	if winter.is_empty():
+	if roads.is_empty():
 		return
 	var landmark_positions: Array[Vector2] = []
 	for child in _collect_prop_sprites(_props):
 		if child.has_meta("landmark_id"):
 			landmark_positions.append(child.position)
 	var placed: Array[Vector2] = []
-	var variant_i := 0
-	var house_i := 0
-	for road in winter:
+	var counters := Vector2i(0, 0) ## x=variant_i, y=house_i
+	## S01: both sides of Winterthurerstrasse in the spawn viewport.
+	counters = _place_housing_along_roads(
+		["Winterthurerstrasse"],
+		spawn,
+		900.0,
+		"spawn",
+		roads,
+		variants,
+		landmark_positions,
+		placed,
+		counters
+	)
+	## S02 Kirche corridor: Kirchgasse + Winterthurer linking west/south from spawn (~first 2 km).
+	var kirche_center := Vector2(2500.0, -1000.0)
+	counters = _place_housing_along_roads(
+		["Kirchgasse", "Winterthurerstrasse"],
+		kirche_center,
+		2000.0,
+		"kirche",
+		roads,
+		variants,
+		landmark_positions,
+		placed,
+		counters
+	)
+	## S02 Schneckenwiese corridor: first stretch of the drive toward kiga (~Reutlinger / Winterthurer N).
+	var kiga := SeuzachGeo.kiga_schneckenwiese_world()
+	var schn_center := spawn.lerp(kiga, 0.30)
+	counters = _place_housing_along_roads(
+		["Winterthurerstrasse", "Reutlingerstrasse", "Schneckenwiesenstrasse"],
+		schn_center,
+		2000.0,
+		"schneckenwiese",
+		roads,
+		variants,
+		landmark_positions,
+		placed,
+		counters
+	)
+
+
+func _place_housing_along_roads(
+	road_names: Array,
+	center: Vector2,
+	radius: float,
+	corridor_id: String,
+	roads: Array[Dictionary],
+	variants: Array[String],
+	landmark_positions: Array[Vector2],
+	placed: Array[Vector2],
+	counters: Vector2i
+) -> Vector2i:
+	## Both sides, off-road, spaced houses along named RoadKit polylines inside radius.
+	var spacing := 250.0
+	var min_house_sep := 200.0
+	var min_spawn_sep := 160.0
+	var min_landmark_sep := 320.0
+	var spawn := SeuzachGeo.winterthurer_spawn()
+	var name_set: Dictionary = {}
+	for n in road_names:
+		name_set[str(n)] = true
+	var variant_i := counters.x
+	var house_i := counters.y
+	for road in roads:
+		if not name_set.has(str(road.get("name", ""))):
+			continue
 		var pts: PackedVector2Array = road["points"]
 		var half_w: float = float(road["half_w"])
 		if pts.size() < 2:
@@ -713,7 +768,7 @@ func _place_spawn_housing() -> void:
 		for sample in samples:
 			var point: Vector2 = sample["point"]
 			var tangent: Vector2 = sample["tangent"]
-			if point.distance_to(spawn) > spawn_radius:
+			if point.distance_to(center) > radius:
 				continue
 			var perp := Vector2(-tangent.y, tangent.x)
 			if perp.length_squared() < 0.0001:
@@ -760,12 +815,19 @@ func _place_spawn_housing() -> void:
 					continue
 				variant_i += 1
 				var flip := (house_i % 3) == 1
-				var node_name := "house_%s_%d" % [variant.trim_prefix("house_"), house_i]
+				var node_name := "house_%s_%s_%d" % [
+					corridor_id, variant.trim_prefix("house_"), house_i
+				]
+				var meta := {
+					"house_variant": variant,
+					"district": "seuzach",
+					"housing_corridor": corridor_id,
+				}
 				var spr := _add_prop(
 					file_name,
 					pos,
 					HOUSE_SCALE,
-					{"house_variant": variant, "district": "seuzach"},
+					meta,
 					node_name,
 					flip
 				)
@@ -773,6 +835,7 @@ func _place_spawn_housing() -> void:
 					continue
 				placed.append(pos)
 				house_i += 1
+	return Vector2i(variant_i, house_i)
 
 
 func _named_road_polylines() -> Array[Dictionary]:

@@ -1,6 +1,6 @@
 # Slices: buildings-visible-at-play
 
-**Status:** Entwurf  
+**Status:** Erledigt  
 **Aufgabe:** Beim Spielen Wohnbebauung entlang der Strassen am Winterthurer-Spawn sichtbar machen (nicht „nur Strassen und Grün“).  
 **Datum:** 2026-08-12  
 **Zuschnitt:** zwei verwandte Housing-Korridore um den Spawn; bestehende `house_*.png`; Landmarks/Scale unangetastet
@@ -12,7 +12,7 @@ Feature-Schritte, keine Prozess-Schritte. Pro Zeile folgt der Ablauf (Plan nur w
 | ID | Datei | Feature | Hängt ab von | Status |
 |----|-------|---------|----------------|--------|
 | S01 | `S01-winterthurer-spawn-housing.md` | Wohnzeilen an Winterthurerstrasse + Nahstrassen im Spawn-Viewport | — | erledigt |
-| S02 | `S02-near-spawn-corridor-housing.md` | Housing entlang Kirche-/Schneckenwiese-Nahkorridoren | S01 | offen |
+| S02 | `S02-near-spawn-corridor-housing.md` | Housing entlang Kirche-/Schneckenwiese-Nahkorridoren | S01 | erledigt |
 
 Status nur: `offen` → `in Arbeit` (Implement-Start) → `erledigt` (nach Phase-4-Pass + Git). Kein Slice-File-Phasen-Churn.
 

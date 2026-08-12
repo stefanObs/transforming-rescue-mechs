@@ -30,5 +30,14 @@ Vom Winterthurer-Spawn aus liest sich die Umgebung **weiter bewohnt**, wenn der 
 
 ## Testplan
 
-- Suite: zusätzliche Wohnprops auf den S02-Korridoren; S01-Spawn-Housing und Landmark-Asserts unverändert grün
+- Suite: `./scripts/run_tests.sh` — `house_n >= 20`; Meta `housing_corridor` ∈ {kirche, schneckenwiese} mit je ≥4 Props; S01-Spawn-Viewport ≥3 Häuser; Landmark-Counts/Scales unverändert; neue Häuser off-road
 - Play: kurze Fahrt vom Spawn Richtung Kirche und Richtung Schneckenwiese — Häuser entlang der Strasse, kein leeres Grünband
+
+## Akzeptanz
+
+- [ ] Shared `_place_housing_along_roads` (oder Erweiterung) platziert Kirche- und Schneckenwiese-Nahkorridore
+- [ ] Kirchgasse (+ Winterthurer-Anbindung) und Reutlinger-/Schneckenwiesen-/Winterthurer-Nord bewohnt im ersten ~1,2–2 km
+- [ ] `HOUSE_SCALE` 0.38; keine Landmark-/Spawn-/Zoom-Verschiebung; kein Voll-Seuzach
+- [ ] Suite grün inkl. S01-Spawn-Viewport und S02-Corridor-Metas
+
+Playtest 2026-08-12: Pass — spawn/kirche/schneckenwiese corridor shots; 68 houses total.

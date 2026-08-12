@@ -96,11 +96,12 @@ func _run() -> void:
 			house_n += 1
 		if spr.has_meta("terrain") and str(spr.get_meta("terrain")) == "forest":
 			forest_n += 1
-	_assert(house_n >= 6, "spawn-corridor housing props present (got %d)" % house_n)
+	_assert(house_n >= 20, "spawn+corridor housing props present (got %d)" % house_n)
 	_assert(forest_n >= 1, "forest silhouette props present (got %d)" % forest_n)
 
 	_assert_landmark_scales(world, all_sprites)
 	_assert_spawn_housing(world, all_sprites)
+	_assert_corridor_housing(world, all_sprites)
 
 	for cluster in ["rietacker", "ohringen"]:
 		var n := _count_school_cluster(all_sprites, cluster)
@@ -421,6 +422,40 @@ func _assert_spawn_housing(world: Node, sprites: Array[Sprite2D]) -> void:
 	_assert(
 		in_view >= 3,
 		"≥3 houses intersect spawn viewport @ zoom 0.9 (got %d)" % in_view
+	)
+
+
+func _assert_corridor_housing(world: Node, sprites: Array[Sprite2D]) -> void:
+	## S02: Kirche + Schneckenwiese near-corridor houses beyond the S01 spawn pocket.
+	var kirche_n := 0
+	var schn_n := 0
+	var spawn_n := 0
+	for spr in sprites:
+		if not spr.has_meta("house_variant"):
+			continue
+		if not spr.has_meta("housing_corridor"):
+			continue
+		var corridor := str(spr.get_meta("housing_corridor"))
+		match corridor:
+			"kirche":
+				kirche_n += 1
+			"schneckenwiese":
+				schn_n += 1
+			"spawn":
+				spawn_n += 1
+			_:
+				_assert(false, "unexpected housing_corridor meta '%s'" % corridor)
+		_assert(
+			spr.scale.is_equal_approx(Vector2(0.38, 0.38)),
+			"%s corridor house scale == HOUSE_SCALE" % spr.name
+		)
+		_assert_sprite_off_named_roads(world, spr)
+	_assert(spawn_n >= 3, "≥3 S01 spawn-corridor houses (got %d)" % spawn_n)
+	_assert(kirche_n >= 4, "≥4 Kirche-corridor houses (got %d)" % kirche_n)
+	_assert(schn_n >= 4, "≥4 Schneckenwiese-corridor houses (got %d)" % schn_n)
+	_assert(
+		kirche_n + schn_n + spawn_n >= 20,
+		"≥20 total tagged housing props (got %d)" % (kirche_n + schn_n + spawn_n)
 	)
 
 
