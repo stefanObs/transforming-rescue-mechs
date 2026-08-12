@@ -15,6 +15,10 @@ const HUB_SCALE := Vector2(0.28, 0.28)
 const SCHOOL_SCALE := Vector2(0.50, 0.50)
 ## Residential props along Winterthurer spawn corridor (not SCHOOL/LANDMARK scale).
 const HOUSE_SCALE := Vector2(0.38, 0.38)
+## Visual off-road clearance (sprite paint vs RoadKit asphalt). Separate from BuildingCollision 0.20/0.10.
+const BUILDING_CLEAR_W_FRAC := 0.55
+const BUILDING_CLEAR_H_FRAC := 0.35
+const BUILDING_CLEAR_EDGE_MARGIN := 28.0
 ## S02: Birch/Rietacker per-building multipliers on SCHOOL_SCALE (OSM footprint ratios).
 const BIRCH_A_SCALE_MULT := 1.20
 const BIRCH_B_SCALE_MULT := 1.20
@@ -780,14 +784,11 @@ func _place_housing_along_roads(
 					variant_i += 1
 					continue
 				var tex: Texture2D = load(path)
-				var footprint_half := 40.0
-				if tex != null:
-					footprint_half = maxf(
-						24.0, float(tex.get_width()) * HOUSE_SCALE.x * 0.20
-					) * 0.5
-				## Off-road: clear asphalt + collision pad; stable curb setback (CH village band).
+				var clear_sz := _building_clear_size(tex, HOUSE_SCALE)
+				var clear_half_w := clear_sz.x * 0.5
+				## Off-road: visual clear half-width + edge margin; stable curb setback.
 				var slack := 24.0
-				var need := half_w + maxf(64.0, 14.0 + footprint_half) + slack
+				var need := half_w + clear_half_w + BUILDING_CLEAR_EDGE_MARGIN + slack
 				var pos := point + perp * side * need
 				if pos.distance_to(spawn) < min_spawn_sep:
 					variant_i += 1
@@ -807,7 +808,7 @@ func _place_housing_along_roads(
 				if too_close:
 					variant_i += 1
 					continue
-				if not _house_clears_named_roads(pos, tex, roads):
+				if not _sprite_clears_named_roads(pos, tex, HOUSE_SCALE, roads):
 					variant_i += 1
 					continue
 				variant_i += 1
@@ -883,29 +884,89 @@ func _sample_polyline(pts: PackedVector2Array, spacing: float) -> Array[Dictiona
 	return out
 
 
-func _house_clears_named_roads(pos: Vector2, tex: Texture2D, roads: Array[Dictionary]) -> bool:
+func _building_clear_size(tex: Texture2D, spr_scale: Vector2) -> Vector2:
+	## Visual clear pad — wider/taller than BuildingCollision so sprite paint clears asphalt.
 	var footprint_w := 40.0
 	var footprint_h := 20.0
 	if tex != null:
-		var tex_w := float(tex.get_width()) * HOUSE_SCALE.x
-		var tex_h := float(tex.get_height()) * HOUSE_SCALE.y
-		footprint_w = maxf(24.0, tex_w * 0.20)
-		footprint_h = maxf(16.0, tex_h * 0.10)
-	var feet_y := -footprint_h * 0.25
-	var aabb := Rect2(
-		pos + Vector2(0.0, feet_y) - Vector2(footprint_w, footprint_h) * 0.5,
-		Vector2(footprint_w, footprint_h)
-	)
+		var tex_w := float(tex.get_width()) * absf(spr_scale.x)
+		var tex_h := float(tex.get_height()) * absf(spr_scale.y)
+		footprint_w = maxf(24.0, tex_w * BUILDING_CLEAR_W_FRAC)
+		footprint_h = maxf(16.0, tex_h * BUILDING_CLEAR_H_FRAC)
+	return Vector2(footprint_w, footprint_h)
+
+
+func _building_clear_aabb(pos: Vector2, tex: Texture2D, spr_scale: Vector2) -> Rect2:
+	var clear := _building_clear_size(tex, spr_scale)
+	var feet_y := -clear.y * 0.25
+	return Rect2(pos + Vector2(0.0, feet_y) - clear * 0.5, clear)
+
+
+func _sprite_clears_named_roads(
+	pos: Vector2, tex: Texture2D, spr_scale: Vector2, roads: Array[Dictionary]
+) -> bool:
+	var clear := _building_clear_size(tex, spr_scale)
+	var aabb := _building_clear_aabb(pos, tex, spr_scale)
 	for road in roads:
 		var pts: PackedVector2Array = road["points"]
 		var half_w: float = float(road["half_w"])
 		var d_feet := _dist_point_to_polyline(pos, pts)
 		var d_aabb := _dist_aabb_to_polyline(aabb, pts)
-		if d_feet < half_w + 64.0:
+		var need_feet := half_w + clear.y * 0.5 + BUILDING_CLEAR_EDGE_MARGIN
+		var need_aabb := half_w + BUILDING_CLEAR_EDGE_MARGIN
+		if d_feet < need_feet:
 			return false
-		if d_aabb < half_w + 14.0:
+		if d_aabb < need_aabb:
 			return false
 	return true
+
+
+func _nearest_road_segment_perp(pos: Vector2, roads: Array[Dictionary]) -> Vector2:
+	## Unit perpendicular of the nearest named-road segment (or RIGHT if none).
+	var best_d := 1.0e9
+	var best_perp := Vector2.RIGHT
+	for road in roads:
+		var pts: PackedVector2Array = road["points"]
+		for i in range(pts.size() - 1):
+			var a: Vector2 = pts[i]
+			var b: Vector2 = pts[i + 1]
+			var ab := b - a
+			var len_sq := ab.length_squared()
+			if len_sq < 0.0001:
+				continue
+			var t := clampf((pos - a).dot(ab) / len_sq, 0.0, 1.0)
+			var closest := a + ab * t
+			var d := pos.distance_to(closest)
+			if d < best_d:
+				best_d = d
+				var tangent := ab / sqrt(len_sq)
+				best_perp = Vector2(-tangent.y, tangent.x)
+	return best_perp
+
+
+func _nudge_off_named_roads(
+	pos: Vector2,
+	tex: Texture2D,
+	spr_scale: Vector2,
+	roads: Array[Dictionary],
+	max_nudge: float = 400.0
+) -> Vector2:
+	if roads.is_empty() or _sprite_clears_named_roads(pos, tex, spr_scale, roads):
+		return pos
+	var perp := _nearest_road_segment_perp(pos, roads)
+	if perp.length_squared() < 0.0001:
+		return pos
+	perp = perp.normalized()
+	var step := 8.0
+	for dir_sign in [1.0, -1.0]:
+		var candidate := pos
+		var traveled := 0.0
+		while traveled < max_nudge:
+			candidate += perp * dir_sign * step
+			traveled += step
+			if _sprite_clears_named_roads(candidate, tex, spr_scale, roads):
+				return candidate
+	return pos
 
 
 func _dist_point_to_polyline(p: Vector2, pts: PackedVector2Array) -> float:
@@ -973,45 +1034,63 @@ func _collect_prop_sprites(node: Node) -> Array[Sprite2D]:
 	return out
 
 
+func _add_building_prop(
+	file_name: String,
+	pos: Vector2,
+	scale: Vector2,
+	metas: Dictionary = {},
+	node_name: String = "",
+	flip_h: bool = false
+) -> Sprite2D:
+	## Place a building sprite, nudging perpendicular off RoadKit asphalt when visual clear fails.
+	var path := ART + file_name
+	if not ResourceLoader.exists(path):
+		return null
+	var tex: Texture2D = load(path)
+	var roads := _named_road_polylines()
+	var cleared := _nudge_off_named_roads(pos, tex, scale, roads)
+	return _add_prop(file_name, cleared, scale, metas, node_name, flip_h)
+
+
 func _place_school_clusters() -> void:
 	## Birch + Rietacker + Ohringen: OSM building centroids.
 	## S02: Birch/Rietacker use per-building scales; flip_h left false (authored facing OK).
-	_add_prop(
+	_add_building_prop(
 		"landmark_schulhaus_birch_a.png",
 		SeuzachGeo.birch_schulhaus_a_world(),
 		SCHOOL_SCALE * BIRCH_A_SCALE_MULT,
 		{"landmark_id": "schulhaus_birch", "school_cluster": "birch", "district": "birch"},
 		"schulhaus_birch_a"
 	)
-	_add_prop(
+	_add_building_prop(
 		"landmark_schulhaus_birch_b.png",
 		SeuzachGeo.birch_schulhaus_b_world(),
 		SCHOOL_SCALE * BIRCH_B_SCALE_MULT,
 		{"landmark_id": "schulhaus_birch", "school_cluster": "birch", "district": "birch"},
 		"schulhaus_birch_b"
 	)
-	_add_prop(
+	_add_building_prop(
 		"landmark_turnhalle_birch.png",
 		SeuzachGeo.birch_turnhalle_world(),
 		SCHOOL_SCALE * BIRCH_TURNHALLE_SCALE_MULT,
 		{"landmark_id": "turnhalle_birch", "school_cluster": "birch", "district": "birch", "poi_type": "gym"},
 		"turnhalle_birch"
 	)
-	_add_prop(
+	_add_building_prop(
 		"landmark_schulhaus_rietacker_a.png",
 		SeuzachGeo.rietacker_schulhaus_a_world(),
 		SCHOOL_SCALE * RIETACKER_A_SCALE_MULT,
 		{"landmark_id": "schulhaus_rietacker", "school_cluster": "rietacker", "district": "rietacker"},
 		"schulhaus_rietacker_a"
 	)
-	_add_prop(
+	_add_building_prop(
 		"landmark_schulhaus_rietacker_b.png",
 		SeuzachGeo.rietacker_schulhaus_b_world(),
 		SCHOOL_SCALE * RIETACKER_B_SCALE_MULT,
 		{"landmark_id": "schulhaus_rietacker", "school_cluster": "rietacker", "district": "rietacker"},
 		"schulhaus_rietacker_b"
 	)
-	_add_prop(
+	_add_building_prop(
 		"landmark_turnhalle_rietacker.png",
 		SeuzachGeo.rietacker_turnhalle_world(),
 		SCHOOL_SCALE * RIETACKER_TURNHALLE_SCALE_MULT,
@@ -1025,21 +1104,21 @@ func _place_school_clusters() -> void:
 	_props.add_child(ohringen)
 	_prop_parent = ohringen
 	## S03: Ohringen per-building scales; flip_h false, rotation 0 (authored facing OK).
-	_add_prop(
+	_add_building_prop(
 		"landmark_schulhaus_ohringen_a.png",
 		SeuzachGeo.ohringen_schulhaus_a_world(),
 		SCHOOL_SCALE * OHRINGEN_A_SCALE_MULT,
 		{"landmark_id": "schulhaus_ohringen", "school_cluster": "ohringen", "district": "ohringen"},
 		"schulhaus_ohringen_a"
 	)
-	_add_prop(
+	_add_building_prop(
 		"landmark_schulhaus_ohringen_b.png",
 		SeuzachGeo.ohringen_schulhaus_b_world(),
 		SCHOOL_SCALE * OHRINGEN_B_SCALE_MULT,
 		{"landmark_id": "schulhaus_ohringen", "school_cluster": "ohringen", "district": "ohringen"},
 		"schulhaus_ohringen_b"
 	)
-	_add_prop(
+	_add_building_prop(
 		"landmark_turnhalle_ohringen.png",
 		SeuzachGeo.ohringen_turnhalle_world(),
 		SCHOOL_SCALE * OHRINGEN_TURNHALLE_SCALE_MULT,
@@ -1051,21 +1130,21 @@ func _place_school_clusters() -> void:
 
 func _place_kindergartens() -> void:
 	## Bachtobel + Weid + Schneckenwiese under %Props; Ohringen-Kiga under DistrictOhringen.
-	_add_prop(
+	_add_building_prop(
 		"landmark_kiga_bachtobel.png",
 		SeuzachGeo.kiga_bachtobel_world(),
 		SCHOOL_SCALE * KIGA_BACHTOBEL_SCALE_MULT,
 		{"landmark_id": "kiga_bachtobel", "kindergarten_id": "kiga_bachtobel", "district": "bachtobel"},
 		"kiga_bachtobel"
 	)
-	_add_prop(
+	_add_building_prop(
 		"landmark_kiga_weid.png",
 		SeuzachGeo.kiga_weid_world(),
 		SCHOOL_SCALE * KIGA_WEID_SCALE_MULT,
 		{"landmark_id": "kiga_weid", "kindergarten_id": "kiga_weid", "district": "weid"},
 		"kiga_weid"
 	)
-	_add_prop(
+	_add_building_prop(
 		"landmark_kiga_schneckenwiese.png",
 		SeuzachGeo.kiga_schneckenwiese_world(),
 		SCHOOL_SCALE * KIGA_SCHNECKENWIESE_SCALE_MULT,
@@ -1078,7 +1157,7 @@ func _place_kindergartens() -> void:
 	)
 	var district := _props.get_node_or_null("DistrictOhringen")
 	_prop_parent = district if district else _props
-	_add_prop(
+	_add_building_prop(
 		"landmark_kiga_ohringen.png",
 		SeuzachGeo.kiga_ohringen_world(),
 		SCHOOL_SCALE * KIGA_OHRINGEN_SCALE_MULT,
@@ -1096,7 +1175,7 @@ func _place_bahnhof() -> void:
 	## S08: station building + canopy at Stationsstrasse 53. No tracks (S09).
 	## S05: LANDMARK_SCALE * BAHNHOF_SCALE_MULT; flip_h false; rotation 0 (canopy faces N).
 	_prop_parent = _props
-	_add_prop(
+	_add_building_prop(
 		"landmark_bahnhof_seuzach.png",
 		SeuzachGeo.bahnhof_world(),
 		LANDMARK_SCALE * BAHNHOF_SCALE_MULT,
@@ -1109,7 +1188,7 @@ func _place_badi() -> void:
 	## S10: outdoor pool at Landstrasse 26. Not Ohringen, not Birch indoor pool.
 	## S05: LANDMARK_SCALE * BADI_SCALE_MULT; flip_h false; rotation 0 (north of Landstrasse).
 	_prop_parent = _props
-	_add_prop(
+	_add_building_prop(
 		"landmark_badi_weiher.png",
 		SeuzachGeo.badi_world(),
 		LANDMARK_SCALE * BADI_SCALE_MULT,
