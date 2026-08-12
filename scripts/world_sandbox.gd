@@ -678,7 +678,7 @@ func _place_landmarks() -> void:
 
 
 func _place_spawn_housing() -> void:
-	## S01 Winterthurer spawn + S02 Kirche / Schneckenwiese — street-ribbon house_street_*.png.
+	## Spawn + Kirche / Schneckenwiese — street-ribbon bases; bearing suffix picked per tangent.
 	_prop_parent = _props
 	var spawn := SeuzachGeo.winterthurer_spawn()
 	var variants: Array[String] = [
@@ -778,7 +778,10 @@ func _place_housing_along_roads(
 			perp = perp.normalized()
 			for side_i in range(2):
 				var side := 1.0 if side_i == 0 else -1.0
-				var variant: String = variants[variant_i % variants.size()]
+				var base: String = variants[variant_i % variants.size()]
+				## Sample tangent bearing; recomputed after nudge from closest segment.
+				var bearing := _street_bearing_from_tangent(tangent)
+				var variant := "%s_%s" % [base, bearing]
 				var file_name := "%s.png" % variant
 				var path := ART + file_name
 				if not ResourceLoader.exists(path):
@@ -833,25 +836,80 @@ func _place_housing_along_roads(
 				if too_close:
 					variant_i += 1
 					continue
-				## Street-facing from nudged pos vs nearest point on this corridor road.
-				var closest := _closest_point_on_polyline(pos, pts)
-				var away := pos - closest
-				if away.length_squared() < 0.0001:
+				## Street-facing + bearing from nudged pos vs this corridor road.
+				var corridor_road := {
+					"name": str(road.get("name", "")),
+					"half_w": half_w,
+					"points": pts,
+				}
+				var facing := _housing_facing_on_corridor(pos, corridor_road, perp, tangent)
+				if facing.is_empty():
 					variant_i += 1
 					continue
-				var local_perp := _nearest_road_segment_perp(
-					pos, [{"name": str(road.get("name", "")), "half_w": half_w, "points": pts}]
-				)
-				if local_perp.length_squared() < 0.0001:
-					local_perp = perp
-				else:
-					local_perp = local_perp.normalized()
-				side = 1.0 if away.dot(local_perp) >= 0.0 else -1.0
+				side = float(facing["side"])
+				var local_perp: Vector2 = facing["perp"]
+				bearing = str(facing["bearing"])
+				variant = "%s_%s" % [base, bearing]
+				file_name = "%s.png" % variant
+				path = ART + file_name
+				if not ResourceLoader.exists(path):
+					variant_i += 1
+					continue
+				## Final texture may differ after EW↔NS; recompute clear and re-nudge if needed.
+				tex = load(path)
+				if not _sprite_clears_named_roads(pos, tex, HOUSE_SCALE, roads):
+					pos = _nudge_off_named_roads(pos, tex, HOUSE_SCALE, roads, 700.0)
+					if not _sprite_clears_named_roads(pos, tex, HOUSE_SCALE, roads):
+						variant_i += 1
+						continue
+					if pos.distance_to(spawn) < min_spawn_sep:
+						variant_i += 1
+						continue
+					too_close = false
+					for other in placed:
+						if pos.distance_to(other) < min_house_sep:
+							too_close = true
+							break
+					if too_close:
+						variant_i += 1
+						continue
+					for lp in landmark_positions:
+						if pos.distance_to(lp) < min_landmark_sep:
+							too_close = true
+							break
+					if too_close:
+						variant_i += 1
+						continue
+					facing = _housing_facing_on_corridor(pos, corridor_road, perp, tangent)
+					if facing.is_empty():
+						variant_i += 1
+						continue
+					side = float(facing["side"])
+					local_perp = facing["perp"]
+					var bearing_after := str(facing["bearing"])
+					if bearing_after != bearing:
+						bearing = bearing_after
+						variant = "%s_%s" % [base, bearing]
+						file_name = "%s.png" % variant
+						path = ART + file_name
+						if not ResourceLoader.exists(path):
+							variant_i += 1
+							continue
+						tex = load(path)
+						if not _sprite_clears_named_roads(pos, tex, HOUSE_SCALE, roads):
+							variant_i += 1
+							continue
 				variant_i += 1
-				## Door authored bottom-left (screen SW). Pick flip_h so door faces asphalt.
+				## EW: door bottom-left (SW); NS: door on left edge (W). Flip so door faces asphalt.
 				var toward_road := (-local_perp * side).normalized()
-				var door_no_flip := Vector2(-1.0, 1.0).normalized()
-				var door_flip := Vector2(1.0, 1.0).normalized()
+				var door_no_flip: Vector2
+				var door_flip: Vector2
+				if bearing == "ns":
+					door_no_flip = Vector2(-1.0, 0.0)
+					door_flip = Vector2(1.0, 0.0)
+				else:
+					door_no_flip = Vector2(-1.0, 1.0).normalized()
+					door_flip = Vector2(1.0, 1.0).normalized()
 				var flip := door_flip.dot(toward_road) > door_no_flip.dot(toward_road)
 				var node_name := "house_%s_%s_%d" % [
 					corridor_id, variant.trim_prefix("house_"), house_i
@@ -860,7 +918,9 @@ func _place_housing_along_roads(
 					"house_variant": variant,
 					"district": "seuzach",
 					"housing_corridor": corridor_id,
+					"street_name": str(road.get("name", "")),
 					"street_side": int(side),
+					"street_bearing": bearing,
 					"faces_street": true,
 				}
 				var spr := _add_prop(
@@ -876,6 +936,67 @@ func _place_housing_along_roads(
 				placed.append(pos)
 				house_i += 1
 	return Vector2i(variant_i, house_i)
+
+
+func _housing_facing_on_corridor(
+	pos: Vector2,
+	corridor_road: Dictionary,
+	fallback_perp: Vector2,
+	fallback_tangent: Vector2
+) -> Dictionary:
+	## Side / perp / bearing from house pos vs the placement corridor polyline.
+	var pts: PackedVector2Array = corridor_road["points"]
+	var closest := _closest_point_on_polyline(pos, pts)
+	var away := pos - closest
+	if away.length_squared() < 0.0001:
+		return {}
+	var local_perp := _nearest_road_segment_perp(pos, [corridor_road])
+	if local_perp.length_squared() < 0.0001:
+		local_perp = fallback_perp
+	else:
+		local_perp = local_perp.normalized()
+	var side := 1.0 if away.dot(local_perp) >= 0.0 else -1.0
+	var local_tangent := _nearest_road_segment_tangent(pos, [corridor_road])
+	if local_tangent.length_squared() < 0.0001:
+		local_tangent = fallback_tangent
+	else:
+		local_tangent = local_tangent.normalized()
+	return {
+		"side": side,
+		"perp": local_perp,
+		"bearing": _street_bearing_from_tangent(local_tangent),
+	}
+
+
+func _street_bearing_from_tangent(tangent: Vector2) -> String:
+	## Binary bearing from road tangent (+X east, +Y south).
+	var t := tangent
+	if t.length_squared() < 0.0001:
+		return "ew"
+	t = t.normalized()
+	return "ew" if absf(t.x) >= absf(t.y) else "ns"
+
+
+func _nearest_road_segment_tangent(pos: Vector2, roads: Array[Dictionary]) -> Vector2:
+	## Unit tangent of the nearest named-road segment (or RIGHT if none).
+	var best_d := 1.0e9
+	var best_tangent := Vector2.RIGHT
+	for road in roads:
+		var pts: PackedVector2Array = road["points"]
+		for i in range(pts.size() - 1):
+			var a: Vector2 = pts[i]
+			var b: Vector2 = pts[i + 1]
+			var ab := b - a
+			var len_sq := ab.length_squared()
+			if len_sq < 0.0001:
+				continue
+			var t := clampf((pos - a).dot(ab) / len_sq, 0.0, 1.0)
+			var closest := a + ab * t
+			var d := pos.distance_to(closest)
+			if d < best_d:
+				best_d = d
+				best_tangent = ab / sqrt(len_sq)
+	return best_tangent
 
 
 func _named_road_polylines() -> Array[Dictionary]:

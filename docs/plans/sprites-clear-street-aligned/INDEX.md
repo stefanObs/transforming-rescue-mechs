@@ -12,7 +12,7 @@ Feature-Schritte, keine Prozess-Schritte. Pro Zeile folgt der Ablauf (Plan nur w
 | ID | Datei | Feature | Hängt ab von | Status |
 |----|-------|---------|----------------|--------|
 | S01 | `S01-hard-clearance-agent-rules.md` | Harte Visual-Clearance aller Building-Props + Subagent-Regeln (nie Asphalt übermalen; street-aligned Art) | — | erledigt |
-| S02 | `S02-bearing-aligned-building-art.md` | Style-C street-aligned Haus-/Schul-Varianten für Haupt-Bearings + Placement per Road-Tangent | S01 | offen |
+| S02 | `S02-bearing-aligned-building-art.md` | Style-C street-aligned Haus-/Schul-Varianten für Haupt-Bearings + Placement per Road-Tangent | S01 | erledigt |
 
 Status nur: `offen` → `in Arbeit` (Implement-Start) → `erledigt` (nach Phase-4-Pass + Git). Kein Slice-File-Phasen-Churn.
 

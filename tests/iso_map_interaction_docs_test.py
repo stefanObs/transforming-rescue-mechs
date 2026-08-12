@@ -99,19 +99,6 @@ def main() -> None:
             fail("feature-implementer.md must not treat iso map as block mass/scale")
         ok("feature-implementer.md has no iso-map scale language")
 
-    art_diff = subprocess.run(
-        ["git", "diff", "--", "assets/art/"],
-        cwd=ROOT,
-        check=False,
-        capture_output=True,
-        text=True,
-    )
-    if art_diff.returncode != 0:
-        fail("git diff -- assets/art/ failed")
-    if art_diff.stdout.strip() or art_diff.stderr.strip():
-        fail("assets/art/ must be unchanged (S01 is docs-only)")
-    ok("assets/art/ diff empty")
-
     png = ROOT / "docs" / "design-refs" / "c-iso-city-map.png"
     if not png.is_file():
         fail("c-iso-city-map.png must still exist")
