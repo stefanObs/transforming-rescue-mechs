@@ -43,6 +43,7 @@ If the slice is docs/process only (no Godot gameplay, no `assets/art/`):
    - Confirm: no script parse errors, no fatal engine errors, main scene loads.
    - Plus slice-specific visual (screenshot / drive check as the slice asks).
 7. When the plan involves landmarks/world: note remaining **manual** checks for **this slice’s Grenzen** (often zwei verwandte Zellen/Häuser, not the whole map).
+   - **Housing / landmark / world slices:** verify building sprites do **not** paint over RoadKit asphalt (screenshot or color sample). **Fail** if façades sit on asphalt.
 8. On Pass: do not mark INDEX `erledigt` yourself if Git is still pending (parent sets `erledigt` after Pass+Git). Slice-File: **Erledigt** after Pass+Git — no `Playtest` phase-status ping-pong. Do not mark other INDEX slices done.
 
 ## Output format

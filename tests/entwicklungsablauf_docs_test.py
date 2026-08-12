@@ -158,6 +158,28 @@ def main() -> None:
         fail("ENTWICKLUNGSABLAUF must keep c-umgebung / c-basis proportions")
     ok("iso-map sentences kept in ENTWICKLUNGSABLAUF")
 
+    # Building clearance / street-aligned bearing rules in living agents.
+    art = read(ROOT / ".cursor" / "agents" / "comic-rettung-art.md")
+    implementer = read(ROOT / ".cursor" / "agents" / "feature-implementer.md")
+    art_rule = read(ROOT / ".cursor" / "rules" / "comic-rettung-art.mdc")
+    asphalt = re.compile(r"asphalt|Asphalt|RoadKit", re.IGNORECASE)
+    bearing = re.compile(
+        r"bearing|street-aligned|parallel.*street|E–W|E-W|N–S|N-S|nie Asphalt",
+        re.IGNORECASE,
+    )
+    for label, text in (
+        ("comic-rettung-art.md", art),
+        ("feature-implementer.md", implementer),
+        ("godot-playtester.md", play),
+        ("feature-planner.md", planner),
+        ("comic-rettung-art.mdc", art_rule),
+    ):
+        if not asphalt.search(text):
+            fail(f"{label} must mention asphalt / RoadKit clearance")
+        if not bearing.search(text) and label != "godot-playtester.md":
+            fail(f"{label} must mention street-aligned / bearing (or nie Asphalt)")
+        ok(f"asphalt clearance language in {label}")
+
     print("=== entwicklungsablauf_docs_test passed ===")
 
 

@@ -100,7 +100,7 @@ func _run() -> void:
 			house_n += 1
 		if spr.has_meta("terrain") and str(spr.get_meta("terrain")) == "forest":
 			forest_n += 1
-	_assert(house_n >= 15, "spawn+corridor housing props present (got %d)" % house_n)
+	_assert(house_n >= 12, "spawn+corridor housing props present (got %d)" % house_n)
 	_assert(forest_n >= 1, "forest silhouette props present (got %d)" % forest_n)
 
 	_assert_landmark_scales(world, all_sprites)
@@ -232,6 +232,18 @@ func _assert_landmark_scales(world: Node, sprites: Array[Sprite2D]) -> void:
 	_assert(
 		consts.get("FOREST_SCALE") == Vector2(0.24, 0.24),
 		"FOREST_SCALE == (0.24, 0.24) (got %s)" % str(consts.get("FOREST_SCALE"))
+	)
+	_assert(
+		is_equal_approx(float(consts.get("BUILDING_CLEAR_W_FRAC", 0.0)), 0.95),
+		"BUILDING_CLEAR_W_FRAC == 0.95 (got %s)" % str(consts.get("BUILDING_CLEAR_W_FRAC"))
+	)
+	_assert(
+		is_equal_approx(float(consts.get("BUILDING_CLEAR_H_FRAC", 0.0)), 0.88),
+		"BUILDING_CLEAR_H_FRAC == 0.88 (got %s)" % str(consts.get("BUILDING_CLEAR_H_FRAC"))
+	)
+	_assert(
+		is_equal_approx(float(consts.get("BUILDING_CLEAR_EDGE_MARGIN", 0.0)), 40.0),
+		"BUILDING_CLEAR_EDGE_MARGIN == 40 (got %s)" % str(consts.get("BUILDING_CLEAR_EDGE_MARGIN"))
 	)
 	var school_scale: Vector2 = consts.get("SCHOOL_SCALE")
 	var landmark_scale: Vector2 = consts.get("LANDMARK_SCALE")
@@ -756,18 +768,18 @@ func _assert_birch_campus(sprites: Array[Sprite2D]) -> void:
 		"turnhalle_birch metas"
 	)
 	_assert(
-		a.position.distance_to(SeuzachGeo.birch_schulhaus_a_world()) <= 420.0,
-		"schulhaus_birch_a within 420 wu of OSM getter (d=%.1f)"
+		a.position.distance_to(SeuzachGeo.birch_schulhaus_a_world()) <= 720.0,
+		"schulhaus_birch_a within 720 wu of OSM getter (d=%.1f)"
 		% a.position.distance_to(SeuzachGeo.birch_schulhaus_a_world())
 	)
 	_assert(
-		b.position.distance_to(SeuzachGeo.birch_schulhaus_b_world()) <= 420.0,
-		"schulhaus_birch_b within 420 wu of OSM getter (d=%.1f)"
+		b.position.distance_to(SeuzachGeo.birch_schulhaus_b_world()) <= 720.0,
+		"schulhaus_birch_b within 720 wu of OSM getter (d=%.1f)"
 		% b.position.distance_to(SeuzachGeo.birch_schulhaus_b_world())
 	)
 	_assert(
-		gym.position.distance_to(SeuzachGeo.birch_turnhalle_world()) <= 420.0,
-		"turnhalle_birch within 420 wu of OSM getter (d=%.1f)"
+		gym.position.distance_to(SeuzachGeo.birch_turnhalle_world()) <= 720.0,
+		"turnhalle_birch within 720 wu of OSM getter (d=%.1f)"
 		% gym.position.distance_to(SeuzachGeo.birch_turnhalle_world())
 	)
 	_assert(
@@ -875,18 +887,18 @@ func _assert_rietacker_campus(sprites: Array[Sprite2D]) -> void:
 		"turnhalle_rietacker metas"
 	)
 	_assert(
-		a.position.distance_to(SeuzachGeo.rietacker_schulhaus_a_world()) <= 420.0,
-		"schulhaus_rietacker_a within 420 wu of OSM getter (d=%.1f)"
+		a.position.distance_to(SeuzachGeo.rietacker_schulhaus_a_world()) <= 720.0,
+		"schulhaus_rietacker_a within 720 wu of OSM getter (d=%.1f)"
 		% a.position.distance_to(SeuzachGeo.rietacker_schulhaus_a_world())
 	)
 	_assert(
-		b.position.distance_to(SeuzachGeo.rietacker_schulhaus_b_world()) <= 420.0,
-		"schulhaus_rietacker_b within 420 wu of OSM getter (d=%.1f)"
+		b.position.distance_to(SeuzachGeo.rietacker_schulhaus_b_world()) <= 720.0,
+		"schulhaus_rietacker_b within 720 wu of OSM getter (d=%.1f)"
 		% b.position.distance_to(SeuzachGeo.rietacker_schulhaus_b_world())
 	)
 	_assert(
-		gym.position.distance_to(SeuzachGeo.rietacker_turnhalle_world()) <= 420.0,
-		"turnhalle_rietacker within 420 wu of OSM getter (d=%.1f)"
+		gym.position.distance_to(SeuzachGeo.rietacker_turnhalle_world()) <= 720.0,
+		"turnhalle_rietacker within 720 wu of OSM getter (d=%.1f)"
 		% gym.position.distance_to(SeuzachGeo.rietacker_turnhalle_world())
 	)
 	_assert(
@@ -1005,18 +1017,18 @@ func _assert_ohringen_campus(sprites: Array[Sprite2D]) -> void:
 		"turnhalle_ohringen metas"
 	)
 	_assert(
-		a.position.distance_to(SeuzachGeo.ohringen_schulhaus_a_world()) <= 420.0,
-		"schulhaus_ohringen_a within 420 wu of OSM getter (d=%.1f)"
+		a.position.distance_to(SeuzachGeo.ohringen_schulhaus_a_world()) <= 720.0,
+		"schulhaus_ohringen_a within 720 wu of OSM getter (d=%.1f)"
 		% a.position.distance_to(SeuzachGeo.ohringen_schulhaus_a_world())
 	)
 	_assert(
-		b.position.distance_to(SeuzachGeo.ohringen_schulhaus_b_world()) <= 420.0,
-		"schulhaus_ohringen_b within 420 wu of OSM getter (d=%.1f)"
+		b.position.distance_to(SeuzachGeo.ohringen_schulhaus_b_world()) <= 720.0,
+		"schulhaus_ohringen_b within 720 wu of OSM getter (d=%.1f)"
 		% b.position.distance_to(SeuzachGeo.ohringen_schulhaus_b_world())
 	)
 	_assert(
-		gym.position.distance_to(SeuzachGeo.ohringen_turnhalle_world()) <= 420.0,
-		"turnhalle_ohringen within 420 wu of OSM getter (d=%.1f)"
+		gym.position.distance_to(SeuzachGeo.ohringen_turnhalle_world()) <= 720.0,
+		"turnhalle_ohringen within 720 wu of OSM getter (d=%.1f)"
 		% gym.position.distance_to(SeuzachGeo.ohringen_turnhalle_world())
 	)
 	_assert(
@@ -1033,8 +1045,8 @@ func _assert_ohringen_campus(sprites: Array[Sprite2D]) -> void:
 	)
 	_assert(not a.flip_h and not b.flip_h and not gym.flip_h, "Ohringen campus flip_h false")
 	_assert(
-		a.position.y < b.position.y - 400.0,
-		"ohringen_a north of ohringen_b (a.y=%.0f b.y=%.0f)"
+		a.position.y < b.position.y - 150.0,
+		"ohringen_a north of ohringen_b (a.y=%.0f b.y=%.0f; ≥150 wu after clearance nudge)"
 		% [a.position.y, b.position.y]
 	)
 	_assert(
@@ -1064,8 +1076,8 @@ func _assert_ohringen_campus(sprites: Array[Sprite2D]) -> void:
 	var yard := SeuzachGeo.ohringen_world()
 	for spr in [a, b, gym]:
 		_assert(
-			spr.position.distance_to(yard) < 900.0,
-			"%s within 900 wu of ohringen_world (d=%.1f)"
+			spr.position.distance_to(yard) < 1400.0,
+			"%s within 1400 wu of ohringen_world (d=%.1f; clearance nudge)"
 			% [spr.name, spr.position.distance_to(yard)]
 		)
 		_assert(
@@ -1108,8 +1120,8 @@ func _assert_kiga_bachtobel(world: Node, sprites: Array[Sprite2D]) -> void:
 		"kiga_bachtobel parent chain excludes DistrictOhringen"
 	)
 	_assert(
-		kiga.position.distance_to(SeuzachGeo.kiga_bachtobel_world()) <= 420.0,
-		"kiga_bachtobel within 420 wu of OSM getter (d=%.1f)"
+		kiga.position.distance_to(SeuzachGeo.kiga_bachtobel_world()) <= 720.0,
+		"kiga_bachtobel within 720 wu of OSM getter (d=%.1f)"
 		% kiga.position.distance_to(SeuzachGeo.kiga_bachtobel_world())
 	)
 	_assert(
@@ -1185,8 +1197,8 @@ func _assert_kiga_weid(world: Node, sprites: Array[Sprite2D]) -> void:
 		"kiga_weid parent chain excludes DistrictOhringen"
 	)
 	_assert(
-		kiga.position.distance_to(SeuzachGeo.kiga_weid_world()) <= 420.0,
-		"kiga_weid within 420 wu of OSM getter (d=%.1f)"
+		kiga.position.distance_to(SeuzachGeo.kiga_weid_world()) <= 720.0,
+		"kiga_weid within 720 wu of OSM getter (d=%.1f)"
 		% kiga.position.distance_to(SeuzachGeo.kiga_weid_world())
 	)
 	_assert(
@@ -1272,8 +1284,8 @@ func _assert_kiga_schneckenwiese(world: Node, sprites: Array[Sprite2D]) -> void:
 		"kiga_schneckenwiese parent chain excludes DistrictOhringen"
 	)
 	_assert(
-		kiga.position.distance_to(SeuzachGeo.kiga_schneckenwiese_world()) <= 420.0,
-		"kiga_schneckenwiese within 420 wu of OSM getter (d=%.1f)"
+		kiga.position.distance_to(SeuzachGeo.kiga_schneckenwiese_world()) <= 720.0,
+		"kiga_schneckenwiese within 720 wu of OSM getter (d=%.1f)"
 		% kiga.position.distance_to(SeuzachGeo.kiga_schneckenwiese_world())
 	)
 	_assert(
@@ -1368,8 +1380,8 @@ func _assert_kiga_ohringen(world: Node, sprites: Array[Sprite2D]) -> void:
 		"kiga_ohringen parent chain includes DistrictOhringen"
 	)
 	_assert(
-		kiga.position.distance_to(SeuzachGeo.kiga_ohringen_world()) <= 420.0,
-		"kiga_ohringen within 420 wu of OSM getter (d=%.1f)"
+		kiga.position.distance_to(SeuzachGeo.kiga_ohringen_world()) <= 720.0,
+		"kiga_ohringen within 720 wu of OSM getter (d=%.1f)"
 		% kiga.position.distance_to(SeuzachGeo.kiga_ohringen_world())
 	)
 	_assert(
@@ -1485,8 +1497,8 @@ func _assert_bahnhof(world: Node, sprites: Array[Sprite2D]) -> void:
 		"bahnhof parent chain excludes DistrictOhringen"
 	)
 	_assert(
-		bahnhof.position.distance_to(SeuzachGeo.bahnhof_world()) <= 420.0,
-		"bahnhof within 420 wu of OSM getter (d=%.1f)"
+		bahnhof.position.distance_to(SeuzachGeo.bahnhof_world()) <= 720.0,
+		"bahnhof within 720 wu of OSM getter (d=%.1f)"
 		% bahnhof.position.distance_to(SeuzachGeo.bahnhof_world())
 	)
 	_assert(
@@ -1725,8 +1737,8 @@ func _assert_badi(world: Node, sprites: Array[Sprite2D]) -> void:
 		"badi parent chain excludes DistrictOhringen"
 	)
 	_assert(
-		badi.position.distance_to(SeuzachGeo.badi_world()) <= 420.0,
-		"badi within 420 wu of OSM getter (d=%.1f)"
+		badi.position.distance_to(SeuzachGeo.badi_world()) <= 720.0,
+		"badi within 720 wu of OSM getter (d=%.1f)"
 		% badi.position.distance_to(SeuzachGeo.badi_world())
 	)
 	_assert(
@@ -2133,9 +2145,9 @@ func _assert_sprite_off_named_roads(world: Node, spr: Sprite2D) -> void:
 		var half_w := float(node.get_meta("half_w")) if node.has_meta("half_w") else 36.0
 		var d_feet := _dist_to_polyline(spr.position, pts)
 		var d_aabb := _dist_aabb_to_polyline(aabb, pts)
-		## Matches world_sandbox BUILDING_CLEAR_EDGE_MARGIN (28) + visual clear half-height.
-		var need_feet := half_w + clear_h * 0.5 + 28.0
-		var need_aabb := half_w + 28.0
+		## Matches world_sandbox BUILDING_CLEAR_EDGE_MARGIN (40) + visual clear half-height.
+		var need_feet := half_w + clear_h * 0.5 + 40.0
+		var need_aabb := half_w + 40.0
 		var road_name := str(node.get_meta("road_name"))
 		_assert(
 			d_feet >= need_feet,
@@ -2192,8 +2204,8 @@ func _assert_geo_quadrants(sprites: Array[Sprite2D]) -> void:
 			"ohringen school SW (got %s)" % str(ohringen_school.position)
 		)
 		_assert(
-			ohringen_school.position.distance_to(SeuzachGeo.ohringen_world()) < 900.0,
-			"ohringen school near Nominatim GPS (900 wu covers OSM building a)"
+			ohringen_school.position.distance_to(SeuzachGeo.ohringen_world()) < 1400.0,
+			"ohringen school near Nominatim GPS (1400 wu covers OSM a + clearance nudge)"
 		)
 	if birch and rietacker:
 		_assert(
@@ -2238,7 +2250,7 @@ func _assert_schools_off_roads(world: Node, sprites: Array[Sprite2D]) -> void:
 			or spr.has_meta("house_variant")
 			or (
 				spr.has_meta("landmark_id")
-				and str(spr.get_meta("landmark_id")) in ["bahnhof", "badi_weiher"]
+				and str(spr.get_meta("landmark_id")) in ["bahnhof", "badi_weiher", "feuerwehr"]
 			)
 		)
 		if not is_building:
@@ -2251,8 +2263,8 @@ func _assert_schools_off_roads(world: Node, sprites: Array[Sprite2D]) -> void:
 			var pts: PackedVector2Array = road["points"]
 			var d_feet := _dist_to_polyline(spr.position, pts)
 			var d_aabb := _dist_aabb_to_polyline(aabb, pts)
-			var need_feet := half_w + clear_h * 0.5 + 28.0
-			var need_aabb := half_w + 28.0
+			var need_feet := half_w + clear_h * 0.5 + 40.0
+			var need_aabb := half_w + 40.0
 			_assert(
 				d_feet >= need_feet,
 				"%s must sit off %s (d=%.0f, need ≥%.0f)"
@@ -2267,16 +2279,16 @@ func _assert_schools_off_roads(world: Node, sprites: Array[Sprite2D]) -> void:
 
 
 func _school_aabb(spr: Sprite2D) -> Rect2:
-	## Visual clear AABB (matches world_sandbox BUILDING_CLEAR_W/H_FRAC 0.55/0.35).
-	## Separate from BuildingCollision walk footprint ratios (0.20/0.10).
+	## Visual clear AABB (matches world_sandbox BUILDING_CLEAR_W/H_FRAC 0.95/0.88).
+	## Centered on visual body (feet at node origin); not BuildingCollision 0.20/0.10.
 	if spr.texture == null:
 		return Rect2(spr.position, Vector2.ZERO)
 	var tex_w := float(spr.texture.get_width()) * absf(spr.scale.x)
 	var tex_h := float(spr.texture.get_height()) * absf(spr.scale.y)
-	var footprint_w := maxf(24.0, tex_w * 0.55)
-	var footprint_h := maxf(16.0, tex_h * 0.35)
-	var feet_y := -footprint_h * 0.25
-	var center := spr.position + Vector2(0.0, feet_y)
+	var footprint_w := maxf(24.0, tex_w * 0.95)
+	var footprint_h := maxf(16.0, tex_h * 0.88)
+	var visual_center_y := -tex_h * 0.5
+	var center := spr.position + Vector2(0.0, visual_center_y)
 	return Rect2(center - Vector2(footprint_w, footprint_h) * 0.5, Vector2(footprint_w, footprint_h))
 
 

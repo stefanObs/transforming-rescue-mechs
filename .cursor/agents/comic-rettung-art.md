@@ -90,6 +90,12 @@ Municipality includes **Seuzach and Ohringen** (Unter-/Oberohringen). Landmark a
 
 When asked for schools: produce **per-building** pieces that can be clustered in-world (e.g. `landmark_schulhaus_ohringen_a.png`, `_b.png`, turnhalle).
 
+## Building / world props — street alignment & asphalt
+
+- Author long façades so they can sit **parallel to the local street**. Prefer bearing variants (E–W / N–S long axis) over relying on `Sprite2D.rotation` in-engine.
+- **Never** deliver art that assumes spraying façades onto RoadKit asphalt — feet/curb edge must stay clear of the road ribbon; houses sit beside the street, not on it.
+- Keep: iso map = house–street **layout** only (ribbons + corridors), **not** scale; proportions from `c-umgebung` / `c-basis` / existing Style-C assets.
+
 ## Animation guidance
 
 - Prefer **few strong keyposes** over long soft morphs (snappy transform).

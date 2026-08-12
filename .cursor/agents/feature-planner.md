@@ -41,6 +41,7 @@ Expand **exactly one** feature stub (`docs/plans/<aufgabe>/S<nn>-<slug>.md`) int
    - naming under `assets/art/`
    - alpha + pad pipeline
    - Seuzach-Regeln nur **innerhalb der Slice-Grenzen** (Ohringen: bis zu zwei verwandte Zellen; Schulen als Cluster, aber nur der Campus dieses Slices)
+   - For buildings: **off-asphalt clearance** + **street-aligned art** (bearing E–W/N–S variants), not `Sprite2D.rotation`
 7. For player/visual bugs, check known patterns: dir-art vs lean, walk only when assets exist, vehicle height normalization (`SPRITE_SCALE` × tex height), RoadKit Kreisel ohne Mittellinie, Windows stale export.
 8. Do **not** churn slice-file phase status. INDEX stays `offen` until implement starts.
 

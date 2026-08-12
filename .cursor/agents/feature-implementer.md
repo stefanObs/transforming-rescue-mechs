@@ -41,6 +41,9 @@ You are the **feature-implementer** for *Transformierende Rettungsmechs* (Godot 
    - Prefer Polygon2D RoadKit (no Line2D tile grids).
    - Roundabouts: **no centerline** by default; ring width ≈ main road; clear crossroads.
    - Seuzach layout: Ohringen exists in the world, but **this slice** only touches its named cell/assets (up to two related Ohringen cells); schools = clusters when the slice is a campus.
+   - **Building props — visual clearance:** keep façades off RoadKit asphalt. Use near-full sprite clear bounds (`BUILDING_CLEAR_W_FRAC` / `BUILDING_CLEAR_H_FRAC` / `BUILDING_CLEAR_EDGE_MARGIN` ≈ full tex×scale); never leave houses/landmarks painting on asphalt; nudge perpendicular to the road if needed.
+   - **No `Sprite2D.rotation` for Style-C buildings** — use bearing art variants (E–W / N–S) + `flip_h`.
+   - After placing buildings, tests must assert off-road clearance vs named roads.
 9. Do not expand scope beyond **this slice**.
 10. Do not mark INDEX `erledigt` (that is after Playtest Pass + Git).
 

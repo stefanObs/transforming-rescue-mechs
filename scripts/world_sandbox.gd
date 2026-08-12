@@ -16,9 +16,10 @@ const SCHOOL_SCALE := Vector2(0.50, 0.50)
 ## Residential props along Winterthurer spawn corridor (not SCHOOL/LANDMARK scale).
 const HOUSE_SCALE := Vector2(0.38, 0.38)
 ## Visual off-road clearance (sprite paint vs RoadKit asphalt). Separate from BuildingCollision 0.20/0.10.
-const BUILDING_CLEAR_W_FRAC := 0.55
-const BUILDING_CLEAR_H_FRAC := 0.35
-const BUILDING_CLEAR_EDGE_MARGIN := 28.0
+## Near-full sprite AABB so façades cannot paint onto asphalt.
+const BUILDING_CLEAR_W_FRAC := 0.95
+const BUILDING_CLEAR_H_FRAC := 0.88
+const BUILDING_CLEAR_EDGE_MARGIN := 40.0
 ## S02: Birch/Rietacker per-building multipliers on SCHOOL_SCALE (OSM footprint ratios).
 const BIRCH_A_SCALE_MULT := 1.20
 const BIRCH_B_SCALE_MULT := 1.20
@@ -785,10 +786,10 @@ func _place_housing_along_roads(
 					continue
 				var tex: Texture2D = load(path)
 				var clear_sz := _building_clear_size(tex, HOUSE_SCALE)
-				var clear_half_w := clear_sz.x * 0.5
-				## Off-road: visual clear half-width + edge margin; stable curb setback.
+				## Off-road: near-full clear extent + edge margin; stable curb setback.
+				var clear_extent := maxf(clear_sz.x, clear_sz.y) * 0.5
 				var slack := 24.0
-				var need := half_w + clear_half_w + BUILDING_CLEAR_EDGE_MARGIN + slack
+				var need := half_w + clear_extent + BUILDING_CLEAR_EDGE_MARGIN + slack
 				var pos := point + perp * side * need
 				if pos.distance_to(spawn) < min_spawn_sep:
 					variant_i += 1
@@ -809,11 +810,46 @@ func _place_housing_along_roads(
 					variant_i += 1
 					continue
 				if not _sprite_clears_named_roads(pos, tex, HOUSE_SCALE, roads):
+					pos = _nudge_off_named_roads(pos, tex, HOUSE_SCALE, roads, 700.0)
+					if not _sprite_clears_named_roads(pos, tex, HOUSE_SCALE, roads):
+						variant_i += 1
+						continue
+				## After nudge: sep/landmark/spawn must still hold at the final position.
+				if pos.distance_to(spawn) < min_spawn_sep:
 					variant_i += 1
 					continue
+				too_close = false
+				for other in placed:
+					if pos.distance_to(other) < min_house_sep:
+						too_close = true
+						break
+				if too_close:
+					variant_i += 1
+					continue
+				for lp in landmark_positions:
+					if pos.distance_to(lp) < min_landmark_sep:
+						too_close = true
+						break
+				if too_close:
+					variant_i += 1
+					continue
+				## Street-facing from nudged pos vs nearest point on this corridor road.
+				var closest := _closest_point_on_polyline(pos, pts)
+				var away := pos - closest
+				if away.length_squared() < 0.0001:
+					variant_i += 1
+					continue
+				var local_perp := _nearest_road_segment_perp(
+					pos, [{"name": str(road.get("name", "")), "half_w": half_w, "points": pts}]
+				)
+				if local_perp.length_squared() < 0.0001:
+					local_perp = perp
+				else:
+					local_perp = local_perp.normalized()
+				side = 1.0 if away.dot(local_perp) >= 0.0 else -1.0
 				variant_i += 1
 				## Door authored bottom-left (screen SW). Pick flip_h so door faces asphalt.
-				var toward_road := (-perp * side).normalized()
+				var toward_road := (-local_perp * side).normalized()
 				var door_no_flip := Vector2(-1.0, 1.0).normalized()
 				var door_flip := Vector2(1.0, 1.0).normalized()
 				var flip := door_flip.dot(toward_road) > door_no_flip.dot(toward_road)
@@ -897,9 +933,13 @@ func _building_clear_size(tex: Texture2D, spr_scale: Vector2) -> Vector2:
 
 
 func _building_clear_aabb(pos: Vector2, tex: Texture2D, spr_scale: Vector2) -> Rect2:
+	## Near-full clear box centered on the visual sprite body (feet at node origin).
 	var clear := _building_clear_size(tex, spr_scale)
-	var feet_y := -clear.y * 0.25
-	return Rect2(pos + Vector2(0.0, feet_y) - clear * 0.5, clear)
+	var tex_h := 0.0
+	if tex != null:
+		tex_h = float(tex.get_height()) * absf(spr_scale.y)
+	var visual_center_y := -tex_h * 0.5
+	return Rect2(pos + Vector2(0.0, visual_center_y) - clear * 0.5, clear)
 
 
 func _sprite_clears_named_roads(
@@ -949,24 +989,102 @@ func _nudge_off_named_roads(
 	tex: Texture2D,
 	spr_scale: Vector2,
 	roads: Array[Dictionary],
-	max_nudge: float = 400.0
+	max_nudge: float = 700.0
 ) -> Vector2:
+	## Push perpendicular (and along axes) until near-full visual AABB clears asphalt.
 	if roads.is_empty() or _sprite_clears_named_roads(pos, tex, spr_scale, roads):
 		return pos
 	var perp := _nearest_road_segment_perp(pos, roads)
 	if perp.length_squared() < 0.0001:
-		return pos
-	perp = perp.normalized()
+		perp = Vector2.RIGHT
+	else:
+		perp = perp.normalized()
+	var dirs: Array[Vector2] = [
+		perp,
+		-perp,
+		Vector2.RIGHT,
+		Vector2.LEFT,
+		Vector2.UP,
+		Vector2.DOWN,
+		Vector2(1, 1).normalized(),
+		Vector2(1, -1).normalized(),
+		Vector2(-1, 1).normalized(),
+		Vector2(-1, -1).normalized(),
+	]
 	var step := 8.0
-	for dir_sign in [1.0, -1.0]:
+	for dir in dirs:
 		var candidate := pos
 		var traveled := 0.0
 		while traveled < max_nudge:
-			candidate += perp * dir_sign * step
+			candidate += dir * step
 			traveled += step
 			if _sprite_clears_named_roads(candidate, tex, spr_scale, roads):
 				return candidate
+	## Iterative push away from the most-violating road (tight street grids).
+	var candidate := pos
+	var traveled := 0.0
+	while traveled < max_nudge:
+		if _sprite_clears_named_roads(candidate, tex, spr_scale, roads):
+			return candidate
+		var push := _clearance_push_away(candidate, tex, spr_scale, roads)
+		if push.length_squared() < 0.0001:
+			break
+		candidate += push.normalized() * step
+		traveled += step
+	if _sprite_clears_named_roads(candidate, tex, spr_scale, roads):
+		return candidate
 	return pos
+
+
+func _clearance_push_away(
+	pos: Vector2, tex: Texture2D, spr_scale: Vector2, roads: Array[Dictionary]
+) -> Vector2:
+	## Unit vector away from the worst-violating named road (feet or AABB).
+	var clear := _building_clear_size(tex, spr_scale)
+	var aabb := _building_clear_aabb(pos, tex, spr_scale)
+	var worst_deficit := 0.0
+	var push := Vector2.ZERO
+	for road in roads:
+		var pts: PackedVector2Array = road["points"]
+		var half_w: float = float(road["half_w"])
+		var d_feet := _dist_point_to_polyline(pos, pts)
+		var d_aabb := _dist_aabb_to_polyline(aabb, pts)
+		var need_feet := half_w + clear.y * 0.5 + BUILDING_CLEAR_EDGE_MARGIN
+		var need_aabb := half_w + BUILDING_CLEAR_EDGE_MARGIN
+		var deficit := maxf(need_feet - d_feet, need_aabb - d_aabb)
+		if deficit <= 0.0:
+			continue
+		var closest := _closest_point_on_polyline(pos, pts)
+		var away := pos - closest
+		if away.length_squared() < 0.0001:
+			away = _nearest_road_segment_perp(pos, [road])
+		if away.length_squared() < 0.0001:
+			continue
+		if deficit > worst_deficit:
+			worst_deficit = deficit
+			push = away.normalized()
+	return push
+
+
+func _closest_point_on_polyline(p: Vector2, pts: PackedVector2Array) -> Vector2:
+	if pts.is_empty():
+		return p
+	var best_pt := pts[0]
+	var best_d := p.distance_to(pts[0])
+	for i in range(pts.size() - 1):
+		var a: Vector2 = pts[i]
+		var b: Vector2 = pts[i + 1]
+		var ab := b - a
+		var len_sq := ab.length_squared()
+		var closest: Vector2 = a
+		if len_sq >= 0.0001:
+			var t := clampf((p - a).dot(ab) / len_sq, 0.0, 1.0)
+			closest = a + ab * t
+		var d := p.distance_to(closest)
+		if d < best_d:
+			best_d = d
+			best_pt = closest
+	return best_pt
 
 
 func _dist_point_to_polyline(p: Vector2, pts: PackedVector2Array) -> float:
@@ -1048,7 +1166,10 @@ func _add_building_prop(
 		return null
 	var tex: Texture2D = load(path)
 	var roads := _named_road_polylines()
-	var cleared := _nudge_off_named_roads(pos, tex, scale, roads)
+	var cleared := _nudge_off_named_roads(pos, tex, scale, roads, 700.0)
+	if not _sprite_clears_named_roads(cleared, tex, scale, roads):
+		## Never place a building that still paints on RoadKit asphalt.
+		return null
 	return _add_prop(file_name, cleared, scale, metas, node_name, flip_h)
 
 

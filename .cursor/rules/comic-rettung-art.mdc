@@ -20,5 +20,6 @@ Wenn der User Grafiken, Sprites, Tiles, UI-Art, Moodboards, Transformationen, Wa
 6. Playtest (`godot-playtester`) prüft Transparenz / weiße oder schwarze AI-Platten
 7. Facing-Dir-Art muss dem statischen generierten Look entsprechen (kein Lean/Turn darüber im Spiel)
 8. Ausreichend **verschiedene** Häuser über die Slices hinweg; Schulen als **Gebäudecluster** (ein Campus pro Slice); Feuerwehr/Badi/Bahnhof an Seuzach; **Ohringen gehört zu Seuzach** (eigene Rasterzellen)
+9. Gebäude-Art parallel zur lokalen Strasse (E–W/N–S Varianten); nie Asphalt übermalen
 
 Nach abgeschlossener Art-Lieferung **dieses Slices**: committen, pushen, versionieren (siehe `git-release`-Regel).
