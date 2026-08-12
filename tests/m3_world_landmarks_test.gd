@@ -84,6 +84,8 @@ func _run() -> void:
 		var path: String = ART + str(file_name)
 		_assert(ResourceLoader.exists(path), "geo art exists %s" % file_name)
 
+	_assert_ns_house_art_not_rotate_of_ew()
+
 	var packed: Variant = load("res://scenes/world_sandbox.tscn")
 	_assert(packed is PackedScene, "world_sandbox.tscn loads")
 	if not (packed is PackedScene):
@@ -253,6 +255,22 @@ func _assert_landmark_scales(world: Node, sprites: Array[Sprite2D]) -> void:
 	_assert(
 		is_equal_approx(float(consts.get("BUILDING_CLEAR_EDGE_MARGIN", 0.0)), 40.0),
 		"BUILDING_CLEAR_EDGE_MARGIN == 40 (got %s)" % str(consts.get("BUILDING_CLEAR_EDGE_MARGIN"))
+	)
+	_assert(
+		is_equal_approx(float(consts.get("HOUSE_CLEAR_W_FRAC", 0.0)), 0.70),
+		"HOUSE_CLEAR_W_FRAC == 0.70 (got %s)" % str(consts.get("HOUSE_CLEAR_W_FRAC"))
+	)
+	_assert(
+		is_equal_approx(float(consts.get("HOUSE_CLEAR_H_FRAC", 0.0)), 0.55),
+		"HOUSE_CLEAR_H_FRAC == 0.55 (got %s)" % str(consts.get("HOUSE_CLEAR_H_FRAC"))
+	)
+	_assert(
+		is_equal_approx(float(consts.get("HOUSE_CLEAR_EDGE_MARGIN", 0.0)), 12.0),
+		"HOUSE_CLEAR_EDGE_MARGIN == 12 (got %s)" % str(consts.get("HOUSE_CLEAR_EDGE_MARGIN"))
+	)
+	_assert(
+		is_equal_approx(float(consts.get("HOUSE_CURB_SLACK", 0.0)), 6.0),
+		"HOUSE_CURB_SLACK == 6 (got %s)" % str(consts.get("HOUSE_CURB_SLACK"))
 	)
 	var school_scale: Vector2 = consts.get("SCHOOL_SCALE")
 	var landmark_scale: Vector2 = consts.get("LANDMARK_SCALE")
@@ -2315,7 +2333,8 @@ func _assert_sprite_off_named_roads(world: Node, spr: Sprite2D) -> void:
 	if ground == null:
 		return
 	var aabb := _school_aabb(spr)
-	var clear_h := aabb.size.y
+	var edge := _clear_edge_margin_for(spr)
+	var street_half := _street_half_for(spr, aabb)
 	for node in _collect_nodes(ground):
 		if not node.has_meta("road_name") or not node.has_meta("road_points"):
 			continue
@@ -2325,9 +2344,9 @@ func _assert_sprite_off_named_roads(world: Node, spr: Sprite2D) -> void:
 		var half_w := float(node.get_meta("half_w")) if node.has_meta("half_w") else 36.0
 		var d_feet := _dist_to_polyline(spr.position, pts)
 		var d_aabb := _dist_aabb_to_polyline(aabb, pts)
-		## Matches world_sandbox BUILDING_CLEAR_EDGE_MARGIN (40) + visual clear half-height.
-		var need_feet := half_w + clear_h * 0.5 + 40.0
-		var need_aabb := half_w + 40.0
+		## Matches world_sandbox: houses use street-facing half; landmarks clear.y.
+		var need_feet := half_w + street_half + edge
+		var need_aabb := half_w + edge
 		var road_name := str(node.get_meta("road_name"))
 		_assert(
 			d_feet >= need_feet,
@@ -2437,14 +2456,15 @@ func _assert_schools_off_roads(world: Node, sprites: Array[Sprite2D]) -> void:
 			continue
 		checked += 1
 		var aabb := _school_aabb(spr)
-		var clear_h := aabb.size.y
+		var edge := _clear_edge_margin_for(spr)
+		var street_half := _street_half_for(spr, aabb)
 		for road in roads:
 			var half_w := float(road["half_w"])
 			var pts: PackedVector2Array = road["points"]
 			var d_feet := _dist_to_polyline(spr.position, pts)
 			var d_aabb := _dist_aabb_to_polyline(aabb, pts)
-			var need_feet := half_w + clear_h * 0.5 + 40.0
-			var need_aabb := half_w + 40.0
+			var need_feet := half_w + street_half + edge
+			var need_aabb := half_w + edge
 			_assert(
 				d_feet >= need_feet,
 				"%s must sit off %s (d=%.0f, need ≥%.0f)"
@@ -2458,15 +2478,83 @@ func _assert_schools_off_roads(world: Node, sprites: Array[Sprite2D]) -> void:
 	_assert(checked >= 10, "visual clear checked for buildings (got %d)" % checked)
 
 
+func _clear_edge_margin_for(spr: Sprite2D) -> float:
+	## Houses use HOUSE_CLEAR_EDGE_MARGIN (12); landmarks/schools keep BUILDING (40).
+	if spr.has_meta("house_variant"):
+		return 12.0
+	return 40.0
+
+
+func _street_half_for(spr: Sprite2D, aabb: Rect2) -> float:
+	## Houses: ns → clear.x/2, ew → clear.y/2. Landmarks always clear.y/2.
+	if spr.has_meta("house_variant"):
+		var bearing := ""
+		if spr.has_meta("street_bearing"):
+			bearing = str(spr.get_meta("street_bearing"))
+		elif str(spr.get_meta("house_variant")).ends_with("_ns"):
+			bearing = "ns"
+		else:
+			bearing = "ew"
+		return (aabb.size.x if bearing == "ns" else aabb.size.y) * 0.5
+	return aabb.size.y * 0.5
+
+
+func _assert_ns_house_art_not_rotate_of_ew() -> void:
+	## Guard: NS must be upright-authored, not PIL ROTATE_270 of EW (= Godot rotate_90 CLOCKWISE).
+	var bases: Array[String] = [
+		"house_street_a",
+		"house_street_b",
+		"house_street_flachdach",
+		"house_street_reihen",
+	]
+	for base in bases:
+		var ew_path := ART + base + "_ew.png"
+		var ns_path := ART + base + "_ns.png"
+		_assert(ResourceLoader.exists(ew_path), "ew art exists %s" % ew_path)
+		_assert(ResourceLoader.exists(ns_path), "ns art exists %s" % ns_path)
+		var ew_tex: Texture2D = load(ew_path)
+		var ns_tex: Texture2D = load(ns_path)
+		_assert(ew_tex != null and ns_tex != null, "ew/ns textures load for %s" % base)
+		if ew_tex == null or ns_tex == null:
+			continue
+		var ew_img: Image = ew_tex.get_image()
+		var ns_img: Image = ns_tex.get_image()
+		_assert(ew_img != null and ns_img != null, "ew/ns images for %s" % base)
+		if ew_img == null or ns_img == null:
+			continue
+		var rotated := ew_img.duplicate()
+		rotated.rotate_90(CLOCKWISE)
+		var same_size: bool = (
+			rotated.get_width() == ns_img.get_width()
+			and rotated.get_height() == ns_img.get_height()
+		)
+		if not same_size:
+			continue
+		## Cheap sample grid: identical ROTATE_270 would match every sample.
+		var identical: bool = true
+		var step_x: int = maxi(1, rotated.get_width() / 8)
+		var step_y: int = maxi(1, rotated.get_height() / 8)
+		for y in range(0, rotated.get_height(), step_y):
+			for x in range(0, rotated.get_width(), step_x):
+				if rotated.get_pixel(x, y) != ns_img.get_pixel(x, y):
+					identical = false
+					break
+			if not identical:
+				break
+		_assert(not identical, "%s_ns must not be ROTATE_270 of _ew" % base)
+
+
 func _school_aabb(spr: Sprite2D) -> Rect2:
-	## Visual clear AABB (matches world_sandbox BUILDING_CLEAR_W/H_FRAC 0.95/0.88).
+	## Visual clear AABB — houses: HOUSE_CLEAR 0.70/0.55; landmarks: BUILDING 0.95/0.88.
 	## Centered on visual body (feet at node origin); not BuildingCollision 0.20/0.10.
 	if spr.texture == null:
 		return Rect2(spr.position, Vector2.ZERO)
 	var tex_w := float(spr.texture.get_width()) * absf(spr.scale.x)
 	var tex_h := float(spr.texture.get_height()) * absf(spr.scale.y)
-	var footprint_w := maxf(24.0, tex_w * 0.95)
-	var footprint_h := maxf(16.0, tex_h * 0.88)
+	var w_frac := 0.70 if spr.has_meta("house_variant") else 0.95
+	var h_frac := 0.55 if spr.has_meta("house_variant") else 0.88
+	var footprint_w := maxf(24.0, tex_w * w_frac)
+	var footprint_h := maxf(16.0, tex_h * h_frac)
 	var visual_center_y := -tex_h * 0.5
 	var center := spr.position + Vector2(0.0, visual_center_y)
 	return Rect2(center - Vector2(footprint_w, footprint_h) * 0.5, Vector2(footprint_w, footprint_h))
