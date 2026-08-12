@@ -102,6 +102,7 @@ func _run() -> void:
 	_assert_landmark_scales(world, all_sprites)
 	_assert_spawn_housing(world, all_sprites)
 	_assert_corridor_housing(world, all_sprites)
+	_assert_street_facing_housing(world, all_sprites)
 
 	for cluster in ["rietacker", "ohringen"]:
 		var n := _count_school_cluster(all_sprites, cluster)
@@ -457,6 +458,123 @@ func _assert_corridor_housing(world: Node, sprites: Array[Sprite2D]) -> void:
 		kirche_n + schn_n + spawn_n >= 20,
 		"≥20 total tagged housing props (got %d)" % (kirche_n + schn_n + spawn_n)
 	)
+
+
+func _assert_street_facing_housing(world: Node, sprites: Array[Sprite2D]) -> void:
+	## S01 houses-street-aligned: side-aware flip_h + street_side meta (no decorative %3 flip).
+	var ground: Node = world.get_node_or_null("%Ground")
+	_assert(ground != null, "Ground for street-facing housing")
+	if ground == null:
+		return
+	var roads: Array[Dictionary] = []
+	for node in _collect_nodes(ground):
+		if not node.has_meta("road_name") or not node.has_meta("road_points"):
+			continue
+		var rname := str(node.get_meta("road_name"))
+		if rname != "Winterthurerstrasse":
+			continue
+		var pts: PackedVector2Array = PackedVector2Array(node.get_meta("road_points"))
+		if pts.size() >= 2:
+			roads.append({"name": rname, "points": pts})
+	_assert(roads.size() >= 1, "Winterthurerstrasse polyline for spawn housing facing")
+
+	var side_pos_n := 0
+	var side_neg_n := 0
+	var flip_true_on_pos := 0
+	var flip_false_on_pos := 0
+	var flip_true_on_neg := 0
+	var flip_false_on_neg := 0
+	var tagged := 0
+	for spr in sprites:
+		if not spr.has_meta("house_variant"):
+			continue
+		if not spr.has_meta("housing_corridor"):
+			continue
+		if str(spr.get_meta("housing_corridor")) != "spawn":
+			continue
+		_assert(spr.has_meta("street_side"), "%s has street_side meta" % spr.name)
+		_assert(spr.has_meta("faces_street"), "%s has faces_street meta" % spr.name)
+		_assert(bool(spr.get_meta("faces_street")), "%s faces_street == true" % spr.name)
+		_assert(is_zero_approx(spr.rotation), "%s rotation stays 0 (no iso break)" % spr.name)
+		var side := int(spr.get_meta("street_side"))
+		_assert(side == 1 or side == -1, "%s street_side is ±1 (got %d)" % [spr.name, side])
+		tagged += 1
+		if side == 1:
+			side_pos_n += 1
+			if spr.flip_h:
+				flip_true_on_pos += 1
+			else:
+				flip_false_on_pos += 1
+		else:
+			side_neg_n += 1
+			if spr.flip_h:
+				flip_true_on_neg += 1
+			else:
+				flip_false_on_neg += 1
+		var nearest := _nearest_road_sample(spr.position, roads)
+		_assert(nearest.has("tangent"), "%s finds nearest Winterthurer sample" % spr.name)
+		if not nearest.has("tangent"):
+			continue
+		var tangent: Vector2 = nearest["tangent"]
+		var perp := Vector2(-tangent.y, tangent.x)
+		if perp.length_squared() < 0.0001:
+			continue
+		perp = perp.normalized()
+		var toward_road := (-perp * float(side)).normalized()
+		var door_no_flip := Vector2(-1.0, 1.0).normalized()
+		var door_flip := Vector2(1.0, 1.0).normalized()
+		var expect_flip := door_flip.dot(toward_road) > door_no_flip.dot(toward_road)
+		_assert(
+			spr.flip_h == expect_flip,
+			"%s flip_h matches side-aware rule (got %s expect %s side=%d)"
+			% [spr.name, str(spr.flip_h), str(expect_flip), side]
+		)
+	_assert(tagged >= 3, "≥3 spawn-corridor houses with street_side (got %d)" % tagged)
+	_assert(side_pos_n >= 1, "spawn corridor has street_side +1 (got %d)" % side_pos_n)
+	_assert(side_neg_n >= 1, "spawn corridor has street_side -1 (got %d)" % side_neg_n)
+	## Per side: majority flip_h is consistent (not decorative random mix).
+	if side_pos_n > 2:
+		_assert(
+			maxi(flip_true_on_pos, flip_false_on_pos) * 2 > side_pos_n,
+			"spawn +1 side: clear majority flip_h (true=%d false=%d)"
+			% [flip_true_on_pos, flip_false_on_pos]
+		)
+	if side_neg_n > 2:
+		_assert(
+			maxi(flip_true_on_neg, flip_false_on_neg) * 2 > side_neg_n,
+			"spawn -1 side: clear majority flip_h (true=%d false=%d)"
+			% [flip_true_on_neg, flip_false_on_neg]
+		)
+	for spr in sprites:
+		if not spr.has_meta("street_side"):
+			continue
+		_assert(
+			spr.has_meta("faces_street") and bool(spr.get_meta("faces_street")),
+			"%s faces_street true" % spr.name
+		)
+		_assert(spr.has_meta("housing_corridor"), "%s keeps housing_corridor" % spr.name)
+		_assert(spr.has_meta("house_variant"), "%s keeps house_variant" % spr.name)
+
+
+func _nearest_road_sample(p: Vector2, roads: Array[Dictionary]) -> Dictionary:
+	var best_d := 1.0e9
+	var best := {}
+	for road in roads:
+		var pts: PackedVector2Array = road["points"]
+		for i in range(pts.size() - 1):
+			var a: Vector2 = pts[i]
+			var b: Vector2 = pts[i + 1]
+			var seg := b - a
+			var seg_len_sq := seg.length_squared()
+			if seg_len_sq < 0.0001:
+				continue
+			var t := clampf((p - a).dot(seg) / seg_len_sq, 0.0, 1.0)
+			var closest := a + seg * t
+			var d := p.distance_to(closest)
+			if d < best_d:
+				best_d = d
+				best = {"point": closest, "tangent": seg.normalized(), "dist": d}
+	return best
 
 
 func _spawn_viewport_rect(center: Vector2, zoom: Vector2) -> Rect2:

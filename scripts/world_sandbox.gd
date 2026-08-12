@@ -788,8 +788,8 @@ func _place_housing_along_roads(
 					footprint_half = maxf(
 						24.0, float(tex.get_width()) * HOUSE_SCALE.x * 0.20
 					) * 0.5
-				## Off-road: clear asphalt + collision pad (mirrors test need_feet / need_aabb).
-				var slack := 16.0 + float((house_i + side_i) % 3) * 8.0
+				## Off-road: clear asphalt + collision pad; stable curb setback (CH village band).
+				var slack := 24.0
 				var need := half_w + maxf(64.0, 14.0 + footprint_half) + slack
 				var pos := point + perp * side * need
 				if pos.distance_to(spawn) < min_spawn_sep:
@@ -814,7 +814,11 @@ func _place_housing_along_roads(
 					variant_i += 1
 					continue
 				variant_i += 1
-				var flip := (house_i % 3) == 1
+				## Door authored bottom-left (screen SW). Pick flip_h so door faces asphalt.
+				var toward_road := (-perp * side).normalized()
+				var door_no_flip := Vector2(-1.0, 1.0).normalized()
+				var door_flip := Vector2(1.0, 1.0).normalized()
+				var flip := door_flip.dot(toward_road) > door_no_flip.dot(toward_road)
 				var node_name := "house_%s_%s_%d" % [
 					corridor_id, variant.trim_prefix("house_"), house_i
 				]
@@ -822,6 +826,8 @@ func _place_housing_along_roads(
 					"house_variant": variant,
 					"district": "seuzach",
 					"housing_corridor": corridor_id,
+					"street_side": int(side),
+					"faces_street": true,
 				}
 				var spr := _add_prop(
 					file_name,
