@@ -13,6 +13,8 @@ const LANDMARK_SCALE := Vector2(0.55, 0.55)
 const FOREST_SCALE := Vector2(0.24, 0.24)
 const HUB_SCALE := Vector2(0.28, 0.28)
 const SCHOOL_SCALE := Vector2(0.50, 0.50)
+## Residential props along Winterthurer spawn corridor (not SCHOOL/LANDMARK scale).
+const HOUSE_SCALE := Vector2(0.38, 0.38)
 ## S02: Birch/Rietacker per-building multipliers on SCHOOL_SCALE (OSM footprint ratios).
 const BIRCH_A_SCALE_MULT := 1.20
 const BIRCH_B_SCALE_MULT := 1.20
@@ -656,8 +658,8 @@ func _add_road_marker(
 
 
 func _place_landmarks() -> void:
-	## Street map + school clusters + kindergartens + Bahnhof + Badi + forest silhouettes.
-	## No houses/hub facade.
+	## Street map + school clusters + kindergartens + Bahnhof + Badi + spawn housing + forest silhouettes.
+	## No hub facade.
 	for child in _props.get_children():
 		child.free()
 	_prop_parent = _props
@@ -666,7 +668,243 @@ func _place_landmarks() -> void:
 	_place_kindergartens()
 	_place_bahnhof()
 	_place_badi()
+	_place_spawn_housing()
 	_place_forest_silhouettes()
+
+
+func _place_spawn_housing() -> void:
+	## Winterthurerstrasse both sides near default spawn — Style-C house_*.png at HOUSE_SCALE.
+	_prop_parent = _props
+	var spawn := SeuzachGeo.winterthurer_spawn()
+	var variants: Array[String] = [
+		"house_a",
+		"house_b",
+		"house_c",
+		"house_d",
+		"house_flachdach",
+		"house_mfh",
+		"house_reihen",
+	]
+	var spacing := 250.0
+	var spawn_radius := 900.0
+	var min_house_sep := 200.0
+	var min_spawn_sep := 160.0
+	var min_landmark_sep := 320.0
+	var roads := _named_road_polylines()
+	var winter: Array[Dictionary] = []
+	for road in roads:
+		if str(road.get("name", "")) == "Winterthurerstrasse":
+			winter.append(road)
+	if winter.is_empty():
+		return
+	var landmark_positions: Array[Vector2] = []
+	for child in _collect_prop_sprites(_props):
+		if child.has_meta("landmark_id"):
+			landmark_positions.append(child.position)
+	var placed: Array[Vector2] = []
+	var variant_i := 0
+	var house_i := 0
+	for road in winter:
+		var pts: PackedVector2Array = road["points"]
+		var half_w: float = float(road["half_w"])
+		if pts.size() < 2:
+			continue
+		var samples := _sample_polyline(pts, spacing)
+		for sample in samples:
+			var point: Vector2 = sample["point"]
+			var tangent: Vector2 = sample["tangent"]
+			if point.distance_to(spawn) > spawn_radius:
+				continue
+			var perp := Vector2(-tangent.y, tangent.x)
+			if perp.length_squared() < 0.0001:
+				continue
+			perp = perp.normalized()
+			for side_i in range(2):
+				var side := 1.0 if side_i == 0 else -1.0
+				var variant: String = variants[variant_i % variants.size()]
+				var file_name := "%s.png" % variant
+				var path := ART + file_name
+				if not ResourceLoader.exists(path):
+					variant_i += 1
+					continue
+				var tex: Texture2D = load(path)
+				var footprint_half := 40.0
+				if tex != null:
+					footprint_half = maxf(
+						24.0, float(tex.get_width()) * HOUSE_SCALE.x * 0.20
+					) * 0.5
+				## Off-road: clear asphalt + collision pad (mirrors test need_feet / need_aabb).
+				var slack := 16.0 + float((house_i + side_i) % 3) * 8.0
+				var need := half_w + maxf(64.0, 14.0 + footprint_half) + slack
+				var pos := point + perp * side * need
+				if pos.distance_to(spawn) < min_spawn_sep:
+					variant_i += 1
+					continue
+				var too_close := false
+				for other in placed:
+					if pos.distance_to(other) < min_house_sep:
+						too_close = true
+						break
+				if too_close:
+					variant_i += 1
+					continue
+				for lp in landmark_positions:
+					if pos.distance_to(lp) < min_landmark_sep:
+						too_close = true
+						break
+				if too_close:
+					variant_i += 1
+					continue
+				if not _house_clears_named_roads(pos, tex, roads):
+					variant_i += 1
+					continue
+				variant_i += 1
+				var flip := (house_i % 3) == 1
+				var node_name := "house_%s_%d" % [variant.trim_prefix("house_"), house_i]
+				var spr := _add_prop(
+					file_name,
+					pos,
+					HOUSE_SCALE,
+					{"house_variant": variant, "district": "seuzach"},
+					node_name,
+					flip
+				)
+				if spr == null:
+					continue
+				placed.append(pos)
+				house_i += 1
+
+
+func _named_road_polylines() -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	if _ground == null:
+		return out
+	for node in _ground.get_children():
+		_collect_named_road_markers(node, out)
+	return out
+
+
+func _collect_named_road_markers(node: Node, out: Array[Dictionary]) -> void:
+	if node.has_meta("road_name") and node.has_meta("road_points"):
+		var pts: PackedVector2Array = PackedVector2Array(node.get_meta("road_points"))
+		if pts.size() >= 2:
+			out.append({
+				"name": str(node.get_meta("road_name")),
+				"half_w": float(node.get_meta("half_w")) if node.has_meta("half_w") else ROAD_HW_LOCAL,
+				"points": pts,
+			})
+	for child in node.get_children():
+		_collect_named_road_markers(child, out)
+
+
+func _sample_polyline(pts: PackedVector2Array, spacing: float) -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	if pts.size() < 2 or spacing <= 0.0:
+		return out
+	var remain := 0.0
+	for i in range(pts.size() - 1):
+		var a: Vector2 = pts[i]
+		var b: Vector2 = pts[i + 1]
+		var seg := a.distance_to(b)
+		if seg < 1.0:
+			continue
+		var tangent := (b - a) / seg
+		var t := remain
+		while t <= seg:
+			out.append({"point": a + tangent * t, "tangent": tangent})
+			t += spacing
+		remain = t - seg
+	return out
+
+
+func _house_clears_named_roads(pos: Vector2, tex: Texture2D, roads: Array[Dictionary]) -> bool:
+	var footprint_w := 40.0
+	var footprint_h := 20.0
+	if tex != null:
+		var tex_w := float(tex.get_width()) * HOUSE_SCALE.x
+		var tex_h := float(tex.get_height()) * HOUSE_SCALE.y
+		footprint_w = maxf(24.0, tex_w * 0.20)
+		footprint_h = maxf(16.0, tex_h * 0.10)
+	var feet_y := -footprint_h * 0.25
+	var aabb := Rect2(
+		pos + Vector2(0.0, feet_y) - Vector2(footprint_w, footprint_h) * 0.5,
+		Vector2(footprint_w, footprint_h)
+	)
+	for road in roads:
+		var pts: PackedVector2Array = road["points"]
+		var half_w: float = float(road["half_w"])
+		var d_feet := _dist_point_to_polyline(pos, pts)
+		var d_aabb := _dist_aabb_to_polyline(aabb, pts)
+		if d_feet < half_w + 64.0:
+			return false
+		if d_aabb < half_w + 14.0:
+			return false
+	return true
+
+
+func _dist_point_to_polyline(p: Vector2, pts: PackedVector2Array) -> float:
+	if pts.is_empty():
+		return 1.0e9
+	var best := p.distance_to(pts[0])
+	for i in range(pts.size() - 1):
+		best = minf(best, _dist_point_to_segment(p, pts[i], pts[i + 1]))
+	return best
+
+
+func _dist_point_to_segment(p: Vector2, a: Vector2, b: Vector2) -> float:
+	var ab := b - a
+	var len_sq := ab.length_squared()
+	if len_sq < 0.0001:
+		return p.distance_to(a)
+	var t := clampf((p - a).dot(ab) / len_sq, 0.0, 1.0)
+	return p.distance_to(a + ab * t)
+
+
+func _dist_aabb_to_polyline(rect: Rect2, pts: PackedVector2Array) -> float:
+	if pts.size() < 2:
+		return 1.0e9
+	var best := 1.0e9
+	for i in range(pts.size() - 1):
+		best = minf(best, _dist_aabb_to_segment(rect, pts[i], pts[i + 1]))
+		if best <= 0.0:
+			return 0.0
+	return best
+
+
+func _dist_aabb_to_segment(rect: Rect2, a: Vector2, b: Vector2) -> float:
+	var c0 := rect.position
+	var c1 := rect.position + Vector2(rect.size.x, 0.0)
+	var c2 := rect.position + rect.size
+	var c3 := rect.position + Vector2(0.0, rect.size.y)
+	var corners: Array[Vector2] = [c0, c1, c2, c3]
+	var edges: Array[Vector2] = [c0, c1, c2, c3, c0]
+	for i in range(4):
+		if Geometry2D.segment_intersects_segment(a, b, edges[i], edges[i + 1]) != null:
+			return 0.0
+	var best := 1.0e9
+	for c in corners:
+		best = minf(best, _dist_point_to_segment(c, a, b))
+	best = minf(best, _dist_point_to_segment(a, c0, c1))
+	best = minf(best, _dist_point_to_segment(a, c1, c2))
+	best = minf(best, _dist_point_to_segment(a, c2, c3))
+	best = minf(best, _dist_point_to_segment(a, c3, c0))
+	best = minf(best, _dist_point_to_segment(b, c0, c1))
+	best = minf(best, _dist_point_to_segment(b, c1, c2))
+	best = minf(best, _dist_point_to_segment(b, c2, c3))
+	best = minf(best, _dist_point_to_segment(b, c3, c0))
+	## Point-in-rect: segment endpoint inside footprint counts as overlap.
+	if rect.has_point(a) or rect.has_point(b):
+		return 0.0
+	return best
+
+
+func _collect_prop_sprites(node: Node) -> Array[Sprite2D]:
+	var out: Array[Sprite2D] = []
+	if node is Sprite2D:
+		out.append(node as Sprite2D)
+	for child in node.get_children():
+		out.append_array(_collect_prop_sprites(child))
+	return out
 
 
 func _place_school_clusters() -> void:

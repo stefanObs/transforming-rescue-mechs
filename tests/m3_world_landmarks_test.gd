@@ -96,10 +96,11 @@ func _run() -> void:
 			house_n += 1
 		if spr.has_meta("terrain") and str(spr.get_meta("terrain")) == "forest":
 			forest_n += 1
-	_assert(house_n == 0, "no housing props in street-map reset (got %d)" % house_n)
+	_assert(house_n >= 6, "spawn-corridor housing props present (got %d)" % house_n)
 	_assert(forest_n >= 1, "forest silhouette props present (got %d)" % forest_n)
 
 	_assert_landmark_scales(world, all_sprites)
+	_assert_spawn_housing(world, all_sprites)
 
 	for cluster in ["rietacker", "ohringen"]:
 		var n := _count_school_cluster(all_sprites, cluster)
@@ -216,6 +217,10 @@ func _assert_landmark_scales(world: Node, sprites: Array[Sprite2D]) -> void:
 	_assert(
 		consts.get("LANDMARK_SCALE") == Vector2(0.55, 0.55),
 		"LANDMARK_SCALE == (0.55, 0.55) (got %s)" % str(consts.get("LANDMARK_SCALE"))
+	)
+	_assert(
+		consts.get("HOUSE_SCALE") == Vector2(0.38, 0.38),
+		"HOUSE_SCALE == (0.38, 0.38) (got %s)" % str(consts.get("HOUSE_SCALE"))
 	)
 	_assert(
 		consts.get("FOREST_SCALE") == Vector2(0.24, 0.24),
@@ -360,6 +365,82 @@ func _assert_landmark_scales(world: Node, sprites: Array[Sprite2D]) -> void:
 			)
 			forest_checked += 1
 	_assert(forest_checked >= 1, "at least one forest at FOREST_SCALE")
+
+
+func _assert_spawn_housing(world: Node, sprites: Array[Sprite2D]) -> void:
+	## S01: Winterthurer spawn-corridor houses visible at zoom 0.9; off asphalt; mixed variants.
+	var world_script: Script = world.get_script()
+	_assert(world_script != null, "world_sandbox script for HOUSE_SCALE")
+	if world_script != null:
+		var consts: Dictionary = world_script.get_script_constant_map()
+		_assert(
+			consts.get("HOUSE_SCALE") == Vector2(0.38, 0.38),
+			"HOUSE_SCALE constant == (0.38, 0.38)"
+		)
+		_assert(
+			consts.get("SCHOOL_SCALE") == Vector2(0.50, 0.50),
+			"SCHOOL_SCALE unchanged with housing"
+		)
+		_assert(
+			consts.get("LANDMARK_SCALE") == Vector2(0.55, 0.55),
+			"LANDMARK_SCALE unchanged with housing"
+		)
+	var spawn := SeuzachGeo.default_world_spawn()
+	_assert(
+		spawn.is_equal_approx(Vector2(3861.9, -101.0)),
+		"default spawn stays Winterthurer (3861.9, -101.0)"
+	)
+	_assert(
+		SeuzachGeo.winterthurer_spawn().is_equal_approx(spawn),
+		"winterthurer_spawn matches default_world_spawn"
+	)
+	var houses: Array[Sprite2D] = []
+	var variants: Dictionary = {}
+	for spr in sprites:
+		if not spr.has_meta("house_variant"):
+			continue
+		houses.append(spr)
+		variants[str(spr.get_meta("house_variant"))] = true
+		_assert(
+			spr.scale.is_equal_approx(Vector2(0.38, 0.38)),
+			"%s scale == HOUSE_SCALE (got %s)" % [spr.name, str(spr.scale)]
+		)
+		_assert(is_zero_approx(spr.rotation), "%s rotation is 0" % spr.name)
+		_assert(
+			spr.has_meta("has_building_collision") and bool(spr.get_meta("has_building_collision")),
+			"%s has BuildingCollision" % spr.name
+		)
+		_assert_sprite_off_named_roads(world, spr)
+	_assert(houses.size() >= 6, "≥6 housing props near spawn corridor (got %d)" % houses.size())
+	_assert(variants.size() >= 2, "≥2 distinct house_variant values (got %d)" % variants.size())
+	var view := _spawn_viewport_rect(spawn, Vector2(0.9, 0.9))
+	var in_view := 0
+	for spr in houses:
+		if _sprite_hits_rect(spr, view):
+			in_view += 1
+	_assert(
+		in_view >= 3,
+		"≥3 houses intersect spawn viewport @ zoom 0.9 (got %d)" % in_view
+	)
+
+
+func _spawn_viewport_rect(center: Vector2, zoom: Vector2) -> Rect2:
+	var screen := Vector2(1280.0, 720.0)
+	var world_size := Vector2(screen.x / maxf(zoom.x, 0.01), screen.y / maxf(zoom.y, 0.01))
+	return Rect2(center - world_size * 0.5, world_size)
+
+
+func _sprite_hits_rect(spr: Sprite2D, rect: Rect2) -> bool:
+	if rect.has_point(spr.position):
+		return true
+	if spr.texture == null:
+		return false
+	var tex_w := float(spr.texture.get_width()) * absf(spr.scale.x)
+	var tex_h := float(spr.texture.get_height()) * absf(spr.scale.y)
+	## Feet pivot at position; sprite extends upward (negative local Y via offset).
+	var top_left := spr.position + Vector2(-tex_w * 0.5, -tex_h)
+	var spr_rect := Rect2(top_left, Vector2(tex_w, tex_h))
+	return spr_rect.intersects(rect)
 
 
 func _find_named_sprite(sprites: Array[Sprite2D], node_name: String) -> Sprite2D:
@@ -1296,7 +1377,7 @@ func _assert_railway(world: Node, sprites: Array[Sprite2D]) -> void:
 			house_n += 1
 		if spr.has_meta("terrain") and str(spr.get_meta("terrain")) == "forest":
 			forest_n += 1
-	_assert(house_n == 0, "no housing props")
+	_assert(house_n >= 6, "housing props present (got %d)" % house_n)
 	_assert(forest_n >= 1, "forest props present (got %d)" % forest_n)
 	for cluster in ["birch", "rietacker", "ohringen"]:
 		var n := _count_school_cluster(sprites, cluster)
@@ -1446,7 +1527,7 @@ func _assert_badi(world: Node, sprites: Array[Sprite2D]) -> void:
 			house_n += 1
 		if spr.has_meta("terrain") and str(spr.get_meta("terrain")) == "forest":
 			forest_n += 1
-	_assert(house_n == 0, "no housing props")
+	_assert(house_n >= 6, "housing props present (got %d)" % house_n)
 	_assert(forest_n >= 1, "forest props present (got %d)" % forest_n)
 	for cluster in ["birch", "rietacker", "ohringen"]:
 		var n := _count_school_cluster(sprites, cluster)
@@ -1544,7 +1625,7 @@ func _assert_streams(world: Node, sprites: Array[Sprite2D]) -> void:
 			house_n += 1
 		if spr.has_meta("terrain") and str(spr.get_meta("terrain")) == "forest":
 			forest_n += 1
-	_assert(house_n == 0, "no housing props")
+	_assert(house_n >= 6, "housing props present (got %d)" % house_n)
 	_assert(forest_n >= 1, "forest props present (got %d)" % forest_n)
 	for cluster in ["birch", "rietacker", "ohringen"]:
 		var n := _count_school_cluster(sprites, cluster)
@@ -1689,7 +1770,7 @@ func _assert_forests(world: Node, sprites: Array[Sprite2D]) -> void:
 				"forest silhouette parent chain excludes DistrictOhringen (%s)" % spr.name
 			)
 			## A1 through forest is maps-true — do not run _assert_sprite_off_named_roads.
-	_assert(house_n == 0, "no housing props")
+	_assert(house_n >= 6, "housing props present (got %d)" % house_n)
 	_assert(
 		forest_n >= 3 and forest_n <= 10,
 		"forest silhouettes 3–10 (got %d)" % forest_n
