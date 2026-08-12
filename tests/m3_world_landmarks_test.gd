@@ -123,6 +123,7 @@ func _run() -> void:
 	_assert_badi(world, all_sprites)
 	_assert_streams(world, all_sprites)
 	_assert_forests(world, all_sprites)
+	_assert_forest_silhouettes_off_roads(world, all_sprites)
 	_assert_geo_quadrants(all_sprites)
 	_assert_schools_off_roads(world, all_sprites)
 
@@ -1926,6 +1927,10 @@ func _assert_forests(world: Node, sprites: Array[Sprite2D]) -> void:
 		if spr.has_meta("terrain") and str(spr.get_meta("terrain")) == "forest":
 			forest_n += 1
 			_assert(
+				spr.has_meta("forest_kit") and str(spr.get_meta("forest_kit")) == "silhouette",
+				"forest silhouette has forest_kit=silhouette (%s)" % spr.name
+			)
+			_assert(
 				not spr.has_meta("has_building_collision")
 				or not bool(spr.get_meta("has_building_collision")),
 				"forest silhouette has no has_building_collision (%s)" % spr.name
@@ -1938,7 +1943,7 @@ func _assert_forests(world: Node, sprites: Array[Sprite2D]) -> void:
 				not _has_named_ancestor(spr, "DistrictOhringen"),
 				"forest silhouette parent chain excludes DistrictOhringen (%s)" % spr.name
 			)
-			## A1 through forest is maps-true — do not run _assert_sprite_off_named_roads.
+			## Silhouettes clear asphalt; Ground floors may still sit under roads (maps-true).
 	_assert(house_n >= 6, "housing props present (got %d)" % house_n)
 	_assert(
 		forest_n >= 3 and forest_n <= 10,
@@ -2057,6 +2062,24 @@ func _assert_forests(world: Node, sprites: Array[Sprite2D]) -> void:
 			"forest silhouette %s off brooks (d=%.0f, need ≥400)"
 			% [spr.name, best_stream]
 		)
+
+
+func _assert_forest_silhouettes_off_roads(world: Node, sprites: Array[Sprite2D]) -> void:
+	## Prop silhouettes must clear named asphalt; Ground forest floors may underlay roads.
+	var checked := 0
+	for spr in sprites:
+		var is_silhouette := (
+			spr.has_meta("forest_kit") and str(spr.get_meta("forest_kit")) == "silhouette"
+		) or (
+			spr.has_meta("terrain")
+			and str(spr.get_meta("terrain")) == "forest"
+			and spr is Sprite2D
+		)
+		if not is_silhouette:
+			continue
+		checked += 1
+		_assert_sprite_off_named_roads(world, spr)
+	_assert(checked >= 3, "forest silhouettes off-road checked ≥3 (got %d)" % checked)
 
 
 func _sample_hits_forest(sample: Vector2, centroid: Vector2, pts: PackedVector2Array) -> bool:

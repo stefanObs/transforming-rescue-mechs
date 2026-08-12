@@ -1234,21 +1234,28 @@ func _add_forest_silhouette(
 	metas: Dictionary = {},
 	node_name: String = ""
 ) -> Sprite2D:
+	## Cluster sprite only — no BuildingCollision. Nudge off RoadKit asphalt; floors stay put.
 	var path := ART + file_name
 	if not ResourceLoader.exists(path):
 		return null
+	var tex: Texture2D = load(path)
+	var roads := _named_road_polylines()
+	var cleared := _nudge_off_named_roads(pos, tex, FOREST_SCALE, roads)
 	var spr := Sprite2D.new()
 	if node_name != "":
 		spr.name = node_name
-	spr.texture = load(path)
+	spr.texture = tex
 	spr.scale = FOREST_SCALE
-	spr.position = pos
+	spr.position = cleared
 	spr.centered = true
 	spr.offset = Vector2(0.0, feet_offset_y(spr.texture))
 	spr.z_as_relative = false
-	spr.z_index = compute_prop_z(pos.y)
-	for key in metas.keys():
-		spr.set_meta(str(key), metas[key])
+	spr.z_index = compute_prop_z(cleared.y)
+	var all_metas := metas.duplicate()
+	if not all_metas.has("forest_kit"):
+		all_metas["forest_kit"] = "silhouette"
+	for key in all_metas.keys():
+		spr.set_meta(str(key), all_metas[key])
 	var parent: Node2D = _prop_parent if _prop_parent != null else _props
 	parent.add_child(spr)
 	return spr

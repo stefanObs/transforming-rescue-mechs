@@ -29,5 +29,15 @@ Spieler sieht konsistente Strassen-Ausrichtung der Bebauung (Facing/Setback) und
 
 ## Testplan
 
-- Nach Placement: Forests (und betroffene Props) nicht auf named RoadKit asphalt; Housing facing/setback weiterhin konsistent
-- Playtest: Korridore lesbar, keine Prop-Platten auf der Fahrbahn
+- Forest silhouettes (`forest_kit=silhouette` / `terrain=forest`): visual clear off named roads (Feet + AABB); floors stay under roads (A1-through-forest ok)
+- Housing street-facing (side-aware flip + slack 24) und S01 building clearance bleiben grün
+- Streams/Rails nur wenn Sprite2D auf Asphalt (sonst Ground polygons lassen)
+- `./scripts/run_tests.sh` grün
+
+## Akzeptanz
+
+- `_add_forest_silhouette` nudgt mit `_nudge_off_named_roads` + `FOREST_SCALE` (Floors unberührt)
+- Housing Flip/Setback unverändert sofern Tests grün; min sep nur bei sparsen Spacing bump
+- Assert silhouettes off-road; floor/A1-through-forest Tests nicht regressieren
+
+Playtest 2026-08-12: Pass — silhouettes off roads; housing still clear; floors under roads kept.
