@@ -34,6 +34,10 @@ const REQUIRED_ART := [
 	"house_mfh.png",
 	"house_flachdach.png",
 	"house_reihen.png",
+	"house_street_a.png",
+	"house_street_b.png",
+	"house_street_flachdach.png",
+	"house_street_reihen.png",
 ]
 
 ## Preferred new geo-slice art (required once delivered).
@@ -428,14 +432,22 @@ func _assert_spawn_housing(world: Node, sprites: Array[Sprite2D]) -> void:
 
 func _assert_corridor_housing(world: Node, sprites: Array[Sprite2D]) -> void:
 	## S02: Kirche + Schneckenwiese near-corridor houses beyond the S01 spawn pocket.
+	## houses-street-aligned S02: corridor cycle uses only house_street_* variants.
 	var kirche_n := 0
 	var schn_n := 0
 	var spawn_n := 0
+	var street_variants: Dictionary = {}
 	for spr in sprites:
 		if not spr.has_meta("house_variant"):
 			continue
 		if not spr.has_meta("housing_corridor"):
 			continue
+		var variant := str(spr.get_meta("house_variant"))
+		_assert(
+			variant.begins_with("house_street_"),
+			"%s house_variant is street-ribbon (got %s)" % [spr.name, variant]
+		)
+		street_variants[variant] = true
 		var corridor := str(spr.get_meta("housing_corridor"))
 		match corridor:
 			"kirche":
@@ -457,6 +469,10 @@ func _assert_corridor_housing(world: Node, sprites: Array[Sprite2D]) -> void:
 	_assert(
 		kirche_n + schn_n + spawn_n >= 20,
 		"≥20 total tagged housing props (got %d)" % (kirche_n + schn_n + spawn_n)
+	)
+	_assert(
+		street_variants.size() >= 2,
+		"≥2 distinct house_street_* variants (got %d)" % street_variants.size()
 	)
 
 

@@ -673,17 +673,14 @@ func _place_landmarks() -> void:
 
 
 func _place_spawn_housing() -> void:
-	## S01 Winterthurer spawn + S02 Kirche / Schneckenwiese near-corridors — Style-C house_*.png.
+	## S01 Winterthurer spawn + S02 Kirche / Schneckenwiese — street-ribbon house_street_*.png.
 	_prop_parent = _props
 	var spawn := SeuzachGeo.winterthurer_spawn()
 	var variants: Array[String] = [
-		"house_a",
-		"house_b",
-		"house_c",
-		"house_d",
-		"house_flachdach",
-		"house_mfh",
-		"house_reihen",
+		"house_street_a",
+		"house_street_b",
+		"house_street_flachdach",
+		"house_street_reihen",
 	]
 	var roads := _named_road_polylines()
 	if roads.is_empty():
