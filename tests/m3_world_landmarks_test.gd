@@ -25,6 +25,14 @@ const REQUIRED_ART := [
 	"landmark_schulhaus_ohringen_a.png",
 	"landmark_schulhaus_ohringen_b.png",
 	"landmark_turnhalle_ohringen.png",
+	"landmark_schulhaus_ohringen_a_ew.png",
+	"landmark_schulhaus_ohringen_a_ns.png",
+	"landmark_schulhaus_ohringen_b_ew.png",
+	"landmark_schulhaus_ohringen_b_ns.png",
+	"landmark_turnhalle_ohringen_ew.png",
+	"landmark_turnhalle_ohringen_ns.png",
+	"landmark_kiga_ohringen_ew.png",
+	"landmark_kiga_ohringen_ns.png",
 	"house_a.png",
 	"house_b.png",
 	"house_c.png",
@@ -136,7 +144,7 @@ func _run() -> void:
 		_assert(n >= 2, "school_cluster %s has >=2 props (got %d)" % [cluster, n])
 	_assert_birch_campus(world, all_sprites)
 	_assert_rietacker_campus(world, all_sprites)
-	_assert_ohringen_campus(all_sprites)
+	_assert_ohringen_campus(world, all_sprites)
 	_assert_kiga_bachtobel(world, all_sprites)
 	_assert_kiga_weid(world, all_sprites)
 	_assert_kiga_schneckenwiese(world, all_sprites)
@@ -1165,7 +1173,7 @@ func _assert_rietacker_campus(world: Node, sprites: Array[Sprite2D]) -> void:
 	_assert_school_street_prop(world, gym, "Turnerstrasse", false, "east")
 
 
-func _assert_ohringen_campus(sprites: Array[Sprite2D]) -> void:
+func _assert_ohringen_campus(world: Node, sprites: Array[Sprite2D]) -> void:
 	var a := _find_named(sprites, "schulhaus_ohringen_a")
 	var b := _find_named(sprites, "schulhaus_ohringen_b")
 	var gym := _find_named(sprites, "turnhalle_ohringen")
@@ -1266,10 +1274,6 @@ func _assert_ohringen_campus(sprites: Array[Sprite2D]) -> void:
 		gym.scale.is_equal_approx(Vector2(0.375, 0.375)),
 		"turnhalle_ohringen scale ≈ 0.375 (got %s)" % str(gym.scale)
 	)
-	_assert(not a.flip_h and not b.flip_h and not gym.flip_h, "Ohringen campus flip_h false")
-	_assert_texture_unprefixed(a)
-	_assert_texture_unprefixed(b)
-	_assert_texture_unprefixed(gym)
 	_assert(
 		a.position.y < b.position.y - 150.0,
 		"ohringen_a north of ohringen_b (a.y=%.0f b.y=%.0f; ≥150 wu after clearance nudge)"
@@ -1311,7 +1315,9 @@ func _assert_ohringen_campus(sprites: Array[Sprite2D]) -> void:
 			"%s has BuildingCollision" % spr.name
 		)
 		_assert(is_zero_approx(spr.rotation), "%s rotation is 0" % spr.name)
-		_assert_texture_unprefixed(spr)
+	_assert_school_street_prop(world, a, "Schulstrasse", true, "west")
+	_assert_school_street_prop(world, b, "Schulstrasse", true, "west")
+	_assert_school_street_prop(world, gym, "Schaffhauserstrasse", true, "north")
 
 
 func _assert_kiga_bachtobel(world: Node, sprites: Array[Sprite2D]) -> void:
@@ -1618,8 +1624,6 @@ func _assert_kiga_ohringen(world: Node, sprites: Array[Sprite2D]) -> void:
 		kiga.scale.is_equal_approx(Vector2(0.275, 0.275)),
 		"kiga_ohringen scale ≈ 0.275 (got %s)" % str(kiga.scale)
 	)
-	_assert(not kiga.flip_h, "kiga_ohringen flip_h false")
-	_assert_texture_unprefixed(kiga)
 	_assert(
 		kiga.position.x < -15000.0 and kiga.position.y > 8000.0,
 		"kiga_ohringen SW Ohringen cells (got %s)" % str(kiga.position)
@@ -1679,6 +1683,7 @@ func _assert_kiga_ohringen(world: Node, sprites: Array[Sprite2D]) -> void:
 		"kiga_ohringen has BuildingCollision"
 	)
 	_assert(is_zero_approx(kiga.rotation), "kiga_ohringen rotation is 0")
+	_assert_school_street_prop(world, kiga, "Schulstrasse", true, "west")
 	var ground: Node = world.get_node_or_null("%Ground")
 	if ground:
 		_assert_road_near(ground, "Schulstrasse", SeuzachGeo.kiga_ohringen_world(), 900.0)
@@ -2547,6 +2552,10 @@ func _assert_ns_house_art_not_rotate_of_ew() -> void:
 		"landmark_schulhaus_rietacker_a",
 		"landmark_schulhaus_rietacker_b",
 		"landmark_turnhalle_rietacker",
+		"landmark_schulhaus_ohringen_a",
+		"landmark_schulhaus_ohringen_b",
+		"landmark_turnhalle_ohringen",
+		"landmark_kiga_ohringen",
 	]
 	for base in bases:
 		var ew_path := ART + base + "_ew.png"
@@ -2647,8 +2656,12 @@ func _assert_school_street_prop(
 		and not file_name.ends_with("landmark_turnhalle_birch.png")
 		and not file_name.ends_with("landmark_schulhaus_rietacker_a.png")
 		and not file_name.ends_with("landmark_schulhaus_rietacker_b.png")
-		and not file_name.ends_with("landmark_turnhalle_rietacker.png"),
-		"%s must not load unprefixed Birch/Rietacker art (got %s)" % [spr.name, file_name]
+		and not file_name.ends_with("landmark_turnhalle_rietacker.png")
+		and not file_name.ends_with("landmark_schulhaus_ohringen_a.png")
+		and not file_name.ends_with("landmark_schulhaus_ohringen_b.png")
+		and not file_name.ends_with("landmark_turnhalle_ohringen.png")
+		and not file_name.ends_with("landmark_kiga_ohringen.png"),
+		"%s must not load unprefixed Birch/Rietacker/Ohringen art (got %s)" % [spr.name, file_name]
 	)
 	var roads := _named_roads_from_world(world, target_road_name)
 	_assert(not roads.is_empty(), "%s target road %s present" % [spr.name, target_road_name])

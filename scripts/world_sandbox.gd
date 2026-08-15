@@ -1440,7 +1440,35 @@ func _add_school_street_prop(
 	if not ResourceLoader.exists(path):
 		return null
 	tex = load(path)
+	var bank_pos := pos
 	pos = _nudge_off_named_roads(pos, tex, scale, roads, 700.0, false, bearing, away)
+	closest = _closest_point_on_polyline(pos, pts)
+	if (pos - closest).dot(away) < 0.0:
+		## GPS bank lost (a second named road on the GPS side). Search along-away / along-road, not across.
+		pos = bank_pos
+		var recovered := false
+		var keep_dirs: Array[Vector2] = [away.normalized()]
+		if absf(away.x) >= absf(away.y):
+			keep_dirs.append(Vector2.LEFT if away.x < 0.0 else Vector2.RIGHT)
+			keep_dirs.append(Vector2.DOWN if away.y >= 0.0 else Vector2.UP)
+		else:
+			keep_dirs.append(Vector2.DOWN if away.y >= 0.0 else Vector2.UP)
+			keep_dirs.append(Vector2.LEFT if away.x < 0.0 else Vector2.RIGHT)
+		for dir in keep_dirs:
+			var candidate := bank_pos
+			var traveled := 0.0
+			while traveled < 700.0:
+				candidate += dir * 8.0
+				traveled += 8.0
+				var keep_closest := _closest_point_on_polyline(candidate, pts)
+				if (candidate - keep_closest).dot(away) < 0.0:
+					break
+				if _sprite_clears_named_roads(candidate, tex, scale, roads, false, bearing):
+					pos = candidate
+					recovered = true
+					break
+			if recovered:
+				break
 	if not _sprite_clears_named_roads(pos, tex, scale, roads, false, bearing):
 		return null
 	facing = _housing_facing_on_corridor(pos, target, facing["perp"], fallback_tangent)
@@ -1467,7 +1495,7 @@ func _add_school_street_prop(
 
 
 func _place_school_clusters() -> void:
-	## Birch + Rietacker street-aligned _ew/_ns; Ohringen stays unprefixed (S03).
+	## Birch + Rietacker + Ohringen street-aligned _ew/_ns; Seuzach kigas stay unprefixed (S04).
 	_add_school_street_prop(
 		"landmark_schulhaus_birch_a",
 		SeuzachGeo.birch_schulhaus_a_world(),
@@ -1525,33 +1553,36 @@ func _place_school_clusters() -> void:
 	ohringen.position = Vector2.ZERO
 	_props.add_child(ohringen)
 	_prop_parent = ohringen
-	## S03: Ohringen per-building scales; flip_h false, rotation 0 (authored facing OK).
-	_add_building_prop(
-		"landmark_schulhaus_ohringen_a.png",
+	## S03: Ohringen street-aligned like Birch/Rietacker; rotation 0.
+	_add_school_street_prop(
+		"landmark_schulhaus_ohringen_a",
 		SeuzachGeo.ohringen_schulhaus_a_world(),
 		SCHOOL_SCALE * OHRINGEN_A_SCALE_MULT,
 		{"landmark_id": "schulhaus_ohringen", "school_cluster": "ohringen", "district": "ohringen"},
-		"schulhaus_ohringen_a"
+		"schulhaus_ohringen_a",
+		"Schulstrasse"
 	)
-	_add_building_prop(
-		"landmark_schulhaus_ohringen_b.png",
+	_add_school_street_prop(
+		"landmark_schulhaus_ohringen_b",
 		SeuzachGeo.ohringen_schulhaus_b_world(),
 		SCHOOL_SCALE * OHRINGEN_B_SCALE_MULT,
 		{"landmark_id": "schulhaus_ohringen", "school_cluster": "ohringen", "district": "ohringen"},
-		"schulhaus_ohringen_b"
+		"schulhaus_ohringen_b",
+		"Schulstrasse"
 	)
-	_add_building_prop(
-		"landmark_turnhalle_ohringen.png",
+	_add_school_street_prop(
+		"landmark_turnhalle_ohringen",
 		SeuzachGeo.ohringen_turnhalle_world(),
 		SCHOOL_SCALE * OHRINGEN_TURNHALLE_SCALE_MULT,
 		{"landmark_id": "turnhalle_ohringen", "school_cluster": "ohringen", "district": "ohringen", "poi_type": "gym"},
-		"turnhalle_ohringen"
+		"turnhalle_ohringen",
+		"Schaffhauserstrasse"
 	)
 	_prop_parent = _props
 
 
 func _place_kindergartens() -> void:
-	## Bachtobel + Weid + Schneckenwiese under %Props; Ohringen-Kiga under DistrictOhringen.
+	## Bachtobel + Weid + Schneckenwiese unprefixed under %Props; kiga_ohringen street-aligned under DistrictOhringen.
 	_add_building_prop(
 		"landmark_kiga_bachtobel.png",
 		SeuzachGeo.kiga_bachtobel_world(),
@@ -1579,8 +1610,8 @@ func _place_kindergartens() -> void:
 	)
 	var district := _props.get_node_or_null("DistrictOhringen")
 	_prop_parent = district if district else _props
-	_add_building_prop(
-		"landmark_kiga_ohringen.png",
+	_add_school_street_prop(
+		"landmark_kiga_ohringen",
 		SeuzachGeo.kiga_ohringen_world(),
 		SCHOOL_SCALE * KIGA_OHRINGEN_SCALE_MULT,
 		{
@@ -1588,7 +1619,8 @@ func _place_kindergartens() -> void:
 			"kindergarten_id": "kiga_ohringen",
 			"district": "ohringen",
 		},
-		"kiga_ohringen"
+		"kiga_ohringen",
+		"Schulstrasse"
 	)
 	_prop_parent = _props
 
