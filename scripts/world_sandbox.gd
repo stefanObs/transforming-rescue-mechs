@@ -906,15 +906,7 @@ func _place_housing_along_roads(
 				variant_i += 1
 				## EW: door bottom-left (SW); NS: door on left edge (W). Flip so door faces asphalt.
 				var toward_road := (-local_perp * side).normalized()
-				var door_no_flip: Vector2
-				var door_flip: Vector2
-				if bearing == "ns":
-					door_no_flip = Vector2(-1.0, 0.0)
-					door_flip = Vector2(1.0, 0.0)
-				else:
-					door_no_flip = Vector2(-1.0, 1.0).normalized()
-					door_flip = Vector2(1.0, 1.0).normalized()
-				var flip := door_flip.dot(toward_road) > door_no_flip.dot(toward_road)
+				var flip := _street_door_flip_h(bearing, toward_road)
 				var node_name := "house_%s_%s_%d" % [
 					corridor_id, variant.trim_prefix("house_"), house_i
 				]
@@ -979,6 +971,19 @@ func _street_bearing_from_tangent(tangent: Vector2) -> String:
 		return "ew"
 	t = t.normalized()
 	return "ew" if absf(t.x) >= absf(t.y) else "ns"
+
+
+func _street_door_flip_h(bearing: String, toward_road: Vector2) -> bool:
+	## NS door W/E; EW door SW/SE. Flip when the flipped door aims more at the curb.
+	var door_no_flip: Vector2
+	var door_flip: Vector2
+	if bearing == "ns":
+		door_no_flip = Vector2(-1.0, 0.0)
+		door_flip = Vector2(1.0, 0.0)
+	else:
+		door_no_flip = Vector2(-1.0, 1.0).normalized()
+		door_flip = Vector2(1.0, 1.0).normalized()
+	return door_flip.dot(toward_road) > door_no_flip.dot(toward_road)
 
 
 func _nearest_road_segment_tangent(pos: Vector2, roads: Array[Dictionary]) -> Vector2:
@@ -1094,6 +1099,13 @@ func _house_street_half(clear: Vector2, street_bearing: String) -> float:
 	return (clear.x if street_bearing == "ns" else clear.y) * 0.5
 
 
+func _clear_street_half(clear: Vector2, house_mode: bool, street_bearing: String) -> float:
+	## Houses always use the street-facing axis; landmarks only when street_bearing is set.
+	if house_mode or not street_bearing.is_empty():
+		return _house_street_half(clear, street_bearing)
+	return clear.y * 0.5
+
+
 func _sprite_clears_named_roads(
 	pos: Vector2,
 	tex: Texture2D,
@@ -1114,9 +1126,7 @@ func _sprite_clears_named_roads(
 		var half_w: float = float(road["half_w"])
 		var d_feet := _dist_point_to_polyline(pos, pts)
 		var d_aabb := _dist_aabb_to_polyline(aabb, pts)
-		var street_half := (
-			_house_street_half(clear, street_bearing) if house_mode else clear.y * 0.5
-		)
+		var street_half := _clear_street_half(clear, house_mode, street_bearing)
 		var need_feet := half_w + street_half + edge
 		var need_aabb := half_w + edge
 		if d_feet < need_feet:
@@ -1156,9 +1166,11 @@ func _nudge_off_named_roads(
 	roads: Array[Dictionary],
 	max_nudge: float = 700.0,
 	house_mode: bool = false,
-	street_bearing: String = ""
+	street_bearing: String = "",
+	prefer_away: Vector2 = Vector2.ZERO
 ) -> Vector2:
 	## Push perpendicular (and along axes) until visual AABB clears asphalt.
+	## Optional prefer_away is tried first (GPS curb side); housing omits it so +perp stays first.
 	if roads.is_empty() or _sprite_clears_named_roads(
 		pos, tex, spr_scale, roads, house_mode, street_bearing
 	):
@@ -1168,7 +1180,12 @@ func _nudge_off_named_roads(
 		perp = Vector2.RIGHT
 	else:
 		perp = perp.normalized()
-	var dirs: Array[Vector2] = [
+	var dirs: Array[Vector2] = []
+	if prefer_away.length_squared() > 0.0001:
+		var away_dir := prefer_away.normalized()
+		dirs.append(away_dir)
+		dirs.append(-away_dir)
+	dirs.append_array([
 		perp,
 		-perp,
 		Vector2.RIGHT,
@@ -1179,7 +1196,7 @@ func _nudge_off_named_roads(
 		Vector2(1, -1).normalized(),
 		Vector2(-1, 1).normalized(),
 		Vector2(-1, -1).normalized(),
-	]
+	])
 	var step := 8.0
 	for dir in dirs:
 		var candidate := pos
@@ -1234,9 +1251,7 @@ func _clearance_push_away(
 		var half_w: float = float(road["half_w"])
 		var d_feet := _dist_point_to_polyline(pos, pts)
 		var d_aabb := _dist_aabb_to_polyline(aabb, pts)
-		var street_half := (
-			_house_street_half(clear, street_bearing) if house_mode else clear.y * 0.5
-		)
+		var street_half := _clear_street_half(clear, house_mode, street_bearing)
 		var need_feet := half_w + street_half + edge
 		var need_aabb := half_w + edge
 		var deficit := maxf(need_feet - d_feet, need_aabb - d_aabb)
@@ -1361,29 +1376,111 @@ func _add_building_prop(
 	return _add_prop(file_name, cleared, scale, metas, node_name, flip_h)
 
 
+func _named_road_by_name(road_name: String, roads: Array[Dictionary]) -> Dictionary:
+	for road in roads:
+		if str(road.get("name", "")) == road_name:
+			return road
+	return {}
+
+
+func _add_school_street_prop(
+	base_without_suffix: String,
+	pos: Vector2,
+	scale: Vector2,
+	metas: Dictionary,
+	node_name: String,
+	target_road_name: String
+) -> Sprite2D:
+	## Street-aligned school: bearing from the target polyline, GPS bank, door toward curb.
+	var roads := _named_road_polylines()
+	var target := _named_road_by_name(target_road_name, roads)
+	if target.is_empty():
+		return null
+	var pts: PackedVector2Array = target["points"]
+	var closest := _closest_point_on_polyline(pos, pts)
+	var away := pos - closest
+	if away.length_squared() < 0.0001:
+		return null
+	var fallback_tangent := _nearest_road_segment_tangent(pos, [target])
+	var fallback_perp := _nearest_road_segment_perp(pos, [target])
+	var bearing := _street_bearing_from_tangent(fallback_tangent)
+	var file_name := "%s_%s.png" % [base_without_suffix, bearing]
+	var path := ART + file_name
+	if not ResourceLoader.exists(path):
+		return null
+	var tex: Texture2D = load(path)
+	var clear := _building_clear_size(tex, scale)
+	var street_half := _house_street_half(clear, bearing)
+	var half_w := float(target["half_w"])
+	var need := half_w + street_half + BUILDING_CLEAR_EDGE_MARGIN + HOUSE_CURB_SLACK
+	var d_feet := pos.distance_to(closest)
+	if d_feet < need:
+		pos = closest + away.normalized() * need
+		closest = _closest_point_on_polyline(pos, pts)
+		away = pos - closest
+		if away.length_squared() < 0.0001:
+			return null
+	var facing := _housing_facing_on_corridor(pos, target, fallback_perp, fallback_tangent)
+	if facing.is_empty():
+		return null
+	bearing = str(facing["bearing"])
+	file_name = "%s_%s.png" % [base_without_suffix, bearing]
+	path = ART + file_name
+	if not ResourceLoader.exists(path):
+		return null
+	tex = load(path)
+	pos = _nudge_off_named_roads(pos, tex, scale, roads, 700.0, false, bearing, away)
+	if not _sprite_clears_named_roads(pos, tex, scale, roads, false, bearing):
+		return null
+	facing = _housing_facing_on_corridor(pos, target, facing["perp"], fallback_tangent)
+	if facing.is_empty():
+		return null
+	var side := float(facing["side"])
+	var local_perp: Vector2 = facing["perp"]
+	bearing = str(facing["bearing"])
+	file_name = "%s_%s.png" % [base_without_suffix, bearing]
+	path = ART + file_name
+	if not ResourceLoader.exists(path):
+		return null
+	tex = load(path)
+	if not _sprite_clears_named_roads(pos, tex, scale, roads, false, bearing):
+		return null
+	var toward_road := (-local_perp * side).normalized()
+	var flip := _street_door_flip_h(bearing, toward_road)
+	var placed_metas := metas.duplicate()
+	placed_metas["street_side"] = int(side)
+	placed_metas["street_bearing"] = bearing
+	placed_metas["faces_street"] = true
+	placed_metas["street_name"] = target_road_name
+	return _add_prop(file_name, pos, scale, placed_metas, node_name, flip)
+
+
 func _place_school_clusters() -> void:
 	## Birch + Rietacker + Ohringen: OSM building centroids.
-	## S02: Birch/Rietacker use per-building scales; flip_h left false (authored facing OK).
-	_add_building_prop(
-		"landmark_schulhaus_birch_a.png",
+	## Birch uses street-aligned _ew/_ns; Rietacker/Ohringen stay unprefixed (S02/S03).
+	_add_school_street_prop(
+		"landmark_schulhaus_birch_a",
 		SeuzachGeo.birch_schulhaus_a_world(),
 		SCHOOL_SCALE * BIRCH_A_SCALE_MULT,
 		{"landmark_id": "schulhaus_birch", "school_cluster": "birch", "district": "birch"},
-		"schulhaus_birch_a"
+		"schulhaus_birch_a",
+		"Bachwiesenstrasse"
 	)
-	_add_building_prop(
-		"landmark_schulhaus_birch_b.png",
+	_add_school_street_prop(
+		"landmark_schulhaus_birch_b",
 		SeuzachGeo.birch_schulhaus_b_world(),
 		SCHOOL_SCALE * BIRCH_B_SCALE_MULT,
 		{"landmark_id": "schulhaus_birch", "school_cluster": "birch", "district": "birch"},
-		"schulhaus_birch_b"
+		"schulhaus_birch_b",
+		"Birchstrasse"
 	)
-	_add_building_prop(
-		"landmark_turnhalle_birch.png",
+	_add_school_street_prop(
+		"landmark_turnhalle_birch",
 		SeuzachGeo.birch_turnhalle_world(),
 		SCHOOL_SCALE * BIRCH_TURNHALLE_SCALE_MULT,
 		{"landmark_id": "turnhalle_birch", "school_cluster": "birch", "district": "birch", "poi_type": "gym"},
-		"turnhalle_birch"
+		"turnhalle_birch",
+		"Birchstrasse"
 	)
 	_add_building_prop(
 		"landmark_schulhaus_rietacker_a.png",

@@ -8,6 +8,12 @@ const REQUIRED_ART := [
 	"landmark_badi_weiher.png",
 	"landmark_schulhaus_birch_a.png",
 	"landmark_schulhaus_birch_b.png",
+	"landmark_schulhaus_birch_a_ew.png",
+	"landmark_schulhaus_birch_a_ns.png",
+	"landmark_schulhaus_birch_b_ew.png",
+	"landmark_schulhaus_birch_b_ns.png",
+	"landmark_turnhalle_birch_ew.png",
+	"landmark_turnhalle_birch_ns.png",
 	"landmark_schulhaus_rietacker_a.png",
 	"landmark_schulhaus_rietacker_b.png",
 	"landmark_schulhaus_ohringen_a.png",
@@ -122,7 +128,7 @@ func _run() -> void:
 	for cluster in ["rietacker", "ohringen"]:
 		var n := _count_school_cluster(all_sprites, cluster)
 		_assert(n >= 2, "school_cluster %s has >=2 props (got %d)" % [cluster, n])
-	_assert_birch_campus(all_sprites)
+	_assert_birch_campus(world, all_sprites)
 	_assert_rietacker_campus(all_sprites)
 	_assert_ohringen_campus(all_sprites)
 	_assert_kiga_bachtobel(world, all_sprites)
@@ -648,6 +654,8 @@ func _assert_street_facing_housing(world: Node, sprites: Array[Sprite2D]) -> voi
 	for spr in sprites:
 		if not spr.has_meta("street_side"):
 			continue
+		if not spr.has_meta("house_variant"):
+			continue
 		_assert(
 			spr.has_meta("faces_street") and bool(spr.get_meta("faces_street")),
 			"%s faces_street true" % spr.name
@@ -897,7 +905,7 @@ func _assert_road_near(ground: Node, road_name: String, target: Vector2, max_dis
 	)
 
 
-func _assert_birch_campus(sprites: Array[Sprite2D]) -> void:
+func _assert_birch_campus(world: Node, sprites: Array[Sprite2D]) -> void:
 	var a := _find_named(sprites, "schulhaus_birch_a")
 	var b := _find_named(sprites, "schulhaus_birch_b")
 	var gym := _find_named(sprites, "turnhalle_birch")
@@ -1014,6 +1022,9 @@ func _assert_birch_campus(sprites: Array[Sprite2D]) -> void:
 			"%s has BuildingCollision" % spr.name
 		)
 		_assert(is_zero_approx(spr.rotation), "%s rotation is 0" % spr.name)
+	_assert_school_street_prop(world, a, "Bachwiesenstrasse", true)
+	_assert_school_street_prop(world, b, "Birchstrasse", false)
+	_assert_school_street_prop(world, gym, "Birchstrasse", false)
 
 
 func _assert_rietacker_campus(sprites: Array[Sprite2D]) -> void:
@@ -1138,6 +1149,7 @@ func _assert_rietacker_campus(sprites: Array[Sprite2D]) -> void:
 			"%s has BuildingCollision" % spr.name
 		)
 		_assert(is_zero_approx(spr.rotation), "%s rotation is 0" % spr.name)
+		_assert_texture_unprefixed(spr)
 
 
 func _assert_ohringen_campus(sprites: Array[Sprite2D]) -> void:
@@ -1242,6 +1254,9 @@ func _assert_ohringen_campus(sprites: Array[Sprite2D]) -> void:
 		"turnhalle_ohringen scale ≈ 0.375 (got %s)" % str(gym.scale)
 	)
 	_assert(not a.flip_h and not b.flip_h and not gym.flip_h, "Ohringen campus flip_h false")
+	_assert_texture_unprefixed(a)
+	_assert_texture_unprefixed(b)
+	_assert_texture_unprefixed(gym)
 	_assert(
 		a.position.y < b.position.y - 150.0,
 		"ohringen_a north of ohringen_b (a.y=%.0f b.y=%.0f; ≥150 wu after clearance nudge)"
@@ -1283,6 +1298,7 @@ func _assert_ohringen_campus(sprites: Array[Sprite2D]) -> void:
 			"%s has BuildingCollision" % spr.name
 		)
 		_assert(is_zero_approx(spr.rotation), "%s rotation is 0" % spr.name)
+		_assert_texture_unprefixed(spr)
 
 
 func _assert_kiga_bachtobel(world: Node, sprites: Array[Sprite2D]) -> void:
@@ -1356,6 +1372,7 @@ func _assert_kiga_bachtobel(world: Node, sprites: Array[Sprite2D]) -> void:
 		"kiga_bachtobel scale ≈ 0.285 (got %s)" % str(kiga.scale)
 	)
 	_assert(not kiga.flip_h, "kiga_bachtobel flip_h false")
+	_assert_texture_unprefixed(kiga)
 	_assert(is_zero_approx(kiga.rotation), "kiga_bachtobel rotation is 0")
 	var ground: Node = world.get_node_or_null("%Ground")
 	if ground:
@@ -1438,6 +1455,7 @@ func _assert_kiga_weid(world: Node, sprites: Array[Sprite2D]) -> void:
 		"kiga_weid scale ≈ 0.275 (got %s)" % str(kiga.scale)
 	)
 	_assert(not kiga.flip_h, "kiga_weid flip_h false")
+	_assert_texture_unprefixed(kiga)
 	_assert(is_zero_approx(kiga.rotation), "kiga_weid rotation is 0")
 	var ground: Node = world.get_node_or_null("%Ground")
 	if ground:
@@ -1534,6 +1552,7 @@ func _assert_kiga_schneckenwiese(world: Node, sprites: Array[Sprite2D]) -> void:
 		"kiga_schneckenwiese scale ≈ 0.515 (got %s)" % str(kiga.scale)
 	)
 	_assert(not kiga.flip_h, "kiga_schneckenwiese flip_h false")
+	_assert_texture_unprefixed(kiga)
 	_assert(is_zero_approx(kiga.rotation), "kiga_schneckenwiese rotation is 0")
 	var ground: Node = world.get_node_or_null("%Ground")
 	if ground:
@@ -1587,6 +1606,7 @@ func _assert_kiga_ohringen(world: Node, sprites: Array[Sprite2D]) -> void:
 		"kiga_ohringen scale ≈ 0.275 (got %s)" % str(kiga.scale)
 	)
 	_assert(not kiga.flip_h, "kiga_ohringen flip_h false")
+	_assert_texture_unprefixed(kiga)
 	_assert(
 		kiga.position.x < -15000.0 and kiga.position.y > 8000.0,
 		"kiga_ohringen SW Ohringen cells (got %s)" % str(kiga.position)
@@ -2344,7 +2364,7 @@ func _assert_sprite_off_named_roads(world: Node, spr: Sprite2D) -> void:
 		var half_w := float(node.get_meta("half_w")) if node.has_meta("half_w") else 36.0
 		var d_feet := _dist_to_polyline(spr.position, pts)
 		var d_aabb := _dist_aabb_to_polyline(aabb, pts)
-		## Matches world_sandbox: houses use street-facing half; landmarks clear.y.
+		## Matches world_sandbox: street-facing half when street_bearing is set.
 		var need_feet := half_w + street_half + edge
 		var need_aabb := half_w + edge
 		var road_name := str(node.get_meta("road_name"))
@@ -2486,15 +2506,17 @@ func _clear_edge_margin_for(spr: Sprite2D) -> float:
 
 
 func _street_half_for(spr: Sprite2D, aabb: Rect2) -> float:
-	## Houses: ns → clear.x/2, ew → clear.y/2. Landmarks always clear.y/2.
-	if spr.has_meta("house_variant"):
-		var bearing := ""
-		if spr.has_meta("street_bearing"):
-			bearing = str(spr.get_meta("street_bearing"))
-		elif str(spr.get_meta("house_variant")).ends_with("_ns"):
+	## Houses and street-aligned schools: ns → clear.x/2, ew → clear.y/2.
+	## Other landmarks keep isotropic clear.y/2.
+	var bearing := ""
+	if spr.has_meta("street_bearing"):
+		bearing = str(spr.get_meta("street_bearing"))
+	elif spr.has_meta("house_variant"):
+		if str(spr.get_meta("house_variant")).ends_with("_ns"):
 			bearing = "ns"
 		else:
 			bearing = "ew"
+	if bearing != "":
 		return (aabb.size.x if bearing == "ns" else aabb.size.y) * 0.5
 	return aabb.size.y * 0.5
 
@@ -2506,6 +2528,9 @@ func _assert_ns_house_art_not_rotate_of_ew() -> void:
 		"house_street_b",
 		"house_street_flachdach",
 		"house_street_reihen",
+		"landmark_schulhaus_birch_a",
+		"landmark_schulhaus_birch_b",
+		"landmark_turnhalle_birch",
 	]
 	for base in bases:
 		var ew_path := ART + base + "_ew.png"
@@ -2542,6 +2567,111 @@ func _assert_ns_house_art_not_rotate_of_ew() -> void:
 			if not identical:
 				break
 		_assert(not identical, "%s_ns must not be ROTATE_270 of _ew" % base)
+
+
+func _assert_texture_unprefixed(spr: Sprite2D) -> void:
+	if spr == null or spr.texture == null:
+		return
+	var file_name := spr.texture.resource_path.get_file()
+	_assert(
+		not file_name.ends_with("_ew.png") and not file_name.ends_with("_ns.png"),
+		"%s stays on unprefixed art (got %s)" % [spr.name, file_name]
+	)
+
+
+func _named_roads_from_world(world: Node, road_name: String) -> Array[Dictionary]:
+	var ground: Node = world.get_node_or_null("%Ground")
+	var out: Array[Dictionary] = []
+	if ground == null:
+		return out
+	for node in _collect_nodes(ground):
+		if not node.has_meta("road_name") or str(node.get_meta("road_name")) != road_name:
+			continue
+		if not node.has_meta("road_points"):
+			continue
+		var pts: PackedVector2Array = PackedVector2Array(node.get_meta("road_points"))
+		if pts.size() < 2:
+			continue
+		out.append({
+			"name": road_name,
+			"half_w": float(node.get_meta("half_w")) if node.has_meta("half_w") else 36.0,
+			"points": pts,
+		})
+	return out
+
+
+func _assert_school_street_prop(
+	world: Node,
+	spr: Sprite2D,
+	target_road_name: String,
+	west_of_road: bool
+) -> void:
+	## Regression vs the 1425-wu / no-facing Birch repro: target polyline, suffix, curb flip.
+	if spr == null:
+		return
+	_assert(spr.has_meta("street_bearing"), "%s has street_bearing" % spr.name)
+	_assert(spr.has_meta("faces_street") and bool(spr.get_meta("faces_street")), "%s faces_street" % spr.name)
+	_assert(spr.has_meta("street_side"), "%s has street_side" % spr.name)
+	_assert(spr.has_meta("street_name") and str(spr.get_meta("street_name")) == target_road_name, "%s street_name == %s" % [spr.name, target_road_name])
+	_assert(is_zero_approx(spr.rotation), "%s rotation is 0" % spr.name)
+	var side := int(spr.get_meta("street_side")) if spr.has_meta("street_side") else 0
+	_assert(side == 1 or side == -1, "%s street_side is ±1 (got %d)" % [spr.name, side])
+	var bearing := str(spr.get_meta("street_bearing")) if spr.has_meta("street_bearing") else ""
+	_assert(bearing == "ew" or bearing == "ns", "%s street_bearing ew|ns (got %s)" % [spr.name, bearing])
+	var file_name := spr.texture.resource_path.get_file() if spr.texture != null else ""
+	_assert(
+		file_name.ends_with("_%s.png" % bearing),
+		"%s texture suffix matches street_bearing (got %s)" % [spr.name, file_name]
+	)
+	_assert(
+		not file_name.ends_with("landmark_schulhaus_birch_a.png")
+		and not file_name.ends_with("landmark_schulhaus_birch_b.png")
+		and not file_name.ends_with("landmark_turnhalle_birch.png"),
+		"%s must not load unprefixed Birch art (got %s)" % [spr.name, file_name]
+	)
+	var roads := _named_roads_from_world(world, target_road_name)
+	_assert(not roads.is_empty(), "%s target road %s present" % [spr.name, target_road_name])
+	if roads.is_empty():
+		return
+	var nearest := _nearest_road_sample(spr.position, roads)
+	_assert(nearest.has("point") and nearest.has("tangent"), "%s nearest %s sample" % [spr.name, target_road_name])
+	if not nearest.has("point"):
+		return
+	var closest: Vector2 = nearest["point"]
+	if west_of_road:
+		_assert(
+			spr.position.x < closest.x,
+			"%s west of %s (x=%.0f closest.x=%.0f)"
+			% [spr.name, target_road_name, spr.position.x, closest.x]
+		)
+	else:
+		_assert(
+			spr.position.x > closest.x,
+			"%s east of %s (x=%.0f closest.x=%.0f)"
+			% [spr.name, target_road_name, spr.position.x, closest.x]
+		)
+	var d: float = float(nearest.get("dist", spr.position.distance_to(closest)))
+	var aabb := _school_aabb(spr)
+	var street_half := _street_half_for(spr, aabb)
+	var half_w := float(roads[0]["half_w"])
+	var need := half_w + street_half + 40.0
+	_assert(
+		d < 800.0,
+		"%s %s setback-band not ~1425 wu (d=%.1f)" % [spr.name, target_road_name, d]
+	)
+	_assert(
+		d >= need - 12.0,
+		"%s %s distance in setback band (d=%.1f need=%.1f)"
+		% [spr.name, target_road_name, d, need]
+	)
+	var tangent: Vector2 = nearest["tangent"]
+	var expect_bearing := "ew" if absf(tangent.x) >= absf(tangent.y) else "ns"
+	_assert(
+		bearing == expect_bearing,
+		"%s street_bearing matches %s tangent (got %s expect %s)"
+		% [spr.name, target_road_name, bearing, expect_bearing]
+	)
+	_assert_flip_matches_bearing(spr, "_" + bearing, side, nearest)
 
 
 func _school_aabb(spr: Sprite2D) -> Rect2:
