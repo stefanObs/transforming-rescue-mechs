@@ -16,6 +16,12 @@ const REQUIRED_ART := [
 	"landmark_turnhalle_birch_ns.png",
 	"landmark_schulhaus_rietacker_a.png",
 	"landmark_schulhaus_rietacker_b.png",
+	"landmark_schulhaus_rietacker_a_ew.png",
+	"landmark_schulhaus_rietacker_a_ns.png",
+	"landmark_schulhaus_rietacker_b_ew.png",
+	"landmark_schulhaus_rietacker_b_ns.png",
+	"landmark_turnhalle_rietacker_ew.png",
+	"landmark_turnhalle_rietacker_ns.png",
 	"landmark_schulhaus_ohringen_a.png",
 	"landmark_schulhaus_ohringen_b.png",
 	"landmark_turnhalle_ohringen.png",
@@ -129,7 +135,7 @@ func _run() -> void:
 		var n := _count_school_cluster(all_sprites, cluster)
 		_assert(n >= 2, "school_cluster %s has >=2 props (got %d)" % [cluster, n])
 	_assert_birch_campus(world, all_sprites)
-	_assert_rietacker_campus(all_sprites)
+	_assert_rietacker_campus(world, all_sprites)
 	_assert_ohringen_campus(all_sprites)
 	_assert_kiga_bachtobel(world, all_sprites)
 	_assert_kiga_weid(world, all_sprites)
@@ -1027,7 +1033,7 @@ func _assert_birch_campus(world: Node, sprites: Array[Sprite2D]) -> void:
 	_assert_school_street_prop(world, gym, "Birchstrasse", false)
 
 
-func _assert_rietacker_campus(sprites: Array[Sprite2D]) -> void:
+func _assert_rietacker_campus(world: Node, sprites: Array[Sprite2D]) -> void:
 	var a := _find_named(sprites, "schulhaus_rietacker_a")
 	var b := _find_named(sprites, "schulhaus_rietacker_b")
 	var gym := _find_named(sprites, "turnhalle_rietacker")
@@ -1149,7 +1155,14 @@ func _assert_rietacker_campus(sprites: Array[Sprite2D]) -> void:
 			"%s has BuildingCollision" % spr.name
 		)
 		_assert(is_zero_approx(spr.rotation), "%s rotation is 0" % spr.name)
-		_assert_texture_unprefixed(spr)
+	_assert_school_street_prop(world, a, "Ohringerstrasse", true, "north")
+	var b_road := str(b.get_meta("street_name")) if b.has_meta("street_name") else "Ohringerstrasse"
+	if b_road == "Püntenstrasse":
+		## NE tract: GPS sits ~1291 wu north of Ohringer; Pünten setback, south of the stub.
+		_assert_school_street_prop(world, b, "Püntenstrasse", false, "south")
+	else:
+		_assert_school_street_prop(world, b, "Ohringerstrasse", true, "north")
+	_assert_school_street_prop(world, gym, "Turnerstrasse", false, "east")
 
 
 func _assert_ohringen_campus(sprites: Array[Sprite2D]) -> void:
@@ -2531,6 +2544,9 @@ func _assert_ns_house_art_not_rotate_of_ew() -> void:
 		"landmark_schulhaus_birch_a",
 		"landmark_schulhaus_birch_b",
 		"landmark_turnhalle_birch",
+		"landmark_schulhaus_rietacker_a",
+		"landmark_schulhaus_rietacker_b",
+		"landmark_turnhalle_rietacker",
 	]
 	for base in bases:
 		var ew_path := ART + base + "_ew.png"
@@ -2604,9 +2620,11 @@ func _assert_school_street_prop(
 	world: Node,
 	spr: Sprite2D,
 	target_road_name: String,
-	west_of_road: bool
+	west_of_road: bool,
+	bank: String = ""
 ) -> void:
 	## Regression vs the 1425-wu / no-facing Birch repro: target polyline, suffix, curb flip.
+	## bank: west|east|north|south. Empty keeps Birch west_of_road (x).
 	if spr == null:
 		return
 	_assert(spr.has_meta("street_bearing"), "%s has street_bearing" % spr.name)
@@ -2626,8 +2644,11 @@ func _assert_school_street_prop(
 	_assert(
 		not file_name.ends_with("landmark_schulhaus_birch_a.png")
 		and not file_name.ends_with("landmark_schulhaus_birch_b.png")
-		and not file_name.ends_with("landmark_turnhalle_birch.png"),
-		"%s must not load unprefixed Birch art (got %s)" % [spr.name, file_name]
+		and not file_name.ends_with("landmark_turnhalle_birch.png")
+		and not file_name.ends_with("landmark_schulhaus_rietacker_a.png")
+		and not file_name.ends_with("landmark_schulhaus_rietacker_b.png")
+		and not file_name.ends_with("landmark_turnhalle_rietacker.png"),
+		"%s must not load unprefixed Birch/Rietacker art (got %s)" % [spr.name, file_name]
 	)
 	var roads := _named_roads_from_world(world, target_road_name)
 	_assert(not roads.is_empty(), "%s target road %s present" % [spr.name, target_road_name])
@@ -2638,18 +2659,35 @@ func _assert_school_street_prop(
 	if not nearest.has("point"):
 		return
 	var closest: Vector2 = nearest["point"]
-	if west_of_road:
+	var bank_mode := bank
+	if bank_mode == "":
+		bank_mode = "west" if west_of_road else "east"
+	if bank_mode == "west":
 		_assert(
 			spr.position.x < closest.x,
 			"%s west of %s (x=%.0f closest.x=%.0f)"
 			% [spr.name, target_road_name, spr.position.x, closest.x]
 		)
-	else:
+	elif bank_mode == "east":
 		_assert(
 			spr.position.x > closest.x,
 			"%s east of %s (x=%.0f closest.x=%.0f)"
 			% [spr.name, target_road_name, spr.position.x, closest.x]
 		)
+	elif bank_mode == "north":
+		_assert(
+			spr.position.y < closest.y,
+			"%s north of %s (y=%.0f closest.y=%.0f)"
+			% [spr.name, target_road_name, spr.position.y, closest.y]
+		)
+	elif bank_mode == "south":
+		_assert(
+			spr.position.y > closest.y,
+			"%s south of %s (y=%.0f closest.y=%.0f)"
+			% [spr.name, target_road_name, spr.position.y, closest.y]
+		)
+	else:
+		_assert(false, "%s unknown bank %s" % [spr.name, bank_mode])
 	var d: float = float(nearest.get("dist", spr.position.distance_to(closest)))
 	var aabb := _school_aabb(spr)
 	var street_half := _street_half_for(spr, aabb)

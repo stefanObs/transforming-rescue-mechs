@@ -1376,11 +1376,22 @@ func _add_building_prop(
 	return _add_prop(file_name, cleared, scale, metas, node_name, flip_h)
 
 
-func _named_road_by_name(road_name: String, roads: Array[Dictionary]) -> Dictionary:
+func _named_road_by_name(road_name: String, roads: Array[Dictionary], near: Vector2) -> Dictionary:
+	## Same-name ribbons: prefer the campus-near polyline (Ohringer 17-pt), not a distant fragment.
+	var best := {}
+	var best_d := 1.0e9
+	var best_n := -1
 	for road in roads:
-		if str(road.get("name", "")) == road_name:
-			return road
-	return {}
+		if str(road.get("name", "")) != road_name:
+			continue
+		var pts: PackedVector2Array = road["points"]
+		var n := pts.size()
+		var d := _dist_point_to_polyline(near, pts)
+		if best.is_empty() or d < best_d - 1.0 or (absf(d - best_d) <= 1.0 and n > best_n):
+			best = road
+			best_d = d
+			best_n = n
+	return best
 
 
 func _add_school_street_prop(
@@ -1393,7 +1404,7 @@ func _add_school_street_prop(
 ) -> Sprite2D:
 	## Street-aligned school: bearing from the target polyline, GPS bank, door toward curb.
 	var roads := _named_road_polylines()
-	var target := _named_road_by_name(target_road_name, roads)
+	var target := _named_road_by_name(target_road_name, roads, pos)
 	if target.is_empty():
 		return null
 	var pts: PackedVector2Array = target["points"]
@@ -1456,8 +1467,7 @@ func _add_school_street_prop(
 
 
 func _place_school_clusters() -> void:
-	## Birch + Rietacker + Ohringen: OSM building centroids.
-	## Birch uses street-aligned _ew/_ns; Rietacker/Ohringen stay unprefixed (S02/S03).
+	## Birch + Rietacker street-aligned _ew/_ns; Ohringen stays unprefixed (S03).
 	_add_school_street_prop(
 		"landmark_schulhaus_birch_a",
 		SeuzachGeo.birch_schulhaus_a_world(),
@@ -1482,26 +1492,32 @@ func _place_school_clusters() -> void:
 		"turnhalle_birch",
 		"Birchstrasse"
 	)
-	_add_building_prop(
-		"landmark_schulhaus_rietacker_a.png",
+	_add_school_street_prop(
+		"landmark_schulhaus_rietacker_a",
 		SeuzachGeo.rietacker_schulhaus_a_world(),
 		SCHOOL_SCALE * RIETACKER_A_SCALE_MULT,
 		{"landmark_id": "schulhaus_rietacker", "school_cluster": "rietacker", "district": "rietacker"},
-		"schulhaus_rietacker_a"
+		"schulhaus_rietacker_a",
+		"Ohringerstrasse"
 	)
-	_add_building_prop(
-		"landmark_schulhaus_rietacker_b.png",
+	## b GPS is ~1291 wu north of Ohringer (helper does not pull toward the ribbon).
+	## Target Püntenstrasse so the NE tract has a named polyline in the setback band.
+	## Do not punch Ohringer north through the courtyard.
+	_add_school_street_prop(
+		"landmark_schulhaus_rietacker_b",
 		SeuzachGeo.rietacker_schulhaus_b_world(),
 		SCHOOL_SCALE * RIETACKER_B_SCALE_MULT,
 		{"landmark_id": "schulhaus_rietacker", "school_cluster": "rietacker", "district": "rietacker"},
-		"schulhaus_rietacker_b"
+		"schulhaus_rietacker_b",
+		"Püntenstrasse"
 	)
-	_add_building_prop(
-		"landmark_turnhalle_rietacker.png",
+	_add_school_street_prop(
+		"landmark_turnhalle_rietacker",
 		SeuzachGeo.rietacker_turnhalle_world(),
 		SCHOOL_SCALE * RIETACKER_TURNHALLE_SCALE_MULT,
 		{"landmark_id": "turnhalle_rietacker", "school_cluster": "rietacker", "district": "rietacker", "poi_type": "gym"},
-		"turnhalle_rietacker"
+		"turnhalle_rietacker",
+		"Turnerstrasse"
 	)
 	var ohringen := Node2D.new()
 	ohringen.name = "DistrictOhringen"

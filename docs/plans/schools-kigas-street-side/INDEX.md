@@ -12,7 +12,7 @@ Feature-Schritte, keine Prozess-Schritte. Pro Zeile folgt der Ablauf (Plan nur w
 | ID | Datei | Feature | Hängt ab von | Status |
 |----|-------|---------|----------------|--------|
 | S01 | `S01-campus-birch-street-side.md` | Campus Birch westlich an Bachwiesenstrasse + street-aligned Facing (Helper) | — | erledigt |
-| S02 | `S02-campus-rietacker-street-side.md` | Campus Rietacker nördlich an Ohringerstrasse / Turnhalle Turnerstrasse | S01 | offen |
+| S02 | `S02-campus-rietacker-street-side.md` | Campus Rietacker nördlich an Ohringerstrasse / Turnhalle Turnerstrasse | S01 | erledigt |
 | S03 | `S03-ohringen-campus-kiga-street-side.md` | Campus Ohringen + Kiga Ohringen westlich an Schulstrasse | S01 | offen |
 | S04 | `S04-kigas-bachtobel-weid-schneckenwiese.md` | Kigas Bachtobel + Weid + Schneckenwiese an ihrer Strasse | S01 | offen |
 
