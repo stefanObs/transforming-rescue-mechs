@@ -1495,7 +1495,7 @@ func _add_school_street_prop(
 
 
 func _place_school_clusters() -> void:
-	## Birch + Rietacker + Ohringen street-aligned _ew/_ns; Seuzach kigas stay unprefixed (S04).
+	## Birch + Rietacker + Ohringen campusses street-aligned _ew/_ns (S01–S03). Kigas: _place_kindergartens.
 	_add_school_street_prop(
 		"landmark_schulhaus_birch_a",
 		SeuzachGeo.birch_schulhaus_a_world(),
@@ -1582,23 +1582,28 @@ func _place_school_clusters() -> void:
 
 
 func _place_kindergartens() -> void:
-	## Bachtobel + Weid + Schneckenwiese unprefixed under %Props; kiga_ohringen street-aligned under DistrictOhringen.
-	_add_building_prop(
-		"landmark_kiga_bachtobel.png",
+	## All four kigas street-aligned _ew/_ns; Seuzach three under %Props, Ohringen under DistrictOhringen.
+	_add_school_street_prop(
+		"landmark_kiga_bachtobel",
 		SeuzachGeo.kiga_bachtobel_world(),
 		SCHOOL_SCALE * KIGA_BACHTOBEL_SCALE_MULT,
 		{"landmark_id": "kiga_bachtobel", "kindergarten_id": "kiga_bachtobel", "district": "bachtobel"},
-		"kiga_bachtobel"
+		"kiga_bachtobel",
+		"Bachtobelstrasse"
 	)
-	_add_building_prop(
-		"landmark_kiga_weid.png",
+	_add_school_street_prop(
+		"landmark_kiga_weid",
 		SeuzachGeo.kiga_weid_world(),
 		SCHOOL_SCALE * KIGA_WEID_SCALE_MULT,
 		{"landmark_id": "kiga_weid", "kindergarten_id": "kiga_weid", "district": "weid"},
-		"kiga_weid"
+		"kiga_weid",
+		"Weidstrasse"
 	)
-	_add_building_prop(
-		"landmark_kiga_schneckenwiese.png",
+	## West of Schneckenwiesenstrasse. The 2-pt stub ended ~322 wu north of GPS (endpoint air-line);
+	## a south vertex was appended so the NS ribbon runs east of ~6995 (setback + visible asphalt).
+	## Not Reutlingerstrasse: collector d≈1142 sits outside the 800-wu band.
+	_add_school_street_prop(
+		"landmark_kiga_schneckenwiese",
 		SeuzachGeo.kiga_schneckenwiese_world(),
 		SCHOOL_SCALE * KIGA_SCHNECKENWIESE_SCALE_MULT,
 		{
@@ -1606,7 +1611,8 @@ func _place_kindergartens() -> void:
 			"kindergarten_id": "kiga_schneckenwiese",
 			"district": "schneckenwiese",
 		},
-		"kiga_schneckenwiese"
+		"kiga_schneckenwiese",
+		"Schneckenwiesenstrasse"
 	)
 	var district := _props.get_node_or_null("DistrictOhringen")
 	_prop_parent = district if district else _props

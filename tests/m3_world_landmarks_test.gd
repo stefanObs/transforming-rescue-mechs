@@ -39,8 +39,14 @@ const REQUIRED_ART := [
 	"house_d.png",
 	"house_farm.png",
 	"landmark_kiga_bachtobel.png",
+	"landmark_kiga_bachtobel_ew.png",
+	"landmark_kiga_bachtobel_ns.png",
 	"landmark_kiga_weid.png",
+	"landmark_kiga_weid_ew.png",
+	"landmark_kiga_weid_ns.png",
 	"landmark_kiga_schneckenwiese.png",
+	"landmark_kiga_schneckenwiese_ew.png",
+	"landmark_kiga_schneckenwiese_ns.png",
 	"landmark_kiga_ohringen.png",
 	"landmark_gemeindehaus_seuzach.png",
 	"landmark_kirche_seuzach.png",
@@ -1390,9 +1396,8 @@ func _assert_kiga_bachtobel(world: Node, sprites: Array[Sprite2D]) -> void:
 		kiga.scale.is_equal_approx(Vector2(0.285, 0.285)),
 		"kiga_bachtobel scale ≈ 0.285 (got %s)" % str(kiga.scale)
 	)
-	_assert(not kiga.flip_h, "kiga_bachtobel flip_h false")
-	_assert_texture_unprefixed(kiga)
 	_assert(is_zero_approx(kiga.rotation), "kiga_bachtobel rotation is 0")
+	_assert_school_street_prop(world, kiga, "Bachtobelstrasse", false, "east")
 	var ground: Node = world.get_node_or_null("%Ground")
 	if ground:
 		_assert_road_near(ground, "Bachtobelstrasse", SeuzachGeo.kiga_bachtobel_world(), 900.0)
@@ -1473,9 +1478,8 @@ func _assert_kiga_weid(world: Node, sprites: Array[Sprite2D]) -> void:
 		kiga.scale.is_equal_approx(Vector2(0.275, 0.275)),
 		"kiga_weid scale ≈ 0.275 (got %s)" % str(kiga.scale)
 	)
-	_assert(not kiga.flip_h, "kiga_weid flip_h false")
-	_assert_texture_unprefixed(kiga)
 	_assert(is_zero_approx(kiga.rotation), "kiga_weid rotation is 0")
+	_assert_school_street_prop(world, kiga, "Weidstrasse", false, "south")
 	var ground: Node = world.get_node_or_null("%Ground")
 	if ground:
 		_assert_road_near(ground, "Weidstrasse", SeuzachGeo.kiga_weid_world(), 900.0)
@@ -1570,9 +1574,14 @@ func _assert_kiga_schneckenwiese(world: Node, sprites: Array[Sprite2D]) -> void:
 		kiga.scale.is_equal_approx(Vector2(0.515, 0.515)),
 		"kiga_schneckenwiese scale ≈ 0.515 (got %s)" % str(kiga.scale)
 	)
-	_assert(not kiga.flip_h, "kiga_schneckenwiese flip_h false")
-	_assert_texture_unprefixed(kiga)
 	_assert(is_zero_approx(kiga.rotation), "kiga_schneckenwiese rotation is 0")
+	var sw_road := str(kiga.get_meta("street_name")) if kiga.has_meta("street_name") else "Schneckenwiesenstrasse"
+	if sw_road == "Reutlingerstrasse":
+		## Fallback: GPS ~1142 wu from collector; north bank if stub still misses asphalt.
+		_assert_school_street_prop(world, kiga, "Reutlingerstrasse", true, "north")
+	else:
+		## Preferred: west of Schneckenwiesenstrasse (NS ribbon east of the prop).
+		_assert_school_street_prop(world, kiga, "Schneckenwiesenstrasse", true, "west")
 	var ground: Node = world.get_node_or_null("%Ground")
 	if ground:
 		_assert_road_near(
@@ -2556,6 +2565,9 @@ func _assert_ns_house_art_not_rotate_of_ew() -> void:
 		"landmark_schulhaus_ohringen_b",
 		"landmark_turnhalle_ohringen",
 		"landmark_kiga_ohringen",
+		"landmark_kiga_bachtobel",
+		"landmark_kiga_weid",
+		"landmark_kiga_schneckenwiese",
 	]
 	for base in bases:
 		var ew_path := ART + base + "_ew.png"
@@ -2660,8 +2672,11 @@ func _assert_school_street_prop(
 		and not file_name.ends_with("landmark_schulhaus_ohringen_a.png")
 		and not file_name.ends_with("landmark_schulhaus_ohringen_b.png")
 		and not file_name.ends_with("landmark_turnhalle_ohringen.png")
-		and not file_name.ends_with("landmark_kiga_ohringen.png"),
-		"%s must not load unprefixed Birch/Rietacker/Ohringen art (got %s)" % [spr.name, file_name]
+		and not file_name.ends_with("landmark_kiga_ohringen.png")
+		and not file_name.ends_with("landmark_kiga_bachtobel.png")
+		and not file_name.ends_with("landmark_kiga_weid.png")
+		and not file_name.ends_with("landmark_kiga_schneckenwiese.png"),
+		"%s must not load unprefixed Birch/Rietacker/Ohringen/Seuzach-kiga art (got %s)" % [spr.name, file_name]
 	)
 	var roads := _named_roads_from_world(world, target_road_name)
 	_assert(not roads.is_empty(), "%s target road %s present" % [spr.name, target_road_name])
