@@ -304,9 +304,9 @@ func _assert_landmark_scales(world: Node, sprites: Array[Sprite2D]) -> void:
 	var birch_a_mult: float = float(consts.get("BIRCH_A_SCALE_MULT", 1.68))
 	var birch_b_mult: float = float(consts.get("BIRCH_B_SCALE_MULT", 1.34))
 	var birch_gym_mult: float = float(consts.get("BIRCH_TURNHALLE_SCALE_MULT", 2.22))
-	var riet_a_mult: float = float(consts.get("RIETACKER_A_SCALE_MULT", 1.30))
-	var riet_b_mult: float = float(consts.get("RIETACKER_B_SCALE_MULT", 1.25))
-	var riet_gym_mult: float = float(consts.get("RIETACKER_TURNHALLE_SCALE_MULT", 1.30))
+	var riet_a_mult: float = float(consts.get("RIETACKER_A_SCALE_MULT", 1.04))
+	var riet_b_mult: float = float(consts.get("RIETACKER_B_SCALE_MULT", 1.21))
+	var riet_gym_mult: float = float(consts.get("RIETACKER_TURNHALLE_SCALE_MULT", 2.62))
 	var ohr_a_mult: float = float(consts.get("OHRINGEN_A_SCALE_MULT", 1.35))
 	var ohr_b_mult: float = float(consts.get("OHRINGEN_B_SCALE_MULT", 0.83))
 	var ohr_gym_mult: float = float(consts.get("OHRINGEN_TURNHALLE_SCALE_MULT", 0.75))
@@ -319,9 +319,9 @@ func _assert_landmark_scales(world: Node, sprites: Array[Sprite2D]) -> void:
 	_assert(absf(birch_a_mult - 1.68) < 0.02, "BIRCH_A_SCALE_MULT ≈ 1.68 (got %.3f)" % birch_a_mult)
 	_assert(absf(birch_b_mult - 1.34) < 0.02, "BIRCH_B_SCALE_MULT ≈ 1.34 (got %.3f)" % birch_b_mult)
 	_assert(absf(birch_gym_mult - 2.22) < 0.02, "BIRCH_TURNHALLE_SCALE_MULT ≈ 2.22 (got %.3f)" % birch_gym_mult)
-	_assert(absf(riet_a_mult - 1.30) < 0.02, "RIETACKER_A_SCALE_MULT ≈ 1.30 (got %.3f)" % riet_a_mult)
-	_assert(absf(riet_b_mult - 1.25) < 0.02, "RIETACKER_B_SCALE_MULT ≈ 1.25 (got %.3f)" % riet_b_mult)
-	_assert(absf(riet_gym_mult - 1.30) < 0.02, "RIETACKER_TURNHALLE_SCALE_MULT ≈ 1.30 (got %.3f)" % riet_gym_mult)
+	_assert(absf(riet_a_mult - 1.04) < 0.02, "RIETACKER_A_SCALE_MULT ≈ 1.04 (got %.3f)" % riet_a_mult)
+	_assert(absf(riet_b_mult - 1.21) < 0.02, "RIETACKER_B_SCALE_MULT ≈ 1.21 (got %.3f)" % riet_b_mult)
+	_assert(absf(riet_gym_mult - 2.62) < 0.02, "RIETACKER_TURNHALLE_SCALE_MULT ≈ 2.62 (got %.3f)" % riet_gym_mult)
 	_assert(absf(ohr_a_mult - 1.35) < 0.02, "OHRINGEN_A_SCALE_MULT ≈ 1.35 (got %.3f)" % ohr_a_mult)
 	_assert(absf(ohr_b_mult - 0.83) < 0.02, "OHRINGEN_B_SCALE_MULT ≈ 0.83 (got %.3f)" % ohr_b_mult)
 	_assert(absf(ohr_gym_mult - 0.75) < 0.02, "OHRINGEN_TURNHALLE_SCALE_MULT ≈ 0.75 (got %.3f)" % ohr_gym_mult)
@@ -1134,16 +1134,16 @@ func _assert_rietacker_campus(world: Node, sprites: Array[Sprite2D]) -> void:
 		% gym.position.distance_to(SeuzachGeo.rietacker_turnhalle_world())
 	)
 	_assert(
-		a.scale.is_equal_approx(Vector2(0.65, 0.65)),
-		"schulhaus_rietacker_a scale ≈ 0.65 (got %s)" % str(a.scale)
+		a.scale.is_equal_approx(Vector2(0.52, 0.52)),
+		"schulhaus_rietacker_a scale ≈ 0.52 (got %s)" % str(a.scale)
 	)
 	_assert(
-		b.scale.is_equal_approx(Vector2(0.625, 0.625)),
-		"schulhaus_rietacker_b scale ≈ 0.625 (got %s)" % str(b.scale)
+		b.scale.is_equal_approx(Vector2(0.605, 0.605)),
+		"schulhaus_rietacker_b scale ≈ 0.605 (got %s)" % str(b.scale)
 	)
 	_assert(
-		gym.scale.is_equal_approx(Vector2(0.65, 0.65)),
-		"turnhalle_rietacker scale ≈ 0.65 (got %s)" % str(gym.scale)
+		gym.scale.is_equal_approx(Vector2(1.31, 1.31)),
+		"turnhalle_rietacker scale ≈ 1.31 (got %s)" % str(gym.scale)
 	)
 	_assert(
 		gym.position.x < minf(a.position.x, b.position.x) - 800.0,

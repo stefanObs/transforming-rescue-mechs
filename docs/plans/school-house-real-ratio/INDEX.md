@@ -12,7 +12,7 @@ Feature-Schritte, keine Prozess-Schritte. Pro Zeile folgt der Ablauf (Plan nur w
 | ID | Datei | Feature | Hängt ab von | Status |
 |----|-------|---------|----------------|--------|
 | S01 | `S01-campus-birch-house-ratio.md` | Campus Birch: Sprite-Fassade / OSM-Strassenfassade ≈ 1.72 | — | erledigt |
-| S02 | `S02-campus-rietacker-house-ratio.md` | Campus Rietacker: Sprite-Fassade / OSM-Strassenfassade ≈ 1.72 | S01 | offen |
+| S02 | `S02-campus-rietacker-house-ratio.md` | Campus Rietacker: Sprite-Fassade / OSM-Strassenfassade ≈ 1.72 | S01 | erledigt |
 | S03 | `S03-ohringen-campus-kiga-house-ratio.md` | Campus Ohringen + Kiga Ohringen: Sprite-Fassade / OSM ≈ 1.72 | S02 | offen |
 | S04 | `S04-kigas-bachtobel-weid-schneckenwiese.md` | Kigas Bachtobel + Weid + Schneckenwiese: Sprite-Fassade / OSM ≈ 1.72 | S03 | offen |
 

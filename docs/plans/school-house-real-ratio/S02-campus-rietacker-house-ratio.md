@@ -32,5 +32,13 @@ Campus **Rietacker** (Schulhäuser a/b + Turnhalle) wirkt neben den Häusern gle
 
 ## Testplan (optional, 2 Bullets)
 
-- Suite: Asserts auf die neuen Rietacker-Mults (1.04 / 1.21 / 2.89, gerundet ok); Birch-Mults aus S01 und `HOUSE_SCALE` 0.38 unverändert
+- Suite: Asserts auf die Rietacker-Mults (1.04 / 1.21 / 2.62, gerundet ok); Birch-Mults aus S01 und `HOUSE_SCALE` 0.38 unverändert
 - Playtest: Campus Rietacker visuell neben Häusern im selben Maß; kein Asphalt unter den drei Trakten, Hof frei
+
+## Akzeptanz
+
+- `RIETACKER_A_SCALE_MULT` / `RIETACKER_B_SCALE_MULT` / `RIETACKER_TURNHALLE_SCALE_MULT` locked at **1.04 / 1.21 / 2.62**
+- Gym draft **2.89** did not place (asphalt / missing prop); **2.64+** exceeds Turnerstrasse setback `d < 800`. Highest green: **2.62** (effective 1.31)
+- Effective scales: a 0.52, b 0.605, gym 1.31 (`SCHOOL_SCALE` 0.50)
+- `HOUSE_SCALE` 0.38 and `SCHOOL_SCALE` 0.50 unchanged; Birch Mults stay 1.68 / 1.34 / 2.22
+- Suite green: Rietacker Mult asserts, campus scale asserts, off-road clearance for the three Rietacker tracts
