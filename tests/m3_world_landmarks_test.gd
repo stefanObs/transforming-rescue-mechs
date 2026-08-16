@@ -301,9 +301,9 @@ func _assert_landmark_scales(world: Node, sprites: Array[Sprite2D]) -> void:
 	var school_scale: Vector2 = consts.get("SCHOOL_SCALE")
 	var landmark_scale: Vector2 = consts.get("LANDMARK_SCALE")
 	var forest_scale: Vector2 = consts.get("FOREST_SCALE")
-	var birch_a_mult: float = float(consts.get("BIRCH_A_SCALE_MULT", 1.20))
-	var birch_b_mult: float = float(consts.get("BIRCH_B_SCALE_MULT", 1.20))
-	var birch_gym_mult: float = float(consts.get("BIRCH_TURNHALLE_SCALE_MULT", 1.00))
+	var birch_a_mult: float = float(consts.get("BIRCH_A_SCALE_MULT", 1.68))
+	var birch_b_mult: float = float(consts.get("BIRCH_B_SCALE_MULT", 1.34))
+	var birch_gym_mult: float = float(consts.get("BIRCH_TURNHALLE_SCALE_MULT", 2.22))
 	var riet_a_mult: float = float(consts.get("RIETACKER_A_SCALE_MULT", 1.30))
 	var riet_b_mult: float = float(consts.get("RIETACKER_B_SCALE_MULT", 1.25))
 	var riet_gym_mult: float = float(consts.get("RIETACKER_TURNHALLE_SCALE_MULT", 1.30))
@@ -316,9 +316,9 @@ func _assert_landmark_scales(world: Node, sprites: Array[Sprite2D]) -> void:
 	var kiga_sw_mult: float = float(consts.get("KIGA_SCHNECKENWIESE_SCALE_MULT", 1.03))
 	var bahnhof_mult: float = float(consts.get("BAHNHOF_SCALE_MULT", 0.79))
 	var badi_mult: float = float(consts.get("BADI_SCALE_MULT", 1.01))
-	_assert(absf(birch_a_mult - 1.20) < 0.02, "BIRCH_A_SCALE_MULT ≈ 1.20 (got %.3f)" % birch_a_mult)
-	_assert(absf(birch_b_mult - 1.20) < 0.02, "BIRCH_B_SCALE_MULT ≈ 1.20 (got %.3f)" % birch_b_mult)
-	_assert(absf(birch_gym_mult - 1.00) < 0.02, "BIRCH_TURNHALLE_SCALE_MULT ≈ 1.00 (got %.3f)" % birch_gym_mult)
+	_assert(absf(birch_a_mult - 1.68) < 0.02, "BIRCH_A_SCALE_MULT ≈ 1.68 (got %.3f)" % birch_a_mult)
+	_assert(absf(birch_b_mult - 1.34) < 0.02, "BIRCH_B_SCALE_MULT ≈ 1.34 (got %.3f)" % birch_b_mult)
+	_assert(absf(birch_gym_mult - 2.22) < 0.02, "BIRCH_TURNHALLE_SCALE_MULT ≈ 2.22 (got %.3f)" % birch_gym_mult)
 	_assert(absf(riet_a_mult - 1.30) < 0.02, "RIETACKER_A_SCALE_MULT ≈ 1.30 (got %.3f)" % riet_a_mult)
 	_assert(absf(riet_b_mult - 1.25) < 0.02, "RIETACKER_B_SCALE_MULT ≈ 1.25 (got %.3f)" % riet_b_mult)
 	_assert(absf(riet_gym_mult - 1.30) < 0.02, "RIETACKER_TURNHALLE_SCALE_MULT ≈ 1.30 (got %.3f)" % riet_gym_mult)
@@ -422,10 +422,13 @@ func _assert_landmark_scales(world: Node, sprites: Array[Sprite2D]) -> void:
 			birch_a.scale.is_equal_approx(school_scale * birch_a_mult),
 			"birch sample scale == SCHOOL_SCALE * BIRCH_A_SCALE_MULT"
 		)
-		var visual_h := float(birch_a.texture.get_height()) * absf(birch_a.scale.y)
+		var tex_h := float(birch_a.texture.get_height())
+		var visual_h := tex_h * absf(birch_a.scale.y)
+		var expected_h := tex_h * absf((school_scale * birch_a_mult).y)
 		_assert(
-			visual_h >= 400.0 and visual_h <= 700.0,
-			"birch visual height ~400–700 wu at BIRCH_A scale (got %.1f)" % visual_h
+			visual_h >= expected_h * 0.85 and visual_h <= expected_h * 1.15,
+			"birch visual height ≈ tex_h * SCHOOL_SCALE * BIRCH_A_SCALE_MULT ±15%% (got %.1f expect %.1f)"
+			% [visual_h, expected_h]
 		)
 
 	var forest_checked := 0
@@ -1009,16 +1012,16 @@ func _assert_birch_campus(world: Node, sprites: Array[Sprite2D]) -> void:
 		% gym.position.distance_to(SeuzachGeo.birch_turnhalle_world())
 	)
 	_assert(
-		a.scale.is_equal_approx(Vector2(0.60, 0.60)),
-		"schulhaus_birch_a scale ≈ 0.60 (got %s)" % str(a.scale)
+		a.scale.is_equal_approx(Vector2(0.84, 0.84)),
+		"schulhaus_birch_a scale ≈ 0.84 (got %s)" % str(a.scale)
 	)
 	_assert(
-		b.scale.is_equal_approx(Vector2(0.60, 0.60)),
-		"schulhaus_birch_b scale ≈ 0.60 (got %s)" % str(b.scale)
+		b.scale.is_equal_approx(Vector2(0.67, 0.67)),
+		"schulhaus_birch_b scale ≈ 0.67 (got %s)" % str(b.scale)
 	)
 	_assert(
-		gym.scale.is_equal_approx(Vector2(0.50, 0.50)),
-		"turnhalle_birch scale ≈ 0.50 (got %s)" % str(gym.scale)
+		gym.scale.is_equal_approx(Vector2(1.11, 1.11)),
+		"turnhalle_birch scale ≈ 1.11 (got %s)" % str(gym.scale)
 	)
 	_assert(
 		a.position.x > b.position.x + 400.0,
