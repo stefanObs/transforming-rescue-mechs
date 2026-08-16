@@ -33,10 +33,10 @@ const RIETACKER_A_SCALE_MULT := 1.04
 const RIETACKER_B_SCALE_MULT := 1.21
 const RIETACKER_TURNHALLE_SCALE_MULT := 2.62
 ## S03: Ohringen campus + kiga per-building multipliers on SCHOOL_SCALE (OSM footprint ratios).
-const OHRINGEN_A_SCALE_MULT := 1.35
-const OHRINGEN_B_SCALE_MULT := 0.83
-const OHRINGEN_TURNHALLE_SCALE_MULT := 0.75
-const KIGA_OHRINGEN_SCALE_MULT := 0.55
+const OHRINGEN_A_SCALE_MULT := 1.42
+const OHRINGEN_B_SCALE_MULT := 1.28
+const OHRINGEN_TURNHALLE_SCALE_MULT := 1.21
+const KIGA_OHRINGEN_SCALE_MULT := 0.78
 ## S04: Seuzach kigas Bachtobel/Weid/Schneckenwiese multipliers on SCHOOL_SCALE (OSM footprint ratios).
 const KIGA_BACHTOBEL_SCALE_MULT := 0.57
 const KIGA_WEID_SCALE_MULT := 0.55

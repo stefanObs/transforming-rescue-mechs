@@ -307,10 +307,10 @@ func _assert_landmark_scales(world: Node, sprites: Array[Sprite2D]) -> void:
 	var riet_a_mult: float = float(consts.get("RIETACKER_A_SCALE_MULT", 1.04))
 	var riet_b_mult: float = float(consts.get("RIETACKER_B_SCALE_MULT", 1.21))
 	var riet_gym_mult: float = float(consts.get("RIETACKER_TURNHALLE_SCALE_MULT", 2.62))
-	var ohr_a_mult: float = float(consts.get("OHRINGEN_A_SCALE_MULT", 1.35))
-	var ohr_b_mult: float = float(consts.get("OHRINGEN_B_SCALE_MULT", 0.83))
-	var ohr_gym_mult: float = float(consts.get("OHRINGEN_TURNHALLE_SCALE_MULT", 0.75))
-	var kiga_ohr_mult: float = float(consts.get("KIGA_OHRINGEN_SCALE_MULT", 0.55))
+	var ohr_a_mult: float = float(consts.get("OHRINGEN_A_SCALE_MULT", 1.42))
+	var ohr_b_mult: float = float(consts.get("OHRINGEN_B_SCALE_MULT", 1.28))
+	var ohr_gym_mult: float = float(consts.get("OHRINGEN_TURNHALLE_SCALE_MULT", 1.21))
+	var kiga_ohr_mult: float = float(consts.get("KIGA_OHRINGEN_SCALE_MULT", 0.78))
 	var kiga_bt_mult: float = float(consts.get("KIGA_BACHTOBEL_SCALE_MULT", 0.57))
 	var kiga_weid_mult: float = float(consts.get("KIGA_WEID_SCALE_MULT", 0.55))
 	var kiga_sw_mult: float = float(consts.get("KIGA_SCHNECKENWIESE_SCALE_MULT", 1.03))
@@ -322,10 +322,10 @@ func _assert_landmark_scales(world: Node, sprites: Array[Sprite2D]) -> void:
 	_assert(absf(riet_a_mult - 1.04) < 0.02, "RIETACKER_A_SCALE_MULT ≈ 1.04 (got %.3f)" % riet_a_mult)
 	_assert(absf(riet_b_mult - 1.21) < 0.02, "RIETACKER_B_SCALE_MULT ≈ 1.21 (got %.3f)" % riet_b_mult)
 	_assert(absf(riet_gym_mult - 2.62) < 0.02, "RIETACKER_TURNHALLE_SCALE_MULT ≈ 2.62 (got %.3f)" % riet_gym_mult)
-	_assert(absf(ohr_a_mult - 1.35) < 0.02, "OHRINGEN_A_SCALE_MULT ≈ 1.35 (got %.3f)" % ohr_a_mult)
-	_assert(absf(ohr_b_mult - 0.83) < 0.02, "OHRINGEN_B_SCALE_MULT ≈ 0.83 (got %.3f)" % ohr_b_mult)
-	_assert(absf(ohr_gym_mult - 0.75) < 0.02, "OHRINGEN_TURNHALLE_SCALE_MULT ≈ 0.75 (got %.3f)" % ohr_gym_mult)
-	_assert(absf(kiga_ohr_mult - 0.55) < 0.02, "KIGA_OHRINGEN_SCALE_MULT ≈ 0.55 (got %.3f)" % kiga_ohr_mult)
+	_assert(absf(ohr_a_mult - 1.42) < 0.02, "OHRINGEN_A_SCALE_MULT ≈ 1.42 (got %.3f)" % ohr_a_mult)
+	_assert(absf(ohr_b_mult - 1.28) < 0.02, "OHRINGEN_B_SCALE_MULT ≈ 1.28 (got %.3f)" % ohr_b_mult)
+	_assert(absf(ohr_gym_mult - 1.21) < 0.02, "OHRINGEN_TURNHALLE_SCALE_MULT ≈ 1.21 (got %.3f)" % ohr_gym_mult)
+	_assert(absf(kiga_ohr_mult - 0.78) < 0.02, "KIGA_OHRINGEN_SCALE_MULT ≈ 0.78 (got %.3f)" % kiga_ohr_mult)
 	_assert(absf(kiga_bt_mult - 0.57) < 0.02, "KIGA_BACHTOBEL_SCALE_MULT ≈ 0.57 (got %.3f)" % kiga_bt_mult)
 	_assert(absf(kiga_weid_mult - 0.55) < 0.02, "KIGA_WEID_SCALE_MULT ≈ 0.55 (got %.3f)" % kiga_weid_mult)
 	_assert(absf(kiga_sw_mult - 1.03) < 0.02, "KIGA_SCHNECKENWIESE_SCALE_MULT ≈ 1.03 (got %.3f)" % kiga_sw_mult)
@@ -1272,16 +1272,16 @@ func _assert_ohringen_campus(world: Node, sprites: Array[Sprite2D]) -> void:
 		% gym.position.distance_to(SeuzachGeo.ohringen_turnhalle_world())
 	)
 	_assert(
-		a.scale.is_equal_approx(Vector2(0.675, 0.675)),
-		"schulhaus_ohringen_a scale ≈ 0.675 (got %s)" % str(a.scale)
+		a.scale.is_equal_approx(Vector2(0.71, 0.71)),
+		"schulhaus_ohringen_a scale ≈ 0.71 (got %s)" % str(a.scale)
 	)
 	_assert(
-		b.scale.is_equal_approx(Vector2(0.415, 0.415)),
-		"schulhaus_ohringen_b scale ≈ 0.415 (got %s)" % str(b.scale)
+		b.scale.is_equal_approx(Vector2(0.64, 0.64)),
+		"schulhaus_ohringen_b scale ≈ 0.64 (got %s)" % str(b.scale)
 	)
 	_assert(
-		gym.scale.is_equal_approx(Vector2(0.375, 0.375)),
-		"turnhalle_ohringen scale ≈ 0.375 (got %s)" % str(gym.scale)
+		gym.scale.is_equal_approx(Vector2(0.605, 0.605)),
+		"turnhalle_ohringen scale ≈ 0.605 (got %s)" % str(gym.scale)
 	)
 	_assert(
 		a.position.y < b.position.y - 150.0,
@@ -1633,8 +1633,8 @@ func _assert_kiga_ohringen(world: Node, sprites: Array[Sprite2D]) -> void:
 		% kiga.position.distance_to(SeuzachGeo.kiga_ohringen_world())
 	)
 	_assert(
-		kiga.scale.is_equal_approx(Vector2(0.275, 0.275)),
-		"kiga_ohringen scale ≈ 0.275 (got %s)" % str(kiga.scale)
+		kiga.scale.is_equal_approx(Vector2(0.39, 0.39)),
+		"kiga_ohringen scale ≈ 0.39 (got %s)" % str(kiga.scale)
 	)
 	_assert(
 		kiga.position.x < -15000.0 and kiga.position.y > 8000.0,
