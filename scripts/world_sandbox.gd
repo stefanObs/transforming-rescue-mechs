@@ -38,9 +38,9 @@ const OHRINGEN_B_SCALE_MULT := 1.28
 const OHRINGEN_TURNHALLE_SCALE_MULT := 1.21
 const KIGA_OHRINGEN_SCALE_MULT := 0.78
 ## S04: Seuzach kigas Bachtobel/Weid/Schneckenwiese multipliers on SCHOOL_SCALE (OSM footprint ratios).
-const KIGA_BACHTOBEL_SCALE_MULT := 0.57
-const KIGA_WEID_SCALE_MULT := 0.55
-const KIGA_SCHNECKENWIESE_SCALE_MULT := 1.03
+const KIGA_BACHTOBEL_SCALE_MULT := 1.00
+const KIGA_WEID_SCALE_MULT := 0.43
+const KIGA_SCHNECKENWIESE_SCALE_MULT := 1.12
 ## S05: Bahnhof + Badi multipliers on LANDMARK_SCALE (OSM footprint ratios).
 const BAHNHOF_SCALE_MULT := 0.79
 const BADI_SCALE_MULT := 1.01

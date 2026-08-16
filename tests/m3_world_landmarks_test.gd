@@ -311,9 +311,9 @@ func _assert_landmark_scales(world: Node, sprites: Array[Sprite2D]) -> void:
 	var ohr_b_mult: float = float(consts.get("OHRINGEN_B_SCALE_MULT", 1.28))
 	var ohr_gym_mult: float = float(consts.get("OHRINGEN_TURNHALLE_SCALE_MULT", 1.21))
 	var kiga_ohr_mult: float = float(consts.get("KIGA_OHRINGEN_SCALE_MULT", 0.78))
-	var kiga_bt_mult: float = float(consts.get("KIGA_BACHTOBEL_SCALE_MULT", 0.57))
-	var kiga_weid_mult: float = float(consts.get("KIGA_WEID_SCALE_MULT", 0.55))
-	var kiga_sw_mult: float = float(consts.get("KIGA_SCHNECKENWIESE_SCALE_MULT", 1.03))
+	var kiga_bt_mult: float = float(consts.get("KIGA_BACHTOBEL_SCALE_MULT", 1.00))
+	var kiga_weid_mult: float = float(consts.get("KIGA_WEID_SCALE_MULT", 0.43))
+	var kiga_sw_mult: float = float(consts.get("KIGA_SCHNECKENWIESE_SCALE_MULT", 1.12))
 	var bahnhof_mult: float = float(consts.get("BAHNHOF_SCALE_MULT", 0.79))
 	var badi_mult: float = float(consts.get("BADI_SCALE_MULT", 1.01))
 	_assert(absf(birch_a_mult - 1.68) < 0.02, "BIRCH_A_SCALE_MULT ≈ 1.68 (got %.3f)" % birch_a_mult)
@@ -326,9 +326,9 @@ func _assert_landmark_scales(world: Node, sprites: Array[Sprite2D]) -> void:
 	_assert(absf(ohr_b_mult - 1.28) < 0.02, "OHRINGEN_B_SCALE_MULT ≈ 1.28 (got %.3f)" % ohr_b_mult)
 	_assert(absf(ohr_gym_mult - 1.21) < 0.02, "OHRINGEN_TURNHALLE_SCALE_MULT ≈ 1.21 (got %.3f)" % ohr_gym_mult)
 	_assert(absf(kiga_ohr_mult - 0.78) < 0.02, "KIGA_OHRINGEN_SCALE_MULT ≈ 0.78 (got %.3f)" % kiga_ohr_mult)
-	_assert(absf(kiga_bt_mult - 0.57) < 0.02, "KIGA_BACHTOBEL_SCALE_MULT ≈ 0.57 (got %.3f)" % kiga_bt_mult)
-	_assert(absf(kiga_weid_mult - 0.55) < 0.02, "KIGA_WEID_SCALE_MULT ≈ 0.55 (got %.3f)" % kiga_weid_mult)
-	_assert(absf(kiga_sw_mult - 1.03) < 0.02, "KIGA_SCHNECKENWIESE_SCALE_MULT ≈ 1.03 (got %.3f)" % kiga_sw_mult)
+	_assert(absf(kiga_bt_mult - 1.00) < 0.02, "KIGA_BACHTOBEL_SCALE_MULT ≈ 1.00 (got %.3f)" % kiga_bt_mult)
+	_assert(absf(kiga_weid_mult - 0.43) < 0.02, "KIGA_WEID_SCALE_MULT ≈ 0.43 (got %.3f)" % kiga_weid_mult)
+	_assert(absf(kiga_sw_mult - 1.12) < 0.02, "KIGA_SCHNECKENWIESE_SCALE_MULT ≈ 1.12 (got %.3f)" % kiga_sw_mult)
 	_assert(absf(bahnhof_mult - 0.79) < 0.02, "BAHNHOF_SCALE_MULT ≈ 0.79 (got %.3f)" % bahnhof_mult)
 	_assert(absf(badi_mult - 1.01) < 0.02, "BADI_SCALE_MULT ≈ 1.01 (got %.3f)" % badi_mult)
 
@@ -1396,8 +1396,8 @@ func _assert_kiga_bachtobel(world: Node, sprites: Array[Sprite2D]) -> void:
 		"kiga_bachtobel has BuildingCollision"
 	)
 	_assert(
-		kiga.scale.is_equal_approx(Vector2(0.285, 0.285)),
-		"kiga_bachtobel scale ≈ 0.285 (got %s)" % str(kiga.scale)
+		kiga.scale.is_equal_approx(Vector2(0.50, 0.50)),
+		"kiga_bachtobel scale ≈ 0.50 (got %s)" % str(kiga.scale)
 	)
 	_assert(is_zero_approx(kiga.rotation), "kiga_bachtobel rotation is 0")
 	_assert_school_street_prop(world, kiga, "Bachtobelstrasse", false, "east")
@@ -1478,8 +1478,8 @@ func _assert_kiga_weid(world: Node, sprites: Array[Sprite2D]) -> void:
 		"kiga_weid has BuildingCollision"
 	)
 	_assert(
-		kiga.scale.is_equal_approx(Vector2(0.275, 0.275)),
-		"kiga_weid scale ≈ 0.275 (got %s)" % str(kiga.scale)
+		kiga.scale.is_equal_approx(Vector2(0.215, 0.215)),
+		"kiga_weid scale ≈ 0.215 (got %s)" % str(kiga.scale)
 	)
 	_assert(is_zero_approx(kiga.rotation), "kiga_weid rotation is 0")
 	_assert_school_street_prop(world, kiga, "Weidstrasse", false, "south")
@@ -1574,8 +1574,8 @@ func _assert_kiga_schneckenwiese(world: Node, sprites: Array[Sprite2D]) -> void:
 		"kiga_schneckenwiese has BuildingCollision"
 	)
 	_assert(
-		kiga.scale.is_equal_approx(Vector2(0.515, 0.515)),
-		"kiga_schneckenwiese scale ≈ 0.515 (got %s)" % str(kiga.scale)
+		kiga.scale.is_equal_approx(Vector2(0.56, 0.56)),
+		"kiga_schneckenwiese scale ≈ 0.56 (got %s)" % str(kiga.scale)
 	)
 	_assert(is_zero_approx(kiga.rotation), "kiga_schneckenwiese rotation is 0")
 	var sw_road := str(kiga.get_meta("street_name")) if kiga.has_meta("street_name") else "Schneckenwiesenstrasse"
