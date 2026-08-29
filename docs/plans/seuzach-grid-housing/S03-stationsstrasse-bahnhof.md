@@ -13,9 +13,9 @@ Spieler sieht Wohnzeilen entlang **Stationsstrasse** vom Zentrumsrand (**STAT-WE
 
 ## In diesem Schritt
 
-- Housing-Zellen **STAT-WEST** und **STAT-BHF**
-- Straßenbindung: Stationsstrasse (+ ggf. Strehlgasse/Stadler nur wo Wohnzeilen maps-plausibel sind)
-- Landmark-Clearance: Bahnhof, Gleisband, Birch-Campus
+- Housing-Zellen **STAT-WEST** und **STAT-BHF** (Feldspannen INDEX, ±10 ok)
+- Straßenbindung: Stationsstrasse; Strehlgasse / Stadlerstrasse nur wo sie die Rects schneiden
+- S01-Quartier-API + shared `placed[]` mit S01/S02; Landmark-Clearance zu Bahnhof, Gleisband, Birch-Campus
 
 ## Nicht (andere Feature-Schritte)
 
@@ -28,5 +28,25 @@ Spieler sieht Wohnzeilen entlang **Stationsstrasse** vom Zentrumsrand (**STAT-WE
 
 ## Testplan
 
-- Bei Bahnhof-Welt: Wohnprops südlich/entlang Stationsstrasse, nicht auf Gleis/Bahnhof-Sprite
-- STAT-WEST und STAT-BHF beide bewohnt, off-road
+### Automatisiert
+
+- [ ] Registry enthält `STAT-WEST` + `STAT-BHF` (Bounds ≈ INDEX) neben S01/S02; `active_ids` = 6
+- [ ] ≥4 Häuser mit `housing_quartier == "STAT-WEST"` und Zell-Index im Rect (±1); analog STAT-BHF
+- [ ] S01/S02-Asserts bleiben grün (≥4 je Quartier, Spawn-Viewport ≥3)
+- [ ] Shared `placed[]`: keine Doppel-Stacks (min pairwise sep ≥ min_house_sep)
+- [ ] Corridor-Meta `stat-west` / `stat-bhf` mappt auf Quartier-IDs; Off-Road / Facing weiter grün
+- [ ] Housing hält Clearance zum Bahnhof-Landmark (min_landmark_sep); Bahnhof-Count bleibt 1
+- [ ] `./scripts/run_tests.sh` grün
+
+### Playtest / Smoke
+
+- [ ] Teleport/Drive: Wohnprops entlang Stationsstrasse in STAT-WEST und STAT-BHF, off-road
+- [ ] Keine Housing-Props auf Bahnhof-/Gleis-/Birch-Footprints
+- [ ] Bahnhof-Landmark unverändert; keine neuen Assets
+
+## Akzeptanzkriterien
+
+- [ ] STAT-WEST und STAT-BHF in der Quartier-Registry mit Stationsstrasse (+ lokale Schnitte Strehlgasse/Stadler) aus `seuzach_roads.json`
+- [ ] Placement über `_place_housing_in_quarter` / shared `placed[]` mit S01/S02 — kein Doppel-Stack
+- [ ] Maps-plausible Wohnzeilen an Stationsstrasse; Bahnhof bleibt Landmark, nicht neu gebaut
+- [ ] S01/S02-Quartiere und Suite-Garantien bleiben grün; kein Art-Import

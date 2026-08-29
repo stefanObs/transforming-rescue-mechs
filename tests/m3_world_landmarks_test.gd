@@ -568,6 +568,18 @@ func _assert_corridor_housing(world: Node, sprites: Array[Sprite2D]) -> void:
 					and str(spr.get_meta("housing_quartier")) == "LAND-MITTE",
 					"%s land-mitte corridor maps to LAND-MITTE quartier" % spr.name
 				)
+			"stat-west":
+				_assert(
+					spr.has_meta("housing_quartier")
+					and str(spr.get_meta("housing_quartier")) == "STAT-WEST",
+					"%s stat-west corridor maps to STAT-WEST quartier" % spr.name
+				)
+			"stat-bhf":
+				_assert(
+					spr.has_meta("housing_quartier")
+					and str(spr.get_meta("housing_quartier")) == "STAT-BHF",
+					"%s stat-bhf corridor maps to STAT-BHF quartier" % spr.name
+				)
 			_:
 				_assert(false, "unexpected housing_corridor meta '%s'" % corridor)
 		_assert(
@@ -590,24 +602,32 @@ func _assert_corridor_housing(world: Node, sprites: Array[Sprite2D]) -> void:
 
 
 func _assert_quartier_housing(_world: Node, sprites: Array[Sprite2D]) -> void:
-	## S01–S02 F1 quarter cells: registry, counts in bounds, no double-stack.
+	## S01–S03 F1 quarter cells: registry, counts in bounds, no double-stack.
 	var reg: Dictionary = HousingQuarters.REGISTRY
-	_assert(reg.size() == 4, "S01+S02 registry has exactly 4 quarters (got %d)" % reg.size())
+	_assert(reg.size() == 6, "S01–S03 registry has exactly 6 quarters (got %d)" % reg.size())
 	_assert(reg.has("KIRCHE-KERN"), "registry has KIRCHE-KERN")
 	_assert(reg.has("WINT-WEST"), "registry has WINT-WEST")
 	_assert(reg.has("WINT-NORD"), "registry has WINT-NORD")
 	_assert(reg.has("LAND-MITTE"), "registry has LAND-MITTE")
+	_assert(reg.has("STAT-WEST"), "registry has STAT-WEST")
+	_assert(reg.has("STAT-BHF"), "registry has STAT-BHF")
 	var s01: Array[String] = HousingQuarters.s01_ids()
 	_assert(s01.size() == 2, "s01_ids size == 2")
 	var s02: Array[String] = HousingQuarters.s02_ids()
 	_assert(s02.size() == 2, "s02_ids size == 2")
+	var s03: Array[String] = HousingQuarters.s03_ids()
+	_assert(s03.size() == 2, "s03_ids size == 2")
 	_assert(
-		HousingQuarters.active_ids().size() == 4,
-		"active_ids includes S01+S02 (got %d)" % HousingQuarters.active_ids().size()
+		HousingQuarters.active_ids().size() == 6,
+		"active_ids includes S01–S03 (got %d)" % HousingQuarters.active_ids().size()
 	)
 	_assert(
 		HousingQuarters.quarter_contains_world("WINT-WEST", SeuzachGeo.winterthurer_spawn()),
 		"Winterthurer spawn cell is inside WINT-WEST"
+	)
+	_assert(
+		HousingQuarters.quarter_contains_world("STAT-BHF", SeuzachGeo.bahnhof_world()),
+		"Bahnhof cell is inside STAT-BHF"
 	)
 	_assert(
 		str(reg["WINT-NORD"].get("roads", [])).contains("Winterthurerstrasse"),
@@ -617,20 +637,35 @@ func _assert_quartier_housing(_world: Node, sprites: Array[Sprite2D]) -> void:
 		str(reg["LAND-MITTE"].get("roads", [])).contains("Landstrasse"),
 		"LAND-MITTE roads include Landstrasse"
 	)
+	_assert(
+		str(reg["STAT-WEST"].get("roads", [])).contains("Stationsstrasse"),
+		"STAT-WEST roads include Stationsstrasse"
+	)
+	_assert(
+		str(reg["STAT-BHF"].get("roads", [])).contains("Stationsstrasse"),
+		"STAT-BHF roads include Stationsstrasse"
+	)
 
 	var allowed_q := {
 		"KIRCHE-KERN": true,
 		"WINT-WEST": true,
 		"WINT-NORD": true,
 		"LAND-MITTE": true,
+		"STAT-WEST": true,
+		"STAT-BHF": true,
 	}
 	var counts := {
 		"KIRCHE-KERN": 0,
 		"WINT-WEST": 0,
 		"WINT-NORD": 0,
 		"LAND-MITTE": 0,
+		"STAT-WEST": 0,
+		"STAT-BHF": 0,
 	}
 	var houses: Array[Sprite2D] = []
+	var bahnhof := _find_landmark(sprites, "bahnhof")
+	_assert(bahnhof != null, "bahnhof landmark present for STAT clearance")
+	var min_landmark_sep := 320.0
 	for spr in sprites:
 		if not spr.has_meta("house_variant"):
 			continue
@@ -653,10 +688,19 @@ func _assert_quartier_housing(_world: Node, sprites: Array[Sprite2D]) -> void:
 			"%s cell %s outside %s (±1)" % [spr.name, str(cell), qid]
 		)
 		counts[qid] = int(counts[qid]) + 1
+		if bahnhof != null and (qid == "STAT-WEST" or qid == "STAT-BHF"):
+			_assert(
+				spr.position.distance_to(bahnhof.position) >= min_landmark_sep - 1.0,
+				"%s too close to bahnhof (d=%.1f, need ≥%.0f)"
+				% [spr.name, spr.position.distance_to(bahnhof.position), min_landmark_sep]
+			)
 	_assert(int(counts["KIRCHE-KERN"]) >= 4, "≥4 KIRCHE-KERN housing props (got %d)" % counts["KIRCHE-KERN"])
 	_assert(int(counts["WINT-WEST"]) >= 4, "≥4 WINT-WEST housing props (got %d)" % counts["WINT-WEST"])
 	_assert(int(counts["WINT-NORD"]) >= 4, "≥4 WINT-NORD housing props (got %d)" % counts["WINT-NORD"])
 	_assert(int(counts["LAND-MITTE"]) >= 4, "≥4 LAND-MITTE housing props (got %d)" % counts["LAND-MITTE"])
+	_assert(int(counts["STAT-WEST"]) >= 4, "≥4 STAT-WEST housing props (got %d)" % counts["STAT-WEST"])
+	_assert(int(counts["STAT-BHF"]) >= 4, "≥4 STAT-BHF housing props (got %d)" % counts["STAT-BHF"])
+	_assert(_count_landmark(sprites, "bahnhof") == 1, "bahnhof landmark count stays 1")
 
 	## Shared placed[]: no pairwise stack closer than placement min_house_sep.
 	var min_sep := 200.0

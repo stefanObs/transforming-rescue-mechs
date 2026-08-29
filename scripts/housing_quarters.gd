@@ -4,7 +4,7 @@ extends Object
 
 const DEBUG_GRID_SCRIPT := preload("res://scripts/debug_grid.gd")
 
-## S01–S02 quarters. Later slices append further ids; do not invent a second grid.
+## S01–S03 quarters. Later slices append further ids; do not invent a second grid.
 const REGISTRY := {
 	"KIRCHE-KERN": {
 		"ix_min": -15,
@@ -40,6 +40,24 @@ const REGISTRY := {
 		"roads": ["Landstrasse"],
 		"corridor_id": "land-mitte",
 	},
+	"STAT-WEST": {
+		## INDEX 80..160, −70..−20; ±10 on axes for Stationsstrasse/Stadler curb samples.
+		"ix_min": 70,
+		"ix_max": 170,
+		"iy_min": -80,
+		"iy_max": -10,
+		"roads": ["Stationsstrasse", "Strehlgasse", "Stadlerstrasse"],
+		"corridor_id": "stat-west",
+	},
+	"STAT-BHF": {
+		## INDEX 155..210, −70..−25; ±10 so Bahnhof-band curb samples stay placeable.
+		"ix_min": 145,
+		"ix_max": 220,
+		"iy_min": -80,
+		"iy_max": -15,
+		"roads": ["Stationsstrasse", "Stadlerstrasse"],
+		"corridor_id": "stat-bhf",
+	},
 }
 
 
@@ -51,11 +69,16 @@ static func s02_ids() -> Array[String]:
 	return ["WINT-NORD", "LAND-MITTE"]
 
 
+static func s03_ids() -> Array[String]:
+	return ["STAT-WEST", "STAT-BHF"]
+
+
 static func active_ids() -> Array[String]:
-	## Placement order: S01 then S02; shared placed[] across all.
+	## Placement order: S01 → S02 → S03; shared placed[] across all.
 	var out: Array[String] = []
 	out.append_array(s01_ids())
 	out.append_array(s02_ids())
+	out.append_array(s03_ids())
 	return out
 
 

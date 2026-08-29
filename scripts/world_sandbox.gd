@@ -684,7 +684,7 @@ func _place_landmarks() -> void:
 
 
 func _place_spawn_housing() -> void:
-	## F1 quarter cells (S01–S02) + interim Schneckenwiese until REUT slices (S04).
+	## F1 quarter cells (S01–S03) + interim Schneckenwiese until REUT slices (S04).
 	_prop_parent = _props
 	var spawn := SeuzachGeo.winterthurer_spawn()
 	var variants: Array[String] = [
@@ -926,6 +926,18 @@ func _place_housing_along_roads(
 						if not _sprite_clears_named_roads(pos, tex, HOUSE_SCALE, roads, true, bearing):
 							variant_i += 1
 							continue
+				## Quarter cells: final curb/nudge must stay in loose (±1) field bounds.
+				if use_bounds:
+					var final_cell: Vector2i = HousingQuarters.world_to_cell(pos)
+					var loose_bounds := {
+						"ix_min": int(field_bounds["ix_min"]) - 1,
+						"ix_max": int(field_bounds["ix_max"]) + 1,
+						"iy_min": int(field_bounds["iy_min"]) - 1,
+						"iy_max": int(field_bounds["iy_max"]) + 1,
+					}
+					if not HousingQuarters.cell_in_bounds(final_cell, loose_bounds):
+						variant_i += 1
+						continue
 				variant_i += 1
 				## EW: door bottom-left (SW); NS: door on left edge (W). Flip so door faces asphalt.
 				var toward_road := (-local_perp * side).normalized()
