@@ -36,7 +36,7 @@ Feldspannen sind Orientierungsrahmen (Maps/OSM); Implementierung darf ±10 Felde
 | S02 | `S02-wint-nord-landstrasse-mitte.md` | WINT-NORD + LAND-MITTE | S01 | erledigt |
 | S03 | `S03-stationsstrasse-bahnhof.md` | STAT-WEST + STAT-BHF | S01 | erledigt |
 | S04 | `S04-reutlinger-se.md` | REUT-MITTE + REUT-SE | S01 | erledigt |
-| S05 | `S05-breitestrasse-seebuehl.md` | BREITE + SEEBUEHL | S01 | offen |
+| S05 | `S05-breitestrasse-seebuehl.md` | BREITE + SEEBUEHL | S01 | erledigt |
 | S06 | `S06-ohringen-nord-sued.md` | OHR-NORD + OHR-SUED | S01 | offen |
 
 Status nur: `offen` → `in Arbeit` (Implement-Start) → `erledigt` (nach Phase-4-Pass + Git). Kein Slice-File-Phasen-Churn.

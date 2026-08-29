@@ -4,7 +4,7 @@ extends Object
 
 const DEBUG_GRID_SCRIPT := preload("res://scripts/debug_grid.gd")
 
-## S01–S04 quarters. Later slices append further ids; do not invent a second grid.
+## S01–S05 quarters. Later slices append further ids; do not invent a second grid.
 const REGISTRY := {
 	"KIRCHE-KERN": {
 		"ix_min": -15,
@@ -95,6 +95,26 @@ const REGISTRY := {
 		],
 		"corridor_id": "reut-se",
 	},
+	"BREITE": {
+		## INDEX 70..140, −55..15; ±10 for Breitestrasse / Birchstrasse curb samples.
+		## Birchstrasse only campus-clear via landmark sep; exclude Seebühl primary.
+		"ix_min": 60,
+		"ix_max": 150,
+		"iy_min": -65,
+		"iy_max": 25,
+		"roads": ["Breitestrasse", "Birchstrasse"],
+		"corridor_id": "breite",
+	},
+	"SEEBUEHL": {
+		## INDEX 100..160, −50..20; ±10 so Seebühlstrasse west tip + Birch–Breite band fit.
+		## Birchstrasse residential / campus-clear stretches only (landmark sep).
+		"ix_min": 90,
+		"ix_max": 170,
+		"iy_min": -60,
+		"iy_max": 30,
+		"roads": ["Seebühlstrasse", "Breitestrasse", "Birchstrasse"],
+		"corridor_id": "seebuehl",
+	},
 }
 
 
@@ -114,13 +134,18 @@ static func s04_ids() -> Array[String]:
 	return ["REUT-MITTE", "REUT-SE"]
 
 
+static func s05_ids() -> Array[String]:
+	return ["BREITE", "SEEBUEHL"]
+
+
 static func active_ids() -> Array[String]:
-	## Placement order: S01 → S02 → S03 → S04; shared placed[] across all.
+	## Placement order: S01 → S02 → S03 → S04 → S05; shared placed[] across all.
 	var out: Array[String] = []
 	out.append_array(s01_ids())
 	out.append_array(s02_ids())
 	out.append_array(s03_ids())
 	out.append_array(s04_ids())
+	out.append_array(s05_ids())
 	return out
 
 
