@@ -2,6 +2,7 @@ extends SceneTree
 ## M3 Seuzach street map: art on disk, world is roads-only (no landmarks/houses).
 
 const ART := "res://assets/art/"
+const HousingQuarters := preload("res://scripts/housing_quarters.gd")
 const REQUIRED_ART := [
 	"landmark_bahnhof_seuzach.png",
 	"landmark_feuerwehr_seuzach.png",
@@ -142,6 +143,7 @@ func _run() -> void:
 	_assert_landmark_scales(world, all_sprites)
 	_assert_spawn_housing(world, all_sprites)
 	_assert_corridor_housing(world, all_sprites)
+	_assert_quartier_housing(world, all_sprites)
 	_assert_street_facing_housing(world, all_sprites)
 	_assert_bearing_aligned_housing(world, all_sprites)
 
@@ -501,6 +503,7 @@ func _assert_spawn_housing(world: Node, sprites: Array[Sprite2D]) -> void:
 
 func _assert_corridor_housing(world: Node, sprites: Array[Sprite2D]) -> void:
 	## Kirche + Schneckenwiese + spawn: bearing-suffixed house_street_* only.
+	## Corridor tags remain for facing suite; S01 quarters also set housing_quartier.
 	var kirche_n := 0
 	var schn_n := 0
 	var spawn_n := 0
@@ -535,10 +538,24 @@ func _assert_corridor_housing(world: Node, sprites: Array[Sprite2D]) -> void:
 		match corridor:
 			"kirche":
 				kirche_n += 1
+				_assert(
+					spr.has_meta("housing_quartier")
+					and str(spr.get_meta("housing_quartier")) == "KIRCHE-KERN",
+					"%s kirche corridor maps to KIRCHE-KERN quartier" % spr.name
+				)
 			"schneckenwiese":
 				schn_n += 1
+				_assert(
+					not spr.has_meta("housing_quartier"),
+					"%s interim schneckenwiese has no housing_quartier" % spr.name
+				)
 			"spawn":
 				spawn_n += 1
+				_assert(
+					spr.has_meta("housing_quartier")
+					and str(spr.get_meta("housing_quartier")) == "WINT-WEST",
+					"%s spawn corridor maps to WINT-WEST quartier" % spr.name
+				)
 			_:
 				_assert(false, "unexpected housing_corridor meta '%s'" % corridor)
 		_assert(
@@ -557,6 +574,67 @@ func _assert_corridor_housing(world: Node, sprites: Array[Sprite2D]) -> void:
 	_assert(
 		street_variants.size() >= 2,
 		"≥2 distinct house_street_* variants (got %d)" % street_variants.size()
+	)
+
+
+func _assert_quartier_housing(_world: Node, sprites: Array[Sprite2D]) -> void:
+	## S01 F1 quarter cells: registry, counts in bounds, no double-stack.
+	var reg: Dictionary = HousingQuarters.REGISTRY
+	_assert(reg.size() == 2, "S01 registry has exactly 2 quarters (got %d)" % reg.size())
+	_assert(reg.has("KIRCHE-KERN"), "registry has KIRCHE-KERN")
+	_assert(reg.has("WINT-WEST"), "registry has WINT-WEST")
+	var s01: Array[String] = HousingQuarters.s01_ids()
+	_assert(s01.size() == 2, "s01_ids size == 2")
+	_assert(
+		HousingQuarters.quarter_contains_world("WINT-WEST", SeuzachGeo.winterthurer_spawn()),
+		"Winterthurer spawn cell is inside WINT-WEST"
+	)
+
+	var kern_n := 0
+	var west_n := 0
+	var houses: Array[Sprite2D] = []
+	for spr in sprites:
+		if not spr.has_meta("house_variant"):
+			continue
+		houses.append(spr)
+		if not spr.has_meta("housing_quartier"):
+			continue
+		var qid := str(spr.get_meta("housing_quartier"))
+		_assert(
+			qid == "KIRCHE-KERN" or qid == "WINT-WEST",
+			"%s unexpected housing_quartier '%s'" % [spr.name, qid]
+		)
+		## Final curb offset may land ±1 field outside the sample rect.
+		var cell: Vector2i = HousingQuarters.world_to_cell(spr.position)
+		var bounds: Dictionary = HousingQuarters.field_bounds(qid)
+		var loose := {
+			"ix_min": int(bounds["ix_min"]) - 1,
+			"ix_max": int(bounds["ix_max"]) + 1,
+			"iy_min": int(bounds["iy_min"]) - 1,
+			"iy_max": int(bounds["iy_max"]) + 1,
+		}
+		_assert(
+			HousingQuarters.cell_in_bounds(cell, loose),
+			"%s cell %s outside %s (±1)" % [spr.name, str(cell), qid]
+		)
+		if qid == "KIRCHE-KERN":
+			kern_n += 1
+		elif qid == "WINT-WEST":
+			west_n += 1
+	_assert(kern_n >= 4, "≥4 KIRCHE-KERN housing props (got %d)" % kern_n)
+	_assert(west_n >= 4, "≥4 WINT-WEST housing props (got %d)" % west_n)
+
+	## Shared placed[]: no pairwise stack closer than placement min_house_sep.
+	var min_sep := 200.0
+	var closest := 1.0e9
+	for i in range(houses.size()):
+		for j in range(i + 1, houses.size()):
+			var d: float = houses[i].position.distance_to(houses[j].position)
+			if d < closest:
+				closest = d
+	_assert(
+		houses.size() < 2 or closest >= min_sep - 1.0,
+		"no double-stack housing (min pairwise sep=%.1f, need ≥%.0f)" % [closest, min_sep]
 	)
 
 
@@ -647,7 +725,7 @@ func _assert_street_facing_housing(world: Node, sprites: Array[Sprite2D]) -> voi
 
 	## E–W corridor sample: Kirchgasse / Reutlinger _ew houses use SW/SE door dirs.
 	var ew_roads: Array[Dictionary] = _road_list_named(
-		roads_by_name, ["Kirchgasse", "Reutlingerstrasse"]
+		roads_by_name, ["Kirchgasse", "Kirchhügelstrasse", "Reutlingerstrasse"]
 	)
 	var ew_flip_checked := 0
 	for spr in sprites:
@@ -713,7 +791,7 @@ func _roads_for_housing_sprite(
 		"spawn":
 			names = ["Winterthurerstrasse"]
 		"kirche":
-			names = ["Kirchgasse", "Winterthurerstrasse"]
+			names = ["Kirchgasse", "Kirchhügelstrasse", "Winterthurerstrasse"]
 		"schneckenwiese":
 			names = ["Winterthurerstrasse", "Reutlingerstrasse", "Schneckenwiesenstrasse"]
 		_:
@@ -774,6 +852,7 @@ func _assert_bearing_aligned_housing(world: Node, sprites: Array[Sprite2D]) -> v
 		[
 			"Winterthurerstrasse",
 			"Kirchgasse",
+			"Kirchhügelstrasse",
 			"Reutlingerstrasse",
 			"Schneckenwiesenstrasse",
 		]

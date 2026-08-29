@@ -5,6 +5,7 @@ extends Node2D
 const RoadKitLib := preload("res://scripts/road_kit.gd")
 const RailwayKitLib := preload("res://scripts/railway_kit.gd")
 const WaterKitLib := preload("res://scripts/water_kit.gd")
+const HousingQuarters := preload("res://scripts/housing_quarters.gd")
 const ART := "res://assets/art/"
 const HUB_SCENE := "res://scenes/hub_station.tscn"
 ## Unused; buildings use SCHOOL_SCALE / LANDMARK_SCALE (not PROP_SCALE).
@@ -683,7 +684,7 @@ func _place_landmarks() -> void:
 
 
 func _place_spawn_housing() -> void:
-	## Spawn + Kirche / Schneckenwiese — street-ribbon bases; bearing suffix picked per tangent.
+	## F1 quarter cells (S01) + interim Schneckenwiese until REUT slices (S04).
 	_prop_parent = _props
 	var spawn := SeuzachGeo.winterthurer_spawn()
 	var variants: Array[String] = [
@@ -699,34 +700,19 @@ func _place_spawn_housing() -> void:
 	for child in _collect_prop_sprites(_props):
 		if child.has_meta("landmark_id"):
 			landmark_positions.append(child.position)
+	## Shared across all passes — prevents double-stack in overlapping field rects / legacy radius.
 	var placed: Array[Vector2] = []
 	var counters := Vector2i(0, 0) ## x=variant_i, y=house_i
-	## S01: both sides of Winterthurerstrasse in the spawn viewport.
-	counters = _place_housing_along_roads(
-		["Winterthurerstrasse"],
-		spawn,
-		900.0,
-		"spawn",
-		roads,
-		variants,
-		landmark_positions,
-		placed,
-		counters
-	)
-	## S02 Kirche corridor: Kirchgasse + Winterthurer linking west/south from spawn (~first 2 km).
-	var kirche_center := Vector2(2500.0, -1000.0)
-	counters = _place_housing_along_roads(
-		["Kirchgasse", "Winterthurerstrasse"],
-		kirche_center,
-		2000.0,
-		"kirche",
-		roads,
-		variants,
-		landmark_positions,
-		placed,
-		counters
-	)
-	## S02 Schneckenwiese corridor: first stretch of the drive toward kiga (~Reutlinger / Winterthurer N).
+	for qid in HousingQuarters.s01_ids():
+		counters = _place_housing_in_quarter(
+			str(qid),
+			roads,
+			variants,
+			landmark_positions,
+			placed,
+			counters
+		)
+	## Temporary until S04 REUT-* quarters replace this radius corridor.
 	var kiga := SeuzachGeo.kiga_schneckenwiese_world()
 	var schn_center := spawn.lerp(kiga, 0.30)
 	counters = _place_housing_along_roads(
@@ -742,6 +728,35 @@ func _place_spawn_housing() -> void:
 	)
 
 
+func _place_housing_in_quarter(
+	quarter_id: String,
+	roads: Array[Dictionary],
+	variants: Array[String],
+	landmark_positions: Array[Vector2],
+	placed: Array[Vector2],
+	counters: Vector2i
+) -> Vector2i:
+	var q: Dictionary = HousingQuarters.get_quarter(quarter_id)
+	if q.is_empty():
+		return counters
+	var road_names: Array = q.get("roads", [])
+	var corridor_id := str(q.get("corridor_id", quarter_id))
+	var bounds: Dictionary = HousingQuarters.field_bounds(quarter_id)
+	return _place_housing_along_roads(
+		road_names,
+		Vector2.ZERO,
+		INF,
+		corridor_id,
+		roads,
+		variants,
+		landmark_positions,
+		placed,
+		counters,
+		bounds,
+		quarter_id
+	)
+
+
 func _place_housing_along_roads(
 	road_names: Array,
 	center: Vector2,
@@ -751,9 +766,12 @@ func _place_housing_along_roads(
 	variants: Array[String],
 	landmark_positions: Array[Vector2],
 	placed: Array[Vector2],
-	counters: Vector2i
+	counters: Vector2i,
+	field_bounds: Dictionary = {},
+	quartier_id: String = ""
 ) -> Vector2i:
-	## Both sides, off-road, spaced houses along named RoadKit polylines inside radius.
+	## Both sides, off-road, spaced houses along named RoadKit polylines.
+	## Filter: F1 field_bounds when set; else radius around center.
 	var spacing := 250.0
 	var min_house_sep := 200.0
 	var min_spawn_sep := 160.0
@@ -764,6 +782,7 @@ func _place_housing_along_roads(
 		name_set[str(n)] = true
 	var variant_i := counters.x
 	var house_i := counters.y
+	var use_bounds := not field_bounds.is_empty()
 	for road in roads:
 		if not name_set.has(str(road.get("name", ""))):
 			continue
@@ -775,7 +794,11 @@ func _place_housing_along_roads(
 		for sample in samples:
 			var point: Vector2 = sample["point"]
 			var tangent: Vector2 = sample["tangent"]
-			if point.distance_to(center) > radius:
+			if use_bounds:
+				var cell: Vector2i = HousingQuarters.world_to_cell(point)
+				if not HousingQuarters.cell_in_bounds(cell, field_bounds):
+					continue
+			elif point.distance_to(center) > radius:
 				continue
 			var perp := Vector2(-tangent.y, tangent.x)
 			if perp.length_squared() < 0.0001:
@@ -907,8 +930,11 @@ func _place_housing_along_roads(
 				## EW: door bottom-left (SW); NS: door on left edge (W). Flip so door faces asphalt.
 				var toward_road := (-local_perp * side).normalized()
 				var flip := _street_door_flip_h(bearing, toward_road)
+				var tag := quartier_id if not quartier_id.is_empty() else corridor_id
 				var node_name := "house_%s_%s_%d" % [
-					corridor_id, variant.trim_prefix("house_"), house_i
+					tag.replace("-", "_").to_lower(),
+					variant.trim_prefix("house_"),
+					house_i
 				]
 				var meta := {
 					"house_variant": variant,
@@ -919,6 +945,8 @@ func _place_housing_along_roads(
 					"street_bearing": bearing,
 					"faces_street": true,
 				}
+				if not quartier_id.is_empty():
+					meta["housing_quartier"] = quartier_id
 				var spr := _add_prop(
 					file_name,
 					pos,
