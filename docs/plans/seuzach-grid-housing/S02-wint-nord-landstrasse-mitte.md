@@ -29,5 +29,24 @@ Spieler sieht Wohnbebauung entlang **Winterthurerstrasse nordwärts** (**WINT-NO
 
 ## Testplan
 
-- Teleport/Drive: Häuser in WINT-NORD und LAND-MITTE sichtbar, off-road, entlang der Bänder
-- Keine Housing-Props auf Badi-/Campus-Footprints
+### Automatisiert
+
+- [ ] Registry enthält `WINT-NORD` + `LAND-MITTE` (Bounds ≈ INDEX) neben S01-Zellen; `active_ids` = 4
+- [ ] ≥4 Häuser mit `housing_quartier == "WINT-NORD"` und Zell-Index im Rect (±1); analog LAND-MITTE
+- [ ] S01-Asserts bleiben grün: ≥4 KIRCHE-KERN, ≥4 WINT-WEST, Spawn-Viewport ≥3
+- [ ] Shared `placed[]`: keine Doppel-Stacks (min pairwise sep ≥ min_house_sep)
+- [ ] Corridor-Meta `wint-nord` / `land-mitte` mappt auf Quartier-IDs; Off-Road / Facing weiter grün
+- [ ] `./scripts/run_tests.sh` grün
+
+### Playtest / Smoke
+
+- [ ] Teleport/Drive: Häuser in WINT-NORD und LAND-MITTE sichtbar, off-road, entlang der Bänder
+- [ ] Keine Housing-Props auf Badi-/Campus-Footprints
+- [ ] KIRCHE-KERN / WINT-WEST unverändert lesbar; keine neuen Assets
+
+## Akzeptanzkriterien
+
+- [ ] WINT-NORD und LAND-MITTE in der Quartier-Registry mit korrekten Road-Namen aus `seuzach_roads.json`
+- [ ] Placement über `_place_housing_in_quarter` / shared `placed[]` mit S01 — kein Doppel-Stack
+- [ ] Maps-plausible Wohnzeilen an Winterthurer-Nord und Landstrasse-Mitte; Badi/Campi nicht neu gebaut
+- [ ] S01-Quartiere und Suite-Garantien bleiben grün; kein Art-Import

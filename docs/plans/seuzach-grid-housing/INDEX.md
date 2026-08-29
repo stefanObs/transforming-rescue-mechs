@@ -33,7 +33,7 @@ Feldspannen sind Orientierungsrahmen (Maps/OSM); Implementierung darf ±10 Felde
 | ID | Datei | Feature | Hängt ab von | Status |
 |----|-------|---------|----------------|--------|
 | S01 | `S01-quartier-raster-kirche-wint-west.md` | Quartier-Raster für Housing + KIRCHE-KERN + WINT-WEST | — | erledigt |
-| S02 | `S02-wint-nord-landstrasse-mitte.md` | WINT-NORD + LAND-MITTE | S01 | offen |
+| S02 | `S02-wint-nord-landstrasse-mitte.md` | WINT-NORD + LAND-MITTE | S01 | erledigt |
 | S03 | `S03-stationsstrasse-bahnhof.md` | STAT-WEST + STAT-BHF | S01 | offen |
 | S04 | `S04-reutlinger-se.md` | REUT-MITTE + REUT-SE | S01 | offen |
 | S05 | `S05-breitestrasse-seebuehl.md` | BREITE + SEEBUEHL | S01 | offen |

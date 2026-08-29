@@ -556,6 +556,18 @@ func _assert_corridor_housing(world: Node, sprites: Array[Sprite2D]) -> void:
 					and str(spr.get_meta("housing_quartier")) == "WINT-WEST",
 					"%s spawn corridor maps to WINT-WEST quartier" % spr.name
 				)
+			"wint-nord":
+				_assert(
+					spr.has_meta("housing_quartier")
+					and str(spr.get_meta("housing_quartier")) == "WINT-NORD",
+					"%s wint-nord corridor maps to WINT-NORD quartier" % spr.name
+				)
+			"land-mitte":
+				_assert(
+					spr.has_meta("housing_quartier")
+					and str(spr.get_meta("housing_quartier")) == "LAND-MITTE",
+					"%s land-mitte corridor maps to LAND-MITTE quartier" % spr.name
+				)
 			_:
 				_assert(false, "unexpected housing_corridor meta '%s'" % corridor)
 		_assert(
@@ -578,20 +590,46 @@ func _assert_corridor_housing(world: Node, sprites: Array[Sprite2D]) -> void:
 
 
 func _assert_quartier_housing(_world: Node, sprites: Array[Sprite2D]) -> void:
-	## S01 F1 quarter cells: registry, counts in bounds, no double-stack.
+	## S01–S02 F1 quarter cells: registry, counts in bounds, no double-stack.
 	var reg: Dictionary = HousingQuarters.REGISTRY
-	_assert(reg.size() == 2, "S01 registry has exactly 2 quarters (got %d)" % reg.size())
+	_assert(reg.size() == 4, "S01+S02 registry has exactly 4 quarters (got %d)" % reg.size())
 	_assert(reg.has("KIRCHE-KERN"), "registry has KIRCHE-KERN")
 	_assert(reg.has("WINT-WEST"), "registry has WINT-WEST")
+	_assert(reg.has("WINT-NORD"), "registry has WINT-NORD")
+	_assert(reg.has("LAND-MITTE"), "registry has LAND-MITTE")
 	var s01: Array[String] = HousingQuarters.s01_ids()
 	_assert(s01.size() == 2, "s01_ids size == 2")
+	var s02: Array[String] = HousingQuarters.s02_ids()
+	_assert(s02.size() == 2, "s02_ids size == 2")
+	_assert(
+		HousingQuarters.active_ids().size() == 4,
+		"active_ids includes S01+S02 (got %d)" % HousingQuarters.active_ids().size()
+	)
 	_assert(
 		HousingQuarters.quarter_contains_world("WINT-WEST", SeuzachGeo.winterthurer_spawn()),
 		"Winterthurer spawn cell is inside WINT-WEST"
 	)
+	_assert(
+		str(reg["WINT-NORD"].get("roads", [])).contains("Winterthurerstrasse"),
+		"WINT-NORD roads include Winterthurerstrasse"
+	)
+	_assert(
+		str(reg["LAND-MITTE"].get("roads", [])).contains("Landstrasse"),
+		"LAND-MITTE roads include Landstrasse"
+	)
 
-	var kern_n := 0
-	var west_n := 0
+	var allowed_q := {
+		"KIRCHE-KERN": true,
+		"WINT-WEST": true,
+		"WINT-NORD": true,
+		"LAND-MITTE": true,
+	}
+	var counts := {
+		"KIRCHE-KERN": 0,
+		"WINT-WEST": 0,
+		"WINT-NORD": 0,
+		"LAND-MITTE": 0,
+	}
 	var houses: Array[Sprite2D] = []
 	for spr in sprites:
 		if not spr.has_meta("house_variant"):
@@ -600,10 +638,7 @@ func _assert_quartier_housing(_world: Node, sprites: Array[Sprite2D]) -> void:
 		if not spr.has_meta("housing_quartier"):
 			continue
 		var qid := str(spr.get_meta("housing_quartier"))
-		_assert(
-			qid == "KIRCHE-KERN" or qid == "WINT-WEST",
-			"%s unexpected housing_quartier '%s'" % [spr.name, qid]
-		)
+		_assert(allowed_q.has(qid), "%s unexpected housing_quartier '%s'" % [spr.name, qid])
 		## Final curb offset may land ±1 field outside the sample rect.
 		var cell: Vector2i = HousingQuarters.world_to_cell(spr.position)
 		var bounds: Dictionary = HousingQuarters.field_bounds(qid)
@@ -617,12 +652,11 @@ func _assert_quartier_housing(_world: Node, sprites: Array[Sprite2D]) -> void:
 			HousingQuarters.cell_in_bounds(cell, loose),
 			"%s cell %s outside %s (±1)" % [spr.name, str(cell), qid]
 		)
-		if qid == "KIRCHE-KERN":
-			kern_n += 1
-		elif qid == "WINT-WEST":
-			west_n += 1
-	_assert(kern_n >= 4, "≥4 KIRCHE-KERN housing props (got %d)" % kern_n)
-	_assert(west_n >= 4, "≥4 WINT-WEST housing props (got %d)" % west_n)
+		counts[qid] = int(counts[qid]) + 1
+	_assert(int(counts["KIRCHE-KERN"]) >= 4, "≥4 KIRCHE-KERN housing props (got %d)" % counts["KIRCHE-KERN"])
+	_assert(int(counts["WINT-WEST"]) >= 4, "≥4 WINT-WEST housing props (got %d)" % counts["WINT-WEST"])
+	_assert(int(counts["WINT-NORD"]) >= 4, "≥4 WINT-NORD housing props (got %d)" % counts["WINT-NORD"])
+	_assert(int(counts["LAND-MITTE"]) >= 4, "≥4 LAND-MITTE housing props (got %d)" % counts["LAND-MITTE"])
 
 	## Shared placed[]: no pairwise stack closer than placement min_house_sep.
 	var min_sep := 200.0
@@ -794,6 +828,10 @@ func _roads_for_housing_sprite(
 			names = ["Kirchgasse", "Kirchhügelstrasse", "Winterthurerstrasse"]
 		"schneckenwiese":
 			names = ["Winterthurerstrasse", "Reutlingerstrasse", "Schneckenwiesenstrasse"]
+		"wint-nord":
+			names = ["Winterthurerstrasse"]
+		"land-mitte":
+			names = ["Landstrasse"]
 		_:
 			return fallback
 	var out := _road_list_named(roads_by_name, names)

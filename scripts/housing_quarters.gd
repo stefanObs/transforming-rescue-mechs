@@ -4,7 +4,7 @@ extends Object
 
 const DEBUG_GRID_SCRIPT := preload("res://scripts/debug_grid.gd")
 
-## S01 only. S02+ append further ids; do not invent a second grid.
+## S01–S02 quarters. Later slices append further ids; do not invent a second grid.
 const REGISTRY := {
 	"KIRCHE-KERN": {
 		"ix_min": -15,
@@ -23,11 +23,40 @@ const REGISTRY := {
 		"roads": ["Winterthurerstrasse"],
 		"corridor_id": "spawn",
 	},
+	"WINT-NORD": {
+		## INDEX 25..55, −90..−30; ix_max +10 so east-side curb offsets stay in-cell.
+		"ix_min": 25,
+		"ix_max": 65,
+		"iy_min": -90,
+		"iy_max": -30,
+		"roads": ["Winterthurerstrasse"],
+		"corridor_id": "wint-nord",
+	},
+	"LAND-MITTE": {
+		"ix_min": 40,
+		"ix_max": 120,
+		"iy_min": -130,
+		"iy_max": -50,
+		"roads": ["Landstrasse"],
+		"corridor_id": "land-mitte",
+	},
 }
 
 
 static func s01_ids() -> Array[String]:
 	return ["KIRCHE-KERN", "WINT-WEST"]
+
+
+static func s02_ids() -> Array[String]:
+	return ["WINT-NORD", "LAND-MITTE"]
+
+
+static func active_ids() -> Array[String]:
+	## Placement order: S01 then S02; shared placed[] across all.
+	var out: Array[String] = []
+	out.append_array(s01_ids())
+	out.append_array(s02_ids())
+	return out
 
 
 static func get_quarter(id: String) -> Dictionary:

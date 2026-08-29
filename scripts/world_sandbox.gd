@@ -684,7 +684,7 @@ func _place_landmarks() -> void:
 
 
 func _place_spawn_housing() -> void:
-	## F1 quarter cells (S01) + interim Schneckenwiese until REUT slices (S04).
+	## F1 quarter cells (S01–S02) + interim Schneckenwiese until REUT slices (S04).
 	_prop_parent = _props
 	var spawn := SeuzachGeo.winterthurer_spawn()
 	var variants: Array[String] = [
@@ -703,7 +703,7 @@ func _place_spawn_housing() -> void:
 	## Shared across all passes — prevents double-stack in overlapping field rects / legacy radius.
 	var placed: Array[Vector2] = []
 	var counters := Vector2i(0, 0) ## x=variant_i, y=house_i
-	for qid in HousingQuarters.s01_ids():
+	for qid in HousingQuarters.active_ids():
 		counters = _place_housing_in_quarter(
 			str(qid),
 			roads,
