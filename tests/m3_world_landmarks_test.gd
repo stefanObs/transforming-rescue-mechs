@@ -502,13 +502,15 @@ func _assert_spawn_housing(world: Node, sprites: Array[Sprite2D]) -> void:
 
 
 func _assert_corridor_housing(world: Node, sprites: Array[Sprite2D]) -> void:
-	## Kirche + Reutlinger + Breite/Seebühl + spawn: bearing-suffixed house_street_* only.
+	## Kirche + Reutlinger + Breite/Seebühl + Ohringen + spawn: bearing-suffixed house_street_* only.
 	## Corridor tags remain for facing suite; quarters also set housing_quartier.
 	var kirche_n := 0
 	var reut_mitte_n := 0
 	var reut_se_n := 0
 	var breite_n := 0
 	var seebuehl_n := 0
+	var ohr_nord_n := 0
+	var ohr_sued_n := 0
 	var spawn_n := 0
 	var street_variants: Dictionary = {}
 	var bases := {
@@ -574,6 +576,20 @@ func _assert_corridor_housing(world: Node, sprites: Array[Sprite2D]) -> void:
 					and str(spr.get_meta("housing_quartier")) == "SEEBUEHL",
 					"%s seebuehl corridor maps to SEEBUEHL quartier" % spr.name
 				)
+			"ohr-nord":
+				ohr_nord_n += 1
+				_assert(
+					spr.has_meta("housing_quartier")
+					and str(spr.get_meta("housing_quartier")) == "OHR-NORD",
+					"%s ohr-nord corridor maps to OHR-NORD quartier" % spr.name
+				)
+			"ohr-sued":
+				ohr_sued_n += 1
+				_assert(
+					spr.has_meta("housing_quartier")
+					and str(spr.get_meta("housing_quartier")) == "OHR-SUED",
+					"%s ohr-sued corridor maps to OHR-SUED quartier" % spr.name
+				)
 			"spawn":
 				spawn_n += 1
 				_assert(
@@ -619,10 +635,29 @@ func _assert_corridor_housing(world: Node, sprites: Array[Sprite2D]) -> void:
 	_assert(reut_se_n >= 4, "≥4 reut-se-corridor houses (got %d)" % reut_se_n)
 	_assert(breite_n >= 4, "≥4 breite-corridor houses (got %d)" % breite_n)
 	_assert(seebuehl_n >= 4, "≥4 seebuehl-corridor houses (got %d)" % seebuehl_n)
+	_assert(ohr_nord_n >= 4, "≥4 ohr-nord-corridor houses (got %d)" % ohr_nord_n)
+	_assert(ohr_sued_n >= 4, "≥4 ohr-sued-corridor houses (got %d)" % ohr_sued_n)
 	_assert(
-		kirche_n + reut_mitte_n + reut_se_n + breite_n + seebuehl_n + spawn_n >= 23,
-		"≥23 total tagged housing props (got %d)"
-		% (kirche_n + reut_mitte_n + reut_se_n + breite_n + seebuehl_n + spawn_n)
+		kirche_n
+		+ reut_mitte_n
+		+ reut_se_n
+		+ breite_n
+		+ seebuehl_n
+		+ ohr_nord_n
+		+ ohr_sued_n
+		+ spawn_n
+		>= 31,
+		"≥31 total tagged housing props (got %d)"
+		% (
+			kirche_n
+			+ reut_mitte_n
+			+ reut_se_n
+			+ breite_n
+			+ seebuehl_n
+			+ ohr_nord_n
+			+ ohr_sued_n
+			+ spawn_n
+		)
 	)
 	_assert(
 		street_variants.size() >= 2,
@@ -631,9 +666,9 @@ func _assert_corridor_housing(world: Node, sprites: Array[Sprite2D]) -> void:
 
 
 func _assert_quartier_housing(_world: Node, sprites: Array[Sprite2D]) -> void:
-	## S01–S05 F1 quarter cells: registry, counts in bounds, no double-stack.
+	## S01–S06 F1 quarter cells: registry, counts in bounds, no double-stack.
 	var reg: Dictionary = HousingQuarters.REGISTRY
-	_assert(reg.size() == 10, "S01–S05 registry has exactly 10 quarters (got %d)" % reg.size())
+	_assert(reg.size() == 12, "S01–S06 registry has exactly 12 quarters (got %d)" % reg.size())
 	_assert(reg.has("KIRCHE-KERN"), "registry has KIRCHE-KERN")
 	_assert(reg.has("WINT-WEST"), "registry has WINT-WEST")
 	_assert(reg.has("WINT-NORD"), "registry has WINT-NORD")
@@ -644,6 +679,8 @@ func _assert_quartier_housing(_world: Node, sprites: Array[Sprite2D]) -> void:
 	_assert(reg.has("REUT-SE"), "registry has REUT-SE")
 	_assert(reg.has("BREITE"), "registry has BREITE")
 	_assert(reg.has("SEEBUEHL"), "registry has SEEBUEHL")
+	_assert(reg.has("OHR-NORD"), "registry has OHR-NORD")
+	_assert(reg.has("OHR-SUED"), "registry has OHR-SUED")
 	var s01: Array[String] = HousingQuarters.s01_ids()
 	_assert(s01.size() == 2, "s01_ids size == 2")
 	var s02: Array[String] = HousingQuarters.s02_ids()
@@ -654,9 +691,11 @@ func _assert_quartier_housing(_world: Node, sprites: Array[Sprite2D]) -> void:
 	_assert(s04.size() == 2, "s04_ids size == 2")
 	var s05: Array[String] = HousingQuarters.s05_ids()
 	_assert(s05.size() == 2, "s05_ids size == 2")
+	var s06: Array[String] = HousingQuarters.s06_ids()
+	_assert(s06.size() == 2, "s06_ids size == 2")
 	_assert(
-		HousingQuarters.active_ids().size() == 10,
-		"active_ids includes S01–S05 (got %d)" % HousingQuarters.active_ids().size()
+		HousingQuarters.active_ids().size() == 12,
+		"active_ids includes S01–S06 (got %d)" % HousingQuarters.active_ids().size()
 	)
 	_assert(
 		HousingQuarters.quarter_contains_world("WINT-WEST", SeuzachGeo.winterthurer_spawn()),
@@ -676,6 +715,18 @@ func _assert_quartier_housing(_world: Node, sprites: Array[Sprite2D]) -> void:
 		HousingQuarters.quarter_contains_world("SEEBUEHL", SeuzachGeo.birch_schulhaus_b_world())
 		or HousingQuarters.quarter_contains_world("BREITE", SeuzachGeo.birch_schulhaus_b_world()),
 		"Birch campus cell intersects BREITE or SEEBUEHL (clearance target)"
+	)
+	_assert(
+		HousingQuarters.quarter_contains_world("OHR-NORD", SeuzachGeo.ohringen_schulhaus_a_world())
+		or HousingQuarters.quarter_contains_world(
+			"OHR-SUED", SeuzachGeo.ohringen_schulhaus_a_world()
+		),
+		"Ohringen campus cell intersects OHR-NORD or OHR-SUED (clearance target)"
+	)
+	_assert(
+		HousingQuarters.quarter_contains_world("OHR-NORD", SeuzachGeo.kiga_ohringen_world())
+		or HousingQuarters.quarter_contains_world("OHR-SUED", SeuzachGeo.kiga_ohringen_world()),
+		"Kiga Ohringen cell intersects OHR-NORD or OHR-SUED (clearance target)"
 	)
 	_assert(
 		str(reg["WINT-NORD"].get("roads", [])).contains("Winterthurerstrasse"),
@@ -713,6 +764,22 @@ func _assert_quartier_housing(_world: Node, sprites: Array[Sprite2D]) -> void:
 		str(reg["SEEBUEHL"].get("roads", [])).contains("Seebühlstrasse"),
 		"SEEBUEHL roads include Seebühlstrasse"
 	)
+	_assert(
+		str(reg["OHR-NORD"].get("roads", [])).contains("Schulstrasse"),
+		"OHR-NORD roads include Schulstrasse"
+	)
+	_assert(
+		str(reg["OHR-NORD"].get("roads", [])).contains("Ohringerstrasse"),
+		"OHR-NORD roads include Ohringerstrasse"
+	)
+	_assert(
+		str(reg["OHR-SUED"].get("roads", [])).contains("Schulstrasse"),
+		"OHR-SUED roads include Schulstrasse"
+	)
+	_assert(
+		str(reg["OHR-SUED"].get("roads", [])).contains("Ohringerstrasse"),
+		"OHR-SUED roads include Ohringerstrasse"
+	)
 
 	var allowed_q := {
 		"KIRCHE-KERN": true,
@@ -725,6 +792,8 @@ func _assert_quartier_housing(_world: Node, sprites: Array[Sprite2D]) -> void:
 		"REUT-SE": true,
 		"BREITE": true,
 		"SEEBUEHL": true,
+		"OHR-NORD": true,
+		"OHR-SUED": true,
 	}
 	var counts := {
 		"KIRCHE-KERN": 0,
@@ -737,6 +806,8 @@ func _assert_quartier_housing(_world: Node, sprites: Array[Sprite2D]) -> void:
 		"REUT-SE": 0,
 		"BREITE": 0,
 		"SEEBUEHL": 0,
+		"OHR-NORD": 0,
+		"OHR-SUED": 0,
 	}
 	var houses: Array[Sprite2D] = []
 	var bahnhof := _find_landmark(sprites, "bahnhof")
@@ -748,6 +819,15 @@ func _assert_quartier_housing(_world: Node, sprites: Array[Sprite2D]) -> void:
 	var birch_gym := _find_named(sprites, "turnhalle_birch")
 	_assert(birch_a != null and birch_b != null and birch_gym != null, "Birch campus props present")
 	var birch_props: Array[Sprite2D] = [birch_a, birch_b, birch_gym]
+	var ohr_a := _find_named(sprites, "schulhaus_ohringen_a")
+	var ohr_b := _find_named(sprites, "schulhaus_ohringen_b")
+	var ohr_gym := _find_named(sprites, "turnhalle_ohringen")
+	var kiga_ohr := _find_named(sprites, "kiga_ohringen")
+	_assert(
+		ohr_a != null and ohr_b != null and ohr_gym != null and kiga_ohr != null,
+		"Ohringen campus+kiga props present"
+	)
+	var ohr_props: Array[Sprite2D] = [ohr_a, ohr_b, ohr_gym, kiga_ohr]
 	var min_landmark_sep := 320.0
 	for spr in sprites:
 		if not spr.has_meta("house_variant"):
@@ -797,6 +877,20 @@ func _assert_quartier_housing(_world: Node, sprites: Array[Sprite2D]) -> void:
 						min_landmark_sep,
 					]
 				)
+		if qid == "OHR-NORD" or qid == "OHR-SUED":
+			for ohr in ohr_props:
+				if ohr == null:
+					continue
+				_assert(
+					spr.position.distance_to(ohr.position) >= min_landmark_sep - 1.0,
+					"%s too close to %s (d=%.1f, need ≥%.0f)"
+					% [
+						spr.name,
+						ohr.name,
+						spr.position.distance_to(ohr.position),
+						min_landmark_sep,
+					]
+				)
 	_assert(int(counts["KIRCHE-KERN"]) >= 4, "≥4 KIRCHE-KERN housing props (got %d)" % counts["KIRCHE-KERN"])
 	_assert(int(counts["WINT-WEST"]) >= 4, "≥4 WINT-WEST housing props (got %d)" % counts["WINT-WEST"])
 	_assert(int(counts["WINT-NORD"]) >= 4, "≥4 WINT-NORD housing props (got %d)" % counts["WINT-NORD"])
@@ -807,6 +901,8 @@ func _assert_quartier_housing(_world: Node, sprites: Array[Sprite2D]) -> void:
 	_assert(int(counts["REUT-SE"]) >= 4, "≥4 REUT-SE housing props (got %d)" % counts["REUT-SE"])
 	_assert(int(counts["BREITE"]) >= 4, "≥4 BREITE housing props (got %d)" % counts["BREITE"])
 	_assert(int(counts["SEEBUEHL"]) >= 4, "≥4 SEEBUEHL housing props (got %d)" % counts["SEEBUEHL"])
+	_assert(int(counts["OHR-NORD"]) >= 4, "≥4 OHR-NORD housing props (got %d)" % counts["OHR-NORD"])
+	_assert(int(counts["OHR-SUED"]) >= 4, "≥4 OHR-SUED housing props (got %d)" % counts["OHR-SUED"])
 	_assert(_count_landmark(sprites, "bahnhof") == 1, "bahnhof landmark count stays 1")
 	_assert(
 		_count_landmark(sprites, "kiga_schneckenwiese") == 1,
@@ -819,6 +915,18 @@ func _assert_quartier_housing(_world: Node, sprites: Array[Sprite2D]) -> void:
 	_assert(
 		_count_landmark(sprites, "turnhalle_birch") == 1,
 		"turnhalle_birch landmark count stays 1"
+	)
+	_assert(
+		_count_landmark(sprites, "schulhaus_ohringen") == 2,
+		"schulhaus_ohringen landmark count stays 2"
+	)
+	_assert(
+		_count_landmark(sprites, "turnhalle_ohringen") == 1,
+		"turnhalle_ohringen landmark count stays 1"
+	)
+	_assert(
+		_count_landmark(sprites, "kiga_ohringen") == 1,
+		"kiga_ohringen landmark count stays 1"
 	)
 
 	## Shared placed[]: no pairwise stack closer than placement min_house_sep.
@@ -920,10 +1028,19 @@ func _assert_street_facing_housing(world: Node, sprites: Array[Sprite2D]) -> voi
 			% [flip_true_on_neg, flip_false_on_neg]
 		)
 
-	## E–W corridor sample: Kirchgasse / Reutlinger / Breite _ew houses use SW/SE door dirs.
+	## E–W corridor sample: Kirchgasse / Reutlinger / Breite / Ohringen _ew houses use SW/SE door dirs.
 	var ew_roads: Array[Dictionary] = _road_list_named(
 		roads_by_name,
-		["Kirchgasse", "Kirchhügelstrasse", "Reutlingerstrasse", "Breitestrasse", "Seebühlstrasse"],
+		[
+			"Kirchgasse",
+			"Kirchhügelstrasse",
+			"Reutlingerstrasse",
+			"Breitestrasse",
+			"Seebühlstrasse",
+			"Schulstrasse",
+			"Friedenstrasse",
+			"Trottenstrasse",
+		],
 	)
 	var ew_flip_checked := 0
 	for spr in sprites:
@@ -939,6 +1056,8 @@ func _assert_street_facing_housing(world: Node, sprites: Array[Sprite2D]) -> voi
 			and corridor != "reut-se"
 			and corridor != "breite"
 			and corridor != "seebuehl"
+			and corridor != "ohr-nord"
+			and corridor != "ohr-sued"
 		):
 			continue
 		_assert(spr.has_meta("street_side"), "%s has street_side" % spr.name)
@@ -1021,6 +1140,32 @@ func _roads_for_housing_sprite(
 			names = ["Breitestrasse", "Birchstrasse"]
 		"seebuehl":
 			names = ["Seebühlstrasse", "Breitestrasse", "Birchstrasse"]
+		"ohr-nord":
+			names = [
+				"Ohringerstrasse",
+				"Schulstrasse",
+				"Schaffhauserstrasse",
+				"Trottenstrasse",
+				"Rundstrasse",
+				"Friedenstrasse",
+				"Münzerstrasse",
+				"Rebhogerstrasse",
+				"Rütistrasse",
+				"Aspstrasse",
+				"Aubodenstrasse",
+			]
+		"ohr-sued":
+			names = [
+				"Ohringerstrasse",
+				"Schulstrasse",
+				"Schaffhauserstrasse",
+				"Trottenstrasse",
+				"Friedenstrasse",
+				"Rütistrasse",
+				"Aubodenstrasse",
+				"Erlenstrasse",
+				"Rebweg",
+			]
 		"wint-nord":
 			names = ["Winterthurerstrasse"]
 		"land-mitte":
@@ -1093,6 +1238,11 @@ func _assert_bearing_aligned_housing(world: Node, sprites: Array[Sprite2D]) -> v
 			"Breitestrasse",
 			"Seebühlstrasse",
 			"Birchstrasse",
+			"Schulstrasse",
+			"Schaffhauserstrasse",
+			"Trottenstrasse",
+			"Friedenstrasse",
+			"Rundstrasse",
 		]
 	)
 

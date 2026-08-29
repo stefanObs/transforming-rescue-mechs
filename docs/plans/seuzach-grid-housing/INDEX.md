@@ -1,6 +1,6 @@
 # Slices: seuzach-grid-housing
 
-**Status:** In Arbeit  
+**Status:** Erledigt  
 **Aufgabe:** Wohnbebauung rasterweise über die wichtigen Seuzach-Wohnquartiere legen — maps-plausibel, am bestehenden F1-100-wu-Feld gebunden.  
 **Datum:** 2026-08-29  
 **Zuschnitt:** zwei verwandte Wohnquartiere / Straßenband-Paare pro Slice; S01 = Quartier-Raster-Konzept + erste zwei Zellen
@@ -37,7 +37,7 @@ Feldspannen sind Orientierungsrahmen (Maps/OSM); Implementierung darf ±10 Felde
 | S03 | `S03-stationsstrasse-bahnhof.md` | STAT-WEST + STAT-BHF | S01 | erledigt |
 | S04 | `S04-reutlinger-se.md` | REUT-MITTE + REUT-SE | S01 | erledigt |
 | S05 | `S05-breitestrasse-seebuehl.md` | BREITE + SEEBUEHL | S01 | erledigt |
-| S06 | `S06-ohringen-nord-sued.md` | OHR-NORD + OHR-SUED | S01 | offen |
+| S06 | `S06-ohringen-nord-sued.md` | OHR-NORD + OHR-SUED | S01 | erledigt |
 
 Status nur: `offen` → `in Arbeit` (Implement-Start) → `erledigt` (nach Phase-4-Pass + Git). Kein Slice-File-Phasen-Churn.
 

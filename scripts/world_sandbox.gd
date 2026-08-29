@@ -684,7 +684,8 @@ func _place_landmarks() -> void:
 
 
 func _place_spawn_housing() -> void:
-	## F1 quarter cells (S01–S05); Schneckenwiese band is REUT-MITTE (no legacy radius).
+	## F1 quarter cells (S01–S06); Schneckenwiese band is REUT-MITTE (no legacy radius).
+	## Ohringen housing stays under %Props (campus/kiga remain under DistrictOhringen).
 	_prop_parent = _props
 	var variants: Array[String] = [
 		"house_street_a",

@@ -29,5 +29,26 @@ Spieler sieht Wohnbebauung in den **eigenen Ohringen-Rasterzellen** **OHR-NORD**
 
 ## Testplan
 
-- Teleport Ohringen: beide Zellen mit Wohnzeilen, off-road, Fassade // Band
-- Campus/Kiga-Footprints frei; F1-Feldindizes im Ohringen-Bereich
+### Automatisiert
+
+- [ ] Registry enthält `OHR-NORD` + `OHR-SUED` (Bounds ≈ INDEX ±10) neben S01–S05; `active_ids` = 12
+- [ ] ≥4 Häuser mit `housing_quartier == "OHR-NORD"` und Zell-Index im Rect (±1); analog OHR-SUED
+- [ ] S01–S05-Asserts bleiben grün (≥4 je Quartier, Spawn-Viewport ≥3)
+- [ ] Shared `placed[]`: keine Doppel-Stacks (min pairwise sep ≥ min_house_sep)
+- [ ] Corridor-Meta `ohr-nord` / `ohr-sued` mappt auf Quartier-IDs
+- [ ] Housing hält Clearance zu Campus Ohringen (a/b + Turnhalle) + Kiga Ohringen; Landmark-Counts bleiben
+- [ ] Off-Road / Facing weiter grün (E–W-Samples inkl. ohr-nord/ohr-sued)
+- [ ] `./scripts/run_tests.sh` grün
+
+### Playtest / Smoke
+
+- [ ] Teleport Ohringen: beide Zellen mit Wohnzeilen, off-road, Fassade // Band
+- [ ] Campus/Kiga-Footprints frei; F1-Feldindizes im Ohringen-Bereich
+- [ ] Keine neuen Assets; S01–S05 Seuzach-Kernquartiere unverändert
+
+## Akzeptanzkriterien
+
+- [ ] OHR-NORD und OHR-SUED in der Quartier-Registry mit Ohringerstrasse / Schulstrasse (+ lokale Ohringen-Wohnwege) aus `seuzach_roads.json`
+- [ ] Placement über `_place_housing_in_quarter` / shared `placed[]` mit S01–S05 — kein Doppel-Stack
+- [ ] Maps-plausible Wohnzeilen in den Ohringen-SW-Zellen; Campus + Kiga bleiben Landmarken
+- [ ] S01–S05-Quartiere und Suite-Garantien bleiben grün; kein Art-Import; kein Forrenberg-/A1-Housing

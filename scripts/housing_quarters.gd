@@ -4,7 +4,7 @@ extends Object
 
 const DEBUG_GRID_SCRIPT := preload("res://scripts/debug_grid.gd")
 
-## S01–S05 quarters. Later slices append further ids; do not invent a second grid.
+## S01–S06 quarters. Do not invent a second grid.
 const REGISTRY := {
 	"KIRCHE-KERN": {
 		"ix_min": -15,
@@ -115,6 +115,49 @@ const REGISTRY := {
 		"roads": ["Seebühlstrasse", "Breitestrasse", "Birchstrasse"],
 		"corridor_id": "seebuehl",
 	},
+	"OHR-NORD": {
+		## INDEX −230..−170, 80..130; ±10 for Ohringen SW curb samples.
+		## Ohringerstrasse listed (slice); OSM ribbon is N of these cells — locals place.
+		## Exclude Forrenberg/A1; campus/kiga cleared via landmark sep.
+		"ix_min": -240,
+		"ix_max": -160,
+		"iy_min": 70,
+		"iy_max": 140,
+		"roads": [
+			"Ohringerstrasse",
+			"Schulstrasse",
+			"Schaffhauserstrasse",
+			"Trottenstrasse",
+			"Rundstrasse",
+			"Friedenstrasse",
+			"Münzerstrasse",
+			"Rebhogerstrasse",
+			"Rütistrasse",
+			"Aspstrasse",
+			"Aubodenstrasse",
+		],
+		"corridor_id": "ohr-nord",
+	},
+	"OHR-SUED": {
+		## INDEX −230..−170, 125..175; ±10 for Schulstrasse-/Süd-Wohnzeilen.
+		## Locals that cut the rect; campus/kiga cleared via landmark sep.
+		"ix_min": -240,
+		"ix_max": -160,
+		"iy_min": 115,
+		"iy_max": 185,
+		"roads": [
+			"Ohringerstrasse",
+			"Schulstrasse",
+			"Schaffhauserstrasse",
+			"Trottenstrasse",
+			"Friedenstrasse",
+			"Rütistrasse",
+			"Aubodenstrasse",
+			"Erlenstrasse",
+			"Rebweg",
+		],
+		"corridor_id": "ohr-sued",
+	},
 }
 
 
@@ -138,14 +181,19 @@ static func s05_ids() -> Array[String]:
 	return ["BREITE", "SEEBUEHL"]
 
 
+static func s06_ids() -> Array[String]:
+	return ["OHR-NORD", "OHR-SUED"]
+
+
 static func active_ids() -> Array[String]:
-	## Placement order: S01 → S02 → S03 → S04 → S05; shared placed[] across all.
+	## Placement order: S01 → … → S06; shared placed[] across all.
 	var out: Array[String] = []
 	out.append_array(s01_ids())
 	out.append_array(s02_ids())
 	out.append_array(s03_ids())
 	out.append_array(s04_ids())
 	out.append_array(s05_ids())
+	out.append_array(s06_ids())
 	return out
 
 
