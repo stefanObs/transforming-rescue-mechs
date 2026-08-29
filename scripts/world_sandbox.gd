@@ -684,9 +684,8 @@ func _place_landmarks() -> void:
 
 
 func _place_spawn_housing() -> void:
-	## F1 quarter cells (S01–S03) + interim Schneckenwiese until REUT slices (S04).
+	## F1 quarter cells (S01–S04); Schneckenwiese band is REUT-MITTE (no legacy radius).
 	_prop_parent = _props
-	var spawn := SeuzachGeo.winterthurer_spawn()
 	var variants: Array[String] = [
 		"house_street_a",
 		"house_street_b",
@@ -700,7 +699,7 @@ func _place_spawn_housing() -> void:
 	for child in _collect_prop_sprites(_props):
 		if child.has_meta("landmark_id"):
 			landmark_positions.append(child.position)
-	## Shared across all passes — prevents double-stack in overlapping field rects / legacy radius.
+	## Shared across all passes — prevents double-stack in overlapping field rects.
 	var placed: Array[Vector2] = []
 	var counters := Vector2i(0, 0) ## x=variant_i, y=house_i
 	for qid in HousingQuarters.active_ids():
@@ -712,20 +711,6 @@ func _place_spawn_housing() -> void:
 			placed,
 			counters
 		)
-	## Temporary until S04 REUT-* quarters replace this radius corridor.
-	var kiga := SeuzachGeo.kiga_schneckenwiese_world()
-	var schn_center := spawn.lerp(kiga, 0.30)
-	counters = _place_housing_along_roads(
-		["Winterthurerstrasse", "Reutlingerstrasse", "Schneckenwiesenstrasse"],
-		schn_center,
-		2000.0,
-		"schneckenwiese",
-		roads,
-		variants,
-		landmark_positions,
-		placed,
-		counters
-	)
 
 
 func _place_housing_in_quarter(
