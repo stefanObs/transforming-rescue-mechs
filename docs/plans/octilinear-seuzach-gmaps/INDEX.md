@@ -15,6 +15,7 @@ Feature-Schritte, keine Prozess-Schritte. Pro Zeile folgt der Ablauf (Plan nur w
 | S02 | `S02-octilinear-gen-svg-docs.md` | Octilinear-Generator → JSON + SVG + data/README | S01 | erledigt |
 | S03 | `S03-connect-dense-octilinear.md` | Verbundenes Netz + dichtere GMaps-Coverage | S02 | erledigt |
 | S04 | `S04-swiss-raster-octilinear-redo.md` | Octilinear-SVG neu aus Swiss Raster 1072-1+1052-3 | S03 | erledigt |
+| S05 | `S05-ohringer-straight-hub-qa.md` | Ohringer begradigen + korrekte Hubs + Zoom-QA | S04 | erledigt |
 
 Status nur: `offen` → `in Arbeit` (Implement-Start) → `erledigt` (nach Phase-4-Pass + Git). Kein Slice-File-Phasen-Churn.
 

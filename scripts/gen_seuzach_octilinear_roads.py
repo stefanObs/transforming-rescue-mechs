@@ -64,6 +64,22 @@ REQUIRED_MAINS = {
     "A1",
 }
 
+# Long corridors that should stay nearly axis-aligned (high RDP, protect interiors).
+STRAIGHT_CORRIDORS = {
+    # Gentle E–W: enough RDP to kill staircases, not so much it invents a SW diagonal.
+    "Ohringerstrasse": {"rdp_cells": 4.0, "axis": "ew", "line_slack_wu": 800.0},
+}
+
+# Named pairs that must share a vertex after connect (correct street meets correct street).
+REQUIRED_JUNCTIONS = [
+    ("Winterthurerstrasse", "Stationsstrasse"),
+    ("Winterthurerstrasse", "Ohringerstrasse"),
+    ("Winterthurerstrasse", "Kirchgasse"),
+    ("Winterthurerstrasse", "Breitestrasse"),
+    ("Schaffhauserstrasse", "Schulstrasse"),
+    ("Stationsstrasse", "Birchstrasse"),
+]
+
 
 def gps_to_world(lat: float, lon: float) -> tuple[float, float]:
     x = (lon - CHURCH_LON) * M_LON * UPM
@@ -92,7 +108,12 @@ def dir_vec(deg: float) -> tuple[float, float]:
     return math.cos(r), math.sin(r)
 
 
-def octilinear_leg(a: tuple[float, float], b: tuple[float, float]) -> list[tuple[float, float]]:
+def octilinear_leg(
+    a: tuple[float, float],
+    b: tuple[float, float],
+    *,
+    prefer_axis: str | None = None,
+) -> list[tuple[float, float]]:
     """Connect a→b with one or two octilinear segments (H/V/45°)."""
     a = snap_lattice(a)
     b = snap_lattice(b)
@@ -135,7 +156,15 @@ def octilinear_leg(a: tuple[float, float], b: tuple[float, float]) -> list[tuple
 
     def path_err(path: list[tuple[float, float]]) -> float:
         length = sum(dist(path[i], path[i + 1]) for i in range(len(path) - 1))
-        return length + 40.0 * (len(path) - 2)
+        e = length + 40.0 * (len(path) - 2)
+        if prefer_axis in ("ew", "ns"):
+            # Penalize long 45° legs on corridors that should stay axis-dominant.
+            for i in range(len(path) - 1):
+                pdx = abs(path[i + 1][0] - path[i][0])
+                pdy = abs(path[i + 1][1] - path[i][1])
+                if abs(pdx - pdy) < 1e-6 and max(pdx, pdy) > LATTICE * 4:
+                    e += max(pdx, pdy) * 0.35
+        return e
 
     best = None
     best_e = 1e18
@@ -182,7 +211,13 @@ def rdp(points: list[tuple[float, float]], epsilon: float) -> list[tuple[float, 
     return [start, end]
 
 
-def octilinearize_polyline(pts: list[tuple[float, float]]) -> list[tuple[float, float]]:
+def octilinearize_polyline(
+    pts: list[tuple[float, float]],
+    *,
+    rdp_cells: float = 2.5,
+    prefer_axis: str | None = None,
+    line_slack_wu: float | None = None,
+) -> list[tuple[float, float]]:
     if len(pts) < 2:
         return [snap_lattice(p) for p in pts]
     snapped = [snap_lattice(p) for p in pts]
@@ -192,13 +227,25 @@ def octilinearize_polyline(pts: list[tuple[float, float]]) -> list[tuple[float, 
             clean.append(p)
     if len(clean) < 2:
         return clean
+    if line_slack_wu is not None and len(clean) >= 3:
+        # Drop outliers far from the start→end chord so RDP cannot invent big detours.
+        a, b = clean[0], clean[-1]
+        dx, dy = b[0] - a[0], b[1] - a[1]
+        den = math.hypot(dx, dy) or 1.0
+        kept = [a]
+        for p in clean[1:-1]:
+            d = abs(dx * (a[1] - p[1]) - dy * (a[0] - p[0])) / den
+            if d <= line_slack_wu:
+                kept.append(p)
+        kept.append(b)
+        clean = kept if len(kept) >= 2 else [a, b]
     # Aggressive simplify so long corridors become few long octilinear legs (not staircases).
-    clean = rdp(clean, LATTICE * 2.5)
+    clean = rdp(clean, LATTICE * rdp_cells)
     clean = [snap_lattice(p) for p in clean]
 
     out: list[tuple[float, float]] = [clean[0]]
     for i in range(len(clean) - 1):
-        leg = octilinear_leg(out[-1], clean[i + 1])
+        leg = octilinear_leg(out[-1], clean[i + 1], prefer_axis=prefer_axis)
         for p in leg[1:]:
             if dist(out[-1], p) >= MIN_SEG_WU * 0.5:
                 out.append(p)
@@ -269,6 +316,11 @@ def connect_network(roads: list[dict]) -> list[dict]:
     polys: list[list[tuple[float, float]]] = [
         [(float(x), float(y)) for x, y in r["points"]] for r in roads
     ]
+    names = [r["name"] for r in roads]
+    protected = {i for i, n in enumerate(names) if n in STRAIGHT_CORRIDORS}
+
+    def is_interior(ri: int, pi: int) -> bool:
+        return ri in protected and 0 < pi < len(polys[ri]) - 1
 
     # --- Pass 1: cluster all vertices within JUNCTION_SNAP, snap clusters ---
     verts: list[tuple[int, int, tuple[float, float]]] = []
@@ -293,6 +345,9 @@ def connect_network(roads: list[dict]) -> list[dict]:
         for j in range(i + 1, len(verts)):
             if verts[i][0] == verts[j][0]:
                 continue
+            # Do not let side streets yank midpoints of protected straight corridors.
+            if is_interior(verts[i][0], verts[i][1]) or is_interior(verts[j][0], verts[j][1]):
+                continue
             if dist(verts[i][2], verts[j][2]) <= JUNCTION_SNAP:
                 union(i, j)
 
@@ -311,12 +366,14 @@ def connect_network(roads: list[dict]) -> list[dict]:
         jp = snap_lattice((cx, cy))
         for i in members:
             ri, pi, _ = verts[i]
+            if is_interior(ri, pi):
+                continue
             polys[ri][pi] = jp
 
     for ri in range(len(polys)):
         polys[ri] = _dedupe_polyline(polys[ri])
 
-    # --- Pass 2: snap near-miss vertices (no stubs yet) ---
+    # --- Pass 2: snap near-miss vertices (no stubs yet); skip protected interiors ---
     n = len(polys)
     class_of = [roads[i]["class"] for i in range(n)]
     for i in range(n):
@@ -328,7 +385,11 @@ def connect_network(roads: list[dict]) -> list[dict]:
             best = 1e18
             bi = bj = 0
             for pi, p in enumerate(polys[i]):
+                if is_interior(i, pi):
+                    continue
                 for pj, q in enumerate(polys[j]):
+                    if is_interior(j, pj):
+                        continue
                     d = dist(p, q)
                     if d < best:
                         best = d
@@ -351,9 +412,10 @@ def connect_network(roads: list[dict]) -> list[dict]:
     for ri in range(len(polys)):
         if len(polys[ri]) < 2:
             continue
+        prefer = STRAIGHT_CORRIDORS.get(names[ri], {}).get("axis")
         rebuilt: list[tuple[float, float]] = [snap_lattice(polys[ri][0])]
         for p in polys[ri][1:]:
-            leg = octilinear_leg(rebuilt[-1], snap_lattice(p))
+            leg = octilinear_leg(rebuilt[-1], snap_lattice(p), prefer_axis=prefer)
             for q in leg[1:]:
                 if dist(rebuilt[-1], q) >= 1.0:
                     rebuilt.append(q)
@@ -467,9 +529,10 @@ def connect_network(roads: list[dict]) -> list[dict]:
     for ri in range(n_orig):
         if len(polys[ri]) < 2:
             continue
+        prefer = STRAIGHT_CORRIDORS.get(names[ri], {}).get("axis")
         rebuilt = [snap_lattice(polys[ri][0])]
         for p in polys[ri][1:]:
-            leg = octilinear_leg(rebuilt[-1], snap_lattice(p))
+            leg = octilinear_leg(rebuilt[-1], snap_lattice(p), prefer_axis=prefer)
             for q in leg[1:]:
                 if dist(rebuilt[-1], q) >= 1.0:
                     rebuilt.append(q)
@@ -516,12 +579,21 @@ def connect_network(roads: list[dict]) -> list[dict]:
     # Preserve shared junctions: snap near verts again, then repair only illegal legs
     # (full re-octilinearize earlier can pull mains apart again).
     polys2 = [[(float(x), float(y)) for x, y in r["points"]] for r in out]
+    out_names = [r["name"] for r in out]
+
+    def is_interior_out(ri: int, pi: int) -> bool:
+        return out_names[ri] in STRAIGHT_CORRIDORS and 0 < pi < len(polys2[ri]) - 1
+
     for i in range(len(polys2)):
         for j in range(i + 1, len(polys2)):
             best = 1e18
             bi = bj = 0
             for pi, p in enumerate(polys2[i]):
+                if is_interior_out(i, pi):
+                    continue
                 for pj, q in enumerate(polys2[j]):
+                    if is_interior_out(j, pj):
+                        continue
                     d = dist(p, q)
                     if d < best:
                         best, bi, bj = d, pi, pj
@@ -535,7 +607,7 @@ def connect_network(roads: list[dict]) -> list[dict]:
                 polys2[i][bi] = mid
                 polys2[j][bj] = mid
 
-    def repair(pts: list[tuple[float, float]]) -> list[tuple[float, float]]:
+    def repair(pts: list[tuple[float, float]], prefer_axis: str | None = None) -> list[tuple[float, float]]:
         if len(pts) < 2:
             return pts
         rebuilt = [snap_lattice(pts[0])]
@@ -553,14 +625,15 @@ def connect_network(roads: list[dict]) -> list[dict]:
                 if dist(rebuilt[-1], target) >= 1.0:
                     rebuilt.append(target)
             else:
-                for q in octilinear_leg(rebuilt[-1], target)[1:]:
+                for q in octilinear_leg(rebuilt[-1], target, prefer_axis=prefer_axis)[1:]:
                     if dist(rebuilt[-1], q) >= 1.0:
                         rebuilt.append(q)
         return _dedupe_polyline(rebuilt)
 
     final = []
     for ri, r in enumerate(out):
-        pts = repair(polys2[ri])
+        prefer = STRAIGHT_CORRIDORS.get(r["name"], {}).get("axis")
+        pts = repair(polys2[ri], prefer_axis=prefer)
         if len(pts) < 2:
             continue
         length = sum(dist(pts[k], pts[k + 1]) for k in range(len(pts) - 1))
@@ -570,41 +643,226 @@ def connect_network(roads: list[dict]) -> list[dict]:
             {
                 "name": r["name"],
                 "class": r["class"],
-                "points": pts,
+                "points": [[round(x, 1), round(y, 1)] for x, y in pts],
             }
         )
+    return force_required_junctions(final)
 
-    # Last snap pass (no rebuild) so mains that landed one lattice cell apart share a node.
-    polys3 = [[(float(x), float(y)) for x, y in r["points"]] for r in final]
-    for i in range(len(polys3)):
-        for j in range(i + 1, len(polys3)):
-            best = 1e18
-            bi = bj = 0
-            for pi, p in enumerate(polys3[i]):
-                for pj, q in enumerate(polys3[j]):
-                    d = dist(p, q)
-                    if d < best:
-                        best, bi, bj = d, pi, pj
-            if 1.0 < best <= LATTICE * 2.5:
-                mid = snap_lattice(
-                    (
-                        (polys3[i][bi][0] + polys3[j][bj][0]) * 0.5,
-                        (polys3[i][bi][1] + polys3[j][bj][1]) * 0.5,
-                    )
-                )
-                polys3[i][bi] = mid
-                polys3[j][bj] = mid
-    sealed = []
-    for ri, r in enumerate(final):
-        pts = repair(polys3[ri])
-        sealed.append(
+
+def force_required_junctions(roads: list[dict]) -> list[dict]:
+    """Ensure named corridors share a vertex where the Swiss plan expects them to meet.
+
+    Multi-pass so fixing Ohringer↔Winter does not permanently break Winter↔Stations.
+    """
+    by_idx = {r["name"]: i for i, r in enumerate(roads)}
+    polys = [[(float(x), float(y)) for x, y in r["points"]] for r in roads]
+
+    def pair_gap(a_name: str, b_name: str) -> float:
+        if a_name not in by_idx or b_name not in by_idx:
+            return 1e18
+        pa, pb = polys[by_idx[a_name]], polys[by_idx[b_name]]
+        if len(pa) < 2 or len(pb) < 2:
+            return 1e18
+        return min(dist(p, q) for p in pa for q in pb)
+
+    def snap_pair(a_name: str, b_name: str) -> bool:
+        if a_name not in by_idx or b_name not in by_idx:
+            return False
+        ia, ib = by_idx[a_name], by_idx[b_name]
+        pa, pb = polys[ia], polys[ib]
+        if len(pa) < 2 or len(pb) < 2:
+            return False
+        if pair_gap(a_name, b_name) < 1.0:
+            return False
+        candidates: list[tuple[float, int, int]] = []
+        for pi, p in enumerate(pa):
+            for pj, q in enumerate(pb):
+                d = dist(p, q)
+                if d > CONNECT_MAIN:
+                    continue
+                end_bonus = 0.0
+                if pi in (0, len(pa) - 1):
+                    end_bonus -= 400.0
+                if pj in (0, len(pb) - 1):
+                    end_bonus -= 400.0
+                # Prefer snapping protected corridors at endpoints only.
+                if a_name in STRAIGHT_CORRIDORS and pi not in (0, len(pa) - 1):
+                    end_bonus += 2000.0
+                if b_name in STRAIGHT_CORRIDORS and pj not in (0, len(pb) - 1):
+                    end_bonus += 2000.0
+                candidates.append((d + end_bonus, pi, pj))
+        if not candidates:
+            return False
+        candidates.sort()
+        _, pi, pj = candidates[0]
+        if a_name in STRAIGHT_CORRIDORS and pi not in (0, len(pa) - 1):
+            d0, d1 = dist(pa[0], pb[pj]), dist(pa[-1], pb[pj])
+            pi = 0 if d0 <= d1 else len(pa) - 1
+        if b_name in STRAIGHT_CORRIDORS and pj not in (0, len(pb) - 1):
+            d0, d1 = dist(pb[0], pa[pi]), dist(pb[-1], pa[pi])
+            pj = 0 if d0 <= d1 else len(pb) - 1
+        mid = snap_lattice(
+            ((pa[pi][0] + pb[pj][0]) * 0.5, (pa[pi][1] + pb[pj][1]) * 0.5)
+        )
+        pa[pi] = mid
+        pb[pj] = mid
+        polys[ia] = _rebuild_octi(pa, STRAIGHT_CORRIDORS.get(a_name, {}).get("axis"))
+        polys[ib] = _rebuild_octi(pb, STRAIGHT_CORRIDORS.get(b_name, {}).get("axis"))
+        return True
+
+    # Triple hub first: Ohringer + Winter + Stations should share one node.
+    hub_names = ("Ohringerstrasse", "Winterthurerstrasse", "Stationsstrasse")
+    if all(n in by_idx for n in hub_names):
+        io, iw, is_ = by_idx[hub_names[0]], by_idx[hub_names[1]], by_idx[hub_names[2]]
+        po, pw, ps = list(polys[io]), list(polys[iw]), list(polys[is_])
+        o_end_i = len(po) - 1 if po[-1][0] >= po[0][0] else 0
+        o_end = po[o_end_i]
+        wi = min(range(len(pw)), key=lambda i: dist(pw[i], o_end))
+        si = min(range(len(ps)), key=lambda i: dist(ps[i], pw[wi]))
+        hub = snap_lattice(
+            (
+                (o_end[0] + pw[wi][0] + ps[si][0]) / 3.0,
+                (o_end[1] + pw[wi][1] + ps[si][1]) / 3.0,
+            )
+        )
+
+        def pin_vertex(
+            pts: list[tuple[float, float]], idx: int, prefer: str | None = None
+        ) -> list[tuple[float, float]]:
+            """Move pts[idx] to hub; repair only the adjacent legs."""
+            pts = list(pts)
+            left = pts[:idx]
+            right = pts[idx + 1 :]
+            out: list[tuple[float, float]] = []
+            if left:
+                out.extend(left[:-1])
+                out.extend(octilinear_leg(left[-1], hub, prefer_axis=prefer))
+            else:
+                out.append(hub)
+            if right:
+                # last point of out should be hub
+                if not out or dist(out[-1], hub) >= 1.0:
+                    out.append(hub)
+                out.extend(octilinear_leg(hub, right[0], prefer_axis=prefer)[1:])
+                out.extend(right[1:])
+            elif not out or dist(out[-1], hub) >= 1.0:
+                out.append(hub)
+            return _dedupe_polyline(out)
+
+        prefer_o = STRAIGHT_CORRIDORS.get("Ohringerstrasse", {}).get("axis")
+        polys[io] = pin_vertex(po, o_end_i, prefer_o)
+        polys[iw] = pin_vertex(pw, wi, None)
+        polys[is_] = pin_vertex(ps, si, None)
+
+    for _ in range(4):
+        changed = False
+        for a_name, b_name in REQUIRED_JUNCTIONS:
+            if pair_gap(a_name, b_name) >= 1.0:
+                changed = snap_pair(a_name, b_name) or changed
+        if not changed:
+            break
+
+    # Rebuild protected corridors as near-straight start→hub runs (kills connect zigzags).
+    for name, cfg in STRAIGHT_CORRIDORS.items():
+        if name not in by_idx:
+            continue
+        ri = by_idx[name]
+        pts = polys[ri]
+        if len(pts) < 2:
+            continue
+        # Keep the west/south-most start (smaller X for EW corridors).
+        if cfg.get("axis") == "ew":
+            start = pts[0] if pts[0][0] <= pts[-1][0] else pts[-1]
+            end = pts[-1] if pts[-1][0] >= pts[0][0] else pts[0]
+        else:
+            start, end = pts[0], pts[-1]
+        # Prefer shared hub with Winter/Stations if present.
+        hub_pt = end
+        for other in ("Winterthurerstrasse", "Stationsstrasse"):
+            if other not in by_idx:
+                continue
+            for q in polys[by_idx[other]]:
+                if dist(q, end) < 1.0:
+                    hub_pt = q
+                    break
+        straight = octilinear_leg(
+            start, hub_pt, prefer_axis=cfg.get("axis")
+        )
+        # If still a long 45° detour, force H-then-V / V-then-H for EW.
+        if cfg.get("axis") == "ew" and len(straight) >= 2:
+            dx = abs(hub_pt[0] - start[0])
+            dy = abs(hub_pt[1] - start[1])
+            if dy > LATTICE and dx > 4 * dy:
+                # Long EW: one horizontal then short vertical (or vice versa at end).
+                mid = snap_lattice((hub_pt[0], start[1]))
+                straight = _dedupe_polyline([start, mid, hub_pt])
+                if dist(start, mid) < 1.0:
+                    straight = _dedupe_polyline([start, hub_pt])
+                elif dist(mid, hub_pt) < 1.0:
+                    straight = _dedupe_polyline([start, hub_pt])
+        polys[ri] = straight
+        # Re-pin shared hub vertex onto Winter/Stations after replace.
+        for other in ("Winterthurerstrasse", "Stationsstrasse"):
+            if other not in by_idx:
+                continue
+            oi = by_idx[other]
+            for pj, q in enumerate(polys[oi]):
+                if dist(q, end) < 1.0 or dist(q, hub_pt) < 1.0:
+                    polys[oi][pj] = hub_pt
+                    break
+
+    # One more junction pass after corridor straighten.
+    for _ in range(3):
+        changed = False
+        for a_name, b_name in REQUIRED_JUNCTIONS:
+            if pair_gap(a_name, b_name) >= 1.0:
+                changed = snap_pair(a_name, b_name) or changed
+        if not changed:
+            break
+
+    out = []
+    for ri, r in enumerate(roads):
+        pts = polys[ri]
+        if len(pts) < 2:
+            continue
+        out.append(
             {
                 "name": r["name"],
                 "class": r["class"],
                 "points": [[round(x, 1), round(y, 1)] for x, y in pts],
             }
         )
-    return sealed
+    return out
+
+
+def _rebuild_octi(
+    pts: list[tuple[float, float]], prefer_axis: str | None = None
+) -> list[tuple[float, float]]:
+    if len(pts) < 2:
+        return pts
+    rebuilt = [snap_lattice(pts[0])]
+    for p in pts[1:]:
+        leg = octilinear_leg(rebuilt[-1], snap_lattice(p), prefer_axis=prefer_axis)
+        for q in leg[1:]:
+            if dist(rebuilt[-1], q) >= 1.0:
+                rebuilt.append(q)
+    return _dedupe_polyline(rebuilt)
+
+
+def validate_required_junctions(roads: list[dict]) -> None:
+    by = {r["name"]: r for r in roads}
+    missing = []
+    for a_name, b_name in REQUIRED_JUNCTIONS:
+        if a_name not in by or b_name not in by:
+            missing.append(f"{a_name}↔{b_name} (road missing)")
+            continue
+        pa = [(float(x), float(y)) for x, y in by[a_name]["points"]]
+        pb = [(float(x), float(y)) for x, y in by[b_name]["points"]]
+        gap = min(dist(p, q) for p in pa for q in pb)
+        if gap >= 1.0:
+            missing.append(f"{a_name}↔{b_name} gap={gap:.0f}")
+    if missing:
+        raise SystemExit(f"required junctions failed: {missing}")
 
 
 def cluster_junctions(roads: list[dict]) -> list[list[float]]:
@@ -631,8 +889,10 @@ def cluster_junctions(roads: list[dict]) -> list[list[float]]:
         kx, ky = key
         for dx in (-1, 0, 1):
             for dy in (-1, 0, 1):
+                if dx == 0 and dy == 0:
+                    continue
                 nk = (kx + dx, ky + dy)
-                if nk == key or nk in used or nk not in buckets:
+                if nk in used or nk not in buckets:
                     continue
                 other = buckets[nk]
                 if {n for n, _, _ in other} & names:
@@ -745,7 +1005,13 @@ def main() -> None:
         world = clip_polyline(world)
         if len(world) < 2:
             continue
-        octi = octilinearize_polyline(world)
+        cfg = STRAIGHT_CORRIDORS.get(r["name"], {})
+        octi = octilinearize_polyline(
+            world,
+            rdp_cells=float(cfg.get("rdp_cells", 2.5)),
+            prefer_axis=cfg.get("axis"),
+            line_slack_wu=cfg.get("line_slack_wu"),
+        )
         octi = clip_polyline(octi)
         if len(octi) < 2:
             continue
@@ -768,6 +1034,7 @@ def main() -> None:
 
     roads_out = connect_network(roads_out)
     validate_octilinear(roads_out)
+    validate_required_junctions(roads_out)
     junctions = cluster_junctions(roads_out)
 
     payload = {
@@ -780,6 +1047,7 @@ def main() -> None:
             "clip": list(CLIP),
             "lattice_wu": LATTICE,
             "connect_near_wu": CONNECT_NEAR,
+            "straight_corridors": sorted(STRAIGHT_CORRIDORS.keys()),
             "note": "Not wired into world_sandbox yet; live game still uses seuzach_roads.json",
         },
         "roads": roads_out,
