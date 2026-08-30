@@ -1,6 +1,6 @@
 {
   "meta": {
-    "source": "Swiss Map Raster 10 (1072-1 + 1052-3) \u2192 octilinear (H/V/45\u00b0) + junction connect",
+    "source": "Swiss Map Raster 10 ref (1072-1 + 1052-3) + named highway centerlines \u2192 octilinear (H/V/45\u00b0) + junction connect",
     "trace": "data/seuzach_roads_swiss_trace.json",
     "church": [
       47.5335012,

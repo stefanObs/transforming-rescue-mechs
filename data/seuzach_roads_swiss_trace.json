@@ -1,6 +1,6 @@
 {
   "meta": {
-    "source": "Swiss Map Raster 10 (sheets 1072-1 + 1052-3) \u2014 WGS84 waypoints along named driveable streets visible on the official Seuzach+Ohringen map",
+    "source": "Named driveable highways in Seuzach+Ohringen bbox (Overpass), verified against Swiss Map Raster 10 sheets 1072-1 + 1052-3",
     "church": [
       47.5335012,
       8.7261235
@@ -10,7 +10,7 @@
       "docs/maps/swiss-map-raster10_2024_1052-3_krel_0.5_2056.tif"
     ],
     "raster_ref": "docs/maps/seuzach_swiss_raster_ref.jpg",
-    "note": "Not derived from data/seuzach_roads.json. Centerlines match official Swiss street Lage on Raster 10; world scale via CLIP / Kirche origin in gen_seuzach_octilinear_roads.py.",
+    "note": "Not derived from data/seuzach_roads.json. Centerlines from public named highways covering the official Raster 10 map area; checked against seuzach_swiss_raster_ref.jpg. World scale via CLIP / Kirche origin in gen_seuzach_octilinear_roads.py.",
     "digitized": "2026-08-30"
   },
   "roads": [
