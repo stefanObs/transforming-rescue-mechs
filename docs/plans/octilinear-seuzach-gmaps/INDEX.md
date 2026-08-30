@@ -1,9 +1,9 @@
 # Slices: octilinear-seuzach-gmaps
 
-**Status:** Entwurf  
-**Aufgabe:** Driveable Seuzach+Ohringen-Straßen aus Google Maps als GMaps-Trace digitalisieren und octilinear (H/V/45°) als JSON + großes SVG ausgeben — ohne Sandbox umzuschalten.  
+**Status:** In Arbeit  
+**Aufgabe:** Driveable Seuzach+Ohringen-Straßen aus Google Maps / Swiss-Raster als Trace digitalisieren und octilinear (H/V/45°) als JSON + großes SVG ausgeben — Geometrie-QA (Junctions, Knicke, Parallel-Abstand) ohne Sandbox umzuschalten.  
 **Datum:** 2026-08-30  
-**Zuschnitt:** Zwei zusammengehörige Data/Tooling-Inkremente (Trace-Quelle → Generator+Artefakte+Docs); ein Thema, sauber trennbar
+**Zuschnitt:** Zwei zusammengehörige Data/Tooling-Inkremente pro Slice; S06+ = Geometrie-Qualität am Generator-Output
 
 Feature-Schritte, keine Prozess-Schritte. Pro Zeile folgt der Ablauf (Plan nur wenn nötig → Implement inkl. Tests → Review → Playtest → Git).
 
@@ -16,6 +16,8 @@ Feature-Schritte, keine Prozess-Schritte. Pro Zeile folgt der Ablauf (Plan nur w
 | S03 | `S03-connect-dense-octilinear.md` | Verbundenes Netz + dichtere GMaps-Coverage | S02 | erledigt |
 | S04 | `S04-swiss-raster-octilinear-redo.md` | Octilinear-SVG neu aus Swiss Raster 1072-1+1052-3 | S03 | erledigt |
 | S05 | `S05-ohringer-straight-hub-qa.md` | Ohringer begradigen + korrekte Hubs + Zoom-QA | S04 | erledigt |
+| S06 | `S06-junction-corner-geometry.md` | Saubere Treffpunkte + sinnvolle Straßen-Knicke | S05 | erledigt |
+| S07 | `S07-parallel-street-spacing.md` | Zu dichte Parallel-Straßen mergen oder trennen | S06 | in Arbeit |
 
 Status nur: `offen` → `in Arbeit` (Implement-Start) → `erledigt` (nach Phase-4-Pass + Git). Kein Slice-File-Phasen-Churn.
 
