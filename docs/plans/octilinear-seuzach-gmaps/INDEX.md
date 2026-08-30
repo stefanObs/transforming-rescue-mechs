@@ -12,7 +12,7 @@ Feature-Schritte, keine Prozess-Schritte. Pro Zeile folgt der Ablauf (Plan nur w
 | ID | Datei | Feature | Hängt ab von | Status |
 |----|-------|---------|----------------|--------|
 | S01 | `S01-gmaps-road-trace.md` | GMaps-Trace Seuzach+Ohringen (WGS84, Klassen, Namen) | — | erledigt |
-| S02 | `S02-octilinear-gen-svg-docs.md` | Octilinear-Generator → JSON + SVG + data/README | S01 | in Arbeit |
+| S02 | `S02-octilinear-gen-svg-docs.md` | Octilinear-Generator → JSON + SVG + data/README | S01 | erledigt |
 
 Status nur: `offen` → `in Arbeit` (Implement-Start) → `erledigt` (nach Phase-4-Pass + Git). Kein Slice-File-Phasen-Churn.
 
