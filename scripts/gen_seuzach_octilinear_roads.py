@@ -46,6 +46,16 @@ COLINEAR_DEG = 5.0  # turn below this → colinear merge candidate
 STAIR_FLAT_DEG = 135.0  # single zig flatten when shortcut is octilinear
 STAIR_FLAT_SLACK = LATTICE * 2  # max chord deviation for stair flatten
 
+# S07 — near-parallel corridor spacing
+PARALLEL_LONG_SEG = 400.0  # only consider segments at least this long
+PARALLEL_BEARING_DEG = 15.0  # similar bearing (or reverse)
+PARALLEL_TOO_CLOSE = 500.0  # mid-distance upper bound for "too close"
+PARALLEL_ABSORB = 250.0  # below this → absorb artifact doubles
+PARALLEL_MIN_GAP = 600.0  # target mid-distance after separate
+PARALLEL_OVERLAP = 800.0  # min longitudinal overlap along shared bearing
+PARALLEL_SUBSET_FRAC = 0.72  # weaker mostly projects onto stronger → absorb
+CLASS_RANK = {"motorway": 4, "main": 3, "collector": 2, "local": 1}
+
 # Landmark dots for SVG (lat, lon) — same GPS as seuzach_geo.gd
 LANDMARKS = {
     "Kirche": (47.5335012, 8.7261235),
@@ -69,6 +79,9 @@ REQUIRED_MAINS = {
     "Ohringerstrasse",
     "A1",
 }
+
+# Never offset these as the moving road if the other of a parallel pair can move.
+PARALLEL_PINNED = frozenset(REQUIRED_MAINS)
 
 # Long corridors that should stay nearly axis-aligned (high RDP, protect interiors).
 STRAIGHT_CORRIDORS = {
@@ -1343,6 +1356,661 @@ def _clean_polyline(
     return _dedupe_polyline(pts)
 
 
+def _polyline_length(pts: list[tuple[float, float]]) -> float:
+    return sum(dist(pts[i], pts[i + 1]) for i in range(len(pts) - 1))
+
+
+def _ang_diff_deg(a: float, b: float) -> float:
+    return abs((a - b + 180.0) % 360.0 - 180.0)
+
+
+def _bearing_similar(a: float, b: float, tol: float = PARALLEL_BEARING_DEG) -> bool:
+    return _ang_diff_deg(a, b) <= tol or _ang_diff_deg(a, (b + 180.0) % 360.0) <= tol
+
+
+def _axis_unit(bearing: float) -> tuple[float, float]:
+    r = math.radians(bearing)
+    return math.cos(r), math.sin(r)
+
+
+def _perp_unit(bearing: float) -> tuple[float, float]:
+    ux, uy = _axis_unit(bearing)
+    return -uy, ux
+
+
+def _proj_t(p: tuple[float, float], origin: tuple[float, float], ux: float, uy: float) -> float:
+    return (p[0] - origin[0]) * ux + (p[1] - origin[1]) * uy
+
+
+def _longitudinal_overlap(
+    a0: tuple[float, float],
+    a1: tuple[float, float],
+    b0: tuple[float, float],
+    b1: tuple[float, float],
+    bearing: float,
+) -> float:
+    ux, uy = _axis_unit(bearing)
+    origin = a0
+    ta0, ta1 = sorted([_proj_t(a0, origin, ux, uy), _proj_t(a1, origin, ux, uy)])
+    tb0, tb1 = sorted([_proj_t(b0, origin, ux, uy), _proj_t(b1, origin, ux, uy)])
+    return max(0.0, min(ta1, tb1) - max(ta0, tb0))
+
+
+def _perp_seg_dist(
+    a0: tuple[float, float],
+    a1: tuple[float, float],
+    b0: tuple[float, float],
+    b1: tuple[float, float],
+) -> float:
+    """Perpendicular distance between two near-parallel segment lines (wu)."""
+    br = bearing_deg(a0, a1)
+    nx, ny = _perp_unit(br)
+    mb = ((b0[0] + b1[0]) * 0.5, (b0[1] + b1[1]) * 0.5)
+    return abs((mb[0] - a0[0]) * nx + (mb[1] - a0[1]) * ny)
+
+
+def _seg_mid_dist(
+    a0: tuple[float, float],
+    a1: tuple[float, float],
+    b0: tuple[float, float],
+    b1: tuple[float, float],
+) -> float:
+    """Alias kept for tests; spacing uses perpendicular distance."""
+    return _perp_seg_dist(a0, a1, b0, b1)
+
+
+def _long_segments(
+    pts: list[tuple[float, float]], min_len: float = PARALLEL_LONG_SEG
+) -> list[tuple[int, tuple[float, float], tuple[float, float], float, float]]:
+    """(seg_index, a, b, length, bearing_deg)."""
+    out = []
+    for i in range(len(pts) - 1):
+        a, b = pts[i], pts[i + 1]
+        L = dist(a, b)
+        if L < min_len:
+            continue
+        out.append((i, a, b, L, bearing_deg(a, b)))
+    return out
+
+
+def _road_priority(road: dict) -> tuple[int, float, int]:
+    """Higher = stronger / keep-in-place. Length breaks class ties; non-links win."""
+    name = str(road["name"])
+    cls = str(road.get("class", "local"))
+    pts = [(float(x), float(y)) for x, y in road["points"]]
+    length = _polyline_length(pts)
+    link_pen = 0 if name.startswith("link-") else 1
+    return (link_pen, CLASS_RANK.get(cls, 0), length)
+
+
+def _is_artifact_pair(
+    strong: dict, weak: dict, subset_frac: float, *, perp_dist: float
+) -> bool:
+    """Absorb when double-trace artifact, not two distinct real streets."""
+    wn = str(weak["name"])
+    sn = str(strong["name"])
+    if wn.startswith("link-") or sn.startswith("link-"):
+        return True
+    sc, wc = str(strong.get("class", "local")), str(weak.get("class", "local"))
+    # Colinear / on-top: only absorb when weak mostly rides on strong.
+    if perp_dist <= max(1.0, LATTICE * 0.25):
+        return subset_frac >= 0.55
+    # Higher-class corridor with a local riding close → absorb only if mostly subset.
+    if (
+        perp_dist <= PARALLEL_ABSORB
+        and CLASS_RANK.get(sc, 0) >= CLASS_RANK.get("collector", 2)
+        and wc == "local"
+        and subset_frac >= PARALLEL_SUBSET_FRAC
+    ):
+        return True
+    # Weak almost entirely projects onto stronger *and* is lower class → absorb.
+    if (
+        subset_frac >= PARALLEL_SUBSET_FRAC
+        and perp_dist <= PARALLEL_ABSORB
+        and CLASS_RANK.get(sc, 0) > CLASS_RANK.get(wc, 0)
+    ):
+        return True
+    return False
+
+
+def _projection_subset_frac(
+    weak_pts: list[tuple[float, float]],
+    strong_pts: list[tuple[float, float]],
+    bearing: float,
+) -> float:
+    """Fraction of weak length whose vertices project near strong polyline."""
+    if len(weak_pts) < 2 or len(strong_pts) < 2:
+        return 0.0
+    total = _polyline_length(weak_pts)
+    if total < 1.0:
+        return 0.0
+    covered = 0.0
+    for i in range(len(weak_pts) - 1):
+        a, b = weak_pts[i], weak_pts[i + 1]
+        mid = ((a[0] + b[0]) * 0.5, (a[1] + b[1]) * 0.5)
+        # Near strong if mid projects within PARALLEL_TOO_CLOSE of some strong seg
+        # with similar bearing.
+        near = False
+        for j in range(len(strong_pts) - 1):
+            s0, s1 = strong_pts[j], strong_pts[j + 1]
+            if dist(s0, s1) < PARALLEL_LONG_SEG * 0.5:
+                continue
+            sb = bearing_deg(s0, s1)
+            if not _bearing_similar(bearing, sb):
+                continue
+            proj, t = project_onto_segment(mid, s0, s1)
+            if 0.0 <= t <= 1.0 and dist(mid, proj) <= PARALLEL_TOO_CLOSE:
+                near = True
+                break
+        if near:
+            covered += dist(a, b)
+    return covered / total
+
+
+def find_near_parallel_pairs(
+    roads: list[dict],
+    *,
+    max_mid: float = PARALLEL_TOO_CLOSE,
+    min_mid: float = 0.0,
+    min_overlap: float = PARALLEL_OVERLAP,
+) -> list[dict]:
+    """Detect near-parallel long-segment pairs by perpendicular spacing.
+
+    Skips segment pairs that already share an endpoint vertex. Includes colinear
+    doubles (perp ≈ 0) so absorb can collapse them.
+    """
+    polys = [[(float(x), float(y)) for x, y in r["points"]] for r in roads]
+    pairs: list[dict] = []
+    for i in range(len(roads)):
+        segs_i = _long_segments(polys[i])
+        if not segs_i:
+            continue
+        for j in range(i + 1, len(roads)):
+            segs_j = _long_segments(polys[j])
+            if not segs_j:
+                continue
+            # Skip roads that already share any vertex (connected junctions).
+            # Exception: still flag if a long parallel run exists away from the meet
+            # — handled by per-segment shared-endpoint skip below.
+            best = None
+            for si, a0, a1, La, ba in segs_i:
+                for sj, b0, b1, Lb, bb in segs_j:
+                    if not _bearing_similar(ba, bb):
+                        continue
+                    if any(dist(p, q) < 1.0 for p in (a0, a1) for q in (b0, b1)):
+                        continue
+                    pd = _perp_seg_dist(a0, a1, b0, b1)
+                    if not (min_mid <= pd <= max_mid):
+                        continue
+                    # Tiny float noise: treat sub-wu as 0.
+                    if pd < 1.0:
+                        pd = 0.0
+                    ov = _longitudinal_overlap(a0, a1, b0, b1, ba)
+                    if ov < min_overlap:
+                        continue
+                    cand = {
+                        "i": i,
+                        "j": j,
+                        "si": si,
+                        "sj": sj,
+                        "mid_dist": pd,
+                        "overlap": ov,
+                        "bearing": ba,
+                        "La": La,
+                        "Lb": Lb,
+                    }
+                    # Prefer closest + longest overlap.
+                    if best is None or (cand["mid_dist"], -cand["overlap"]) < (
+                        best["mid_dist"],
+                        -best["overlap"],
+                    ):
+                        best = cand
+            if best is not None:
+                pairs.append(best)
+    pairs.sort(key=lambda p: (p["mid_dist"], -p["overlap"]))
+    return pairs
+
+
+def count_near_parallel_pairs(
+    roads: list[dict], *, lo: float = 80.0, hi: float = 400.0
+) -> int:
+    """Metric helper: count pairs with perpendicular spacing in [lo, hi]."""
+    return len(find_near_parallel_pairs(roads, max_mid=hi, min_mid=lo))
+
+
+def _absorb_weak_onto_strong(
+    weak: list[tuple[float, float]],
+    strong: list[tuple[float, float]],
+    *,
+    bearing: float,
+    shared: set[tuple[float, float]],
+    prefer: str | None = None,
+    absorb_eps: float = PARALLEL_ABSORB + LATTICE,
+) -> list[tuple[float, float]] | None:
+    """Collapse weak span that rides near strong.
+
+    Returns new polyline, or None if the weak road should be dropped entirely
+    (full artifact double with no remainder off the strong corridor).
+    """
+    if len(weak) < 2 or len(strong) < 2:
+        return weak
+
+    def near_strong(p: tuple[float, float]) -> bool:
+        for i in range(len(strong) - 1):
+            s0, s1 = strong[i], strong[i + 1]
+            if dist(s0, s1) < MIN_SEG_WU:
+                continue
+            if not _bearing_similar(bearing, bearing_deg(s0, s1), tol=PARALLEL_BEARING_DEG + 5.0):
+                continue
+            proj, t = project_onto_segment(p, s0, s1)
+            if 0.0 <= t <= 1.0 and dist(p, proj) <= absorb_eps:
+                return True
+        # Also accept near any strong vertex (hubs / short segs).
+        return any(dist(p, q) <= absorb_eps for q in strong)
+
+    on = [near_strong(p) for p in weak]
+    for i in range(len(weak) - 1):
+        mid = ((weak[i][0] + weak[i + 1][0]) * 0.5, (weak[i][1] + weak[i + 1][1]) * 0.5)
+        if near_strong(mid):
+            if not (point_key(weak[i]) in shared):
+                on[i] = True
+            if not (point_key(weak[i + 1]) in shared):
+                on[i + 1] = True
+
+    if not any(on):
+        return weak
+
+    # Full coverage → drop (caller removes road), unless shared hubs must remain.
+    if all(on) and not any(point_key(p) in shared for p in weak):
+        return None
+
+    kept: list[tuple[float, float]] = []
+    n = len(weak)
+    i = 0
+    while i < n:
+        if not on[i]:
+            kept.append(weak[i])
+            i += 1
+            continue
+        j = i
+        while j < n and on[j]:
+            j += 1
+        run = weak[i:j]
+        # Preserve shared junctions inside the run.
+        shared_in_run = [p for p in run if point_key(p) in shared]
+        if i == 0 and j == n and not shared_in_run:
+            return None
+        if shared_in_run:
+            meet = shared_in_run[0]
+        elif i == 0:
+            meet = _nearest_point_on_polyline(strong, run[-1])
+        elif j == n:
+            meet = _nearest_point_on_polyline(strong, run[0])
+        else:
+            meet = _nearest_point_on_polyline(strong, run[0])
+        if not kept or dist(kept[-1], meet) >= 1.0:
+            kept.append(meet)
+        # If run is interior and we need to continue past it, one meet is enough.
+        i = j
+
+    if len(kept) < 2:
+        return None
+    rebuilt: list[tuple[float, float]] = [snap_lattice(kept[0])]
+    for p in kept[1:]:
+        rebuilt.extend(octilinear_leg(rebuilt[-1], snap_lattice(p), prefer_axis=prefer)[1:])
+    rebuilt = _dedupe_polyline(rebuilt)
+    if len(rebuilt) < 2:
+        return None
+    # If rebuilt still lies entirely on strong, drop it.
+    if all(near_strong(p) for p in rebuilt) and not any(
+        point_key(p) in shared for p in rebuilt
+    ):
+        return None
+    return rebuilt
+
+
+def _nearest_point_on_polyline(
+    pts: list[tuple[float, float]], p: tuple[float, float]
+) -> tuple[float, float]:
+    best = pts[0]
+    best_d = dist(p, best)
+    for q in pts:
+        d = dist(p, q)
+        if d < best_d:
+            best, best_d = q, d
+    for i in range(len(pts) - 1):
+        proj, t = project_onto_segment(p, pts[i], pts[i + 1])
+        if 0.0 <= t <= 1.0:
+            d = dist(p, proj)
+            if d < best_d:
+                best, best_d = snap_lattice(proj), d
+    return snap_lattice(best)
+
+
+def _offset_polyline(
+    pts: list[tuple[float, float]],
+    bearing: float,
+    delta: float,
+    *,
+    shared: set[tuple[float, float]],
+    prefer: str | None = None,
+) -> list[tuple[float, float]]:
+    """Offset non-protected vertices perpendicular to bearing by delta (wu)."""
+    nx, ny = _perp_unit(bearing)
+    out: list[tuple[float, float]] = []
+    for p in pts:
+        if point_key(p) in shared:
+            out.append(p)
+            continue
+        out.append(snap_lattice((p[0] + nx * delta, p[1] + ny * delta)))
+    rebuilt = _rebuild_octi(out, prefer)
+    return rebuilt if len(rebuilt) >= 2 else pts
+
+
+def _pair_shared_keys(
+    a: list[tuple[float, float]], b: list[tuple[float, float]]
+) -> set[tuple[float, float]]:
+    """Vertices of a that coincide with b (pair-local hubs to preserve)."""
+    bkeys = {point_key(p) for p in b}
+    return {point_key(p) for p in a if point_key(p) in bkeys}
+
+
+def _choose_mover(
+    a: dict, b: dict
+) -> tuple[dict, dict]:
+    """Return (strong/keep, weak/move). Respect PARALLEL_PINNED."""
+    pa, pb = _road_priority(a), _road_priority(b)
+    an, bn = str(a["name"]), str(b["name"])
+    a_pin = an in PARALLEL_PINNED
+    b_pin = bn in PARALLEL_PINNED
+    if a_pin and not b_pin:
+        return a, b
+    if b_pin and not a_pin:
+        return b, a
+    if pa >= pb:
+        return a, b
+    return b, a
+
+
+def resolve_near_parallels(roads: list[dict]) -> list[dict]:
+    """Post-pass (after clean_corners): absorb artifact doubles; separate real pairs."""
+    if len(roads) < 2:
+        return roads
+
+    out: list[dict] = [
+        {
+            "name": r["name"],
+            "class": r["class"],
+            "points": [[float(x), float(y)] for x, y in r["points"]],
+        }
+        for r in roads
+    ]
+
+    def _commit_weak(wi: int, new_pts: list[tuple[float, float]]) -> None:
+        shared_now = _shared_junction_keys(out)
+        prefer = STRAIGHT_CORRIDORS.get(str(out[wi]["name"]), {}).get("axis")
+        cleaned = _clean_polyline(new_pts, shared_now, prefer_axis=prefer)
+        if len(cleaned) < 2:
+            cleaned = new_pts
+        out[wi]["points"] = [[round(x, 1), round(y, 1)] for x, y in cleaned]
+
+    # Enough sweeps to clear cascades (absorb → new pairs → separate).
+    for _sweep in range(64):
+        shared = _shared_junction_keys(out)
+        pairs = find_near_parallel_pairs(out, max_mid=PARALLEL_TOO_CLOSE, min_mid=0.0)
+        if not pairs:
+            break
+        changed = False
+        for pair in pairs:
+            i, j = pair["i"], pair["j"]
+            if i >= len(out) or j >= len(out):
+                continue
+            an, bn = str(out[i]["name"]), str(out[j]["name"])
+            # Never move both pinned mains relative to each other.
+            if an in PARALLEL_PINNED and bn in PARALLEL_PINNED:
+                continue
+
+            strong_r, weak_r = _choose_mover(out[i], out[j])
+            si = next(k for k, r in enumerate(out) if r["name"] == strong_r["name"])
+            wi = next(k for k, r in enumerate(out) if r["name"] == weak_r["name"])
+            strong_pts = [(float(x), float(y)) for x, y in out[si]["points"]]
+            weak_pts = [(float(x), float(y)) for x, y in out[wi]["points"]]
+            bearing = pair["bearing"]
+            md = float(pair["mid_dist"])
+            subset = _projection_subset_frac(weak_pts, strong_pts, bearing)
+            prefer = STRAIGHT_CORRIDORS.get(str(out[wi]["name"]), {}).get("axis")
+            artifact = _is_artifact_pair(
+                out[si], out[wi], subset, perp_dist=md
+            )
+
+            # 1) Absorb colinear / close artifact doubles.
+            if md <= PARALLEL_ABSORB and artifact:
+                new_weak: list[tuple[float, float]] | None
+                if md <= LATTICE * 0.25:
+                    pruned = prune_coincident_overlap(
+                        weak_pts, strong_pts, prefer=prefer
+                    )
+                    if pruned != weak_pts and len(pruned) >= 2:
+                        new_weak = pruned
+                    else:
+                        new_weak = _absorb_weak_onto_strong(
+                            weak_pts,
+                            strong_pts,
+                            bearing=bearing,
+                            shared=shared,
+                            prefer=prefer,
+                        )
+                else:
+                    new_weak = _absorb_weak_onto_strong(
+                        weak_pts,
+                        strong_pts,
+                        bearing=bearing,
+                        shared=shared,
+                        prefer=prefer,
+                    )
+                if new_weak is None:
+                    # Full artifact double — drop only synthetic link-* roads.
+                    if str(out[wi]["name"]).startswith("link-"):
+                        del out[wi]
+                        changed = True
+                        break
+                    # Named road: never stub — keep geometry and try separate below.
+                    new_weak = weak_pts
+                weak_len = _polyline_length(weak_pts)
+                new_len = _polyline_length(new_weak) if new_weak else 0.0
+                # Refuse absorb that guts a named corridor (keep ≥40% length unless
+                # almost entirely subset already).
+                if (
+                    not str(out[wi]["name"]).startswith("link-")
+                    and weak_len > MIN_SEG_WU * 4
+                    and new_len < weak_len * 0.4
+                    and subset < 0.9
+                ):
+                    new_weak = weak_pts
+                if len(new_weak) >= 2 and new_weak != weak_pts:
+                    _commit_weak(wi, new_weak)
+                    changed = True
+                    break
+                # Absorb no-oped → fall through to separate below.
+
+            # 2) Separate real corridors that are still too close.
+            if md >= PARALLEL_MIN_GAP:
+                continue
+            # Colinear doubles: still separate (nudge off the line) if absorb failed.
+
+            nx, ny = _perp_unit(bearing)
+            s_segs = _long_segments(strong_pts)
+            w_segs = _long_segments(weak_pts)
+            if not s_segs or not w_segs:
+                continue
+            best_md = None
+            best_side = 0.0
+            for _, a0, a1, _, ba in s_segs:
+                for _, b0, b1, _, bb in w_segs:
+                    if not _bearing_similar(ba, bb):
+                        continue
+                    if _longitudinal_overlap(a0, a1, b0, b1, ba) < PARALLEL_OVERLAP:
+                        continue
+                    cur = _perp_seg_dist(a0, a1, b0, b1)
+                    if best_md is None or cur < best_md:
+                        best_md = cur
+                        mb = ((b0[0] + b1[0]) * 0.5, (b0[1] + b1[1]) * 0.5)
+                        best_side = (mb[0] - a0[0]) * nx + (mb[1] - a0[1]) * ny
+            if best_md is None or best_md >= PARALLEL_MIN_GAP:
+                continue
+            if best_md < 1.0:
+                best_md = 0.0
+            sign = 1.0 if best_side >= 0 else -1.0
+            # If currently colinear-ish side≈0, push to +normal.
+            if abs(best_side) < 1.0:
+                sign = 1.0
+            need = PARALLEL_MIN_GAP - best_md + LATTICE
+            need = math.ceil(need / LATTICE) * LATTICE
+
+            protect = _pair_shared_keys(weak_pts, strong_pts)
+            weak_name = str(out[wi]["name"])
+            for a_name, b_name in REQUIRED_JUNCTIONS:
+                if weak_name not in (a_name, b_name):
+                    continue
+                other = a_name if b_name == weak_name else b_name
+                other_r = next((r for r in out if r["name"] == other), None)
+                if other_r is None:
+                    continue
+                op = [(float(x), float(y)) for x, y in other_r["points"]]
+                protect |= _pair_shared_keys(weak_pts, op)
+
+            def _min_parallel_gap(
+                trial: list[tuple[float, float]],
+            ) -> float:
+                """Smallest perp gap from trial to any other road's long parallel segs."""
+                gap = 1e18
+                for rk, r in enumerate(out):
+                    if rk == wi:
+                        continue
+                    other = [(float(x), float(y)) for x, y in r["points"]]
+                    for _, a0, a1, _, ba in _long_segments(other):
+                        for _, b0, b1, _, bb in _long_segments(trial):
+                            if not _bearing_similar(ba, bb):
+                                continue
+                            if _longitudinal_overlap(a0, a1, b0, b1, ba) < PARALLEL_OVERLAP:
+                                continue
+                            if any(dist(p, q) < 1.0 for p in (a0, a1) for q in (b0, b1)):
+                                continue
+                            gap = min(gap, _perp_seg_dist(a0, a1, b0, b1))
+                return gap
+
+            # Try both perpendicular directions; pick the one with better global gap
+            # (avoids Seestrasse oscillating between Seebühl and Garten).
+            candidates: list[tuple[float, list[tuple[float, float]]]] = []
+            for trial_sign in (sign, -sign):
+                delta = trial_sign * need
+                trial = _offset_polyline(
+                    weak_pts, bearing, delta, shared=protect, prefer=prefer
+                )
+                trial = _resnap_required_meets(
+                    trial, out, wi, shared_before=shared
+                )
+                if len(trial) < 2 or trial == weak_pts:
+                    continue
+                candidates.append((_min_parallel_gap(trial), trial))
+            if not candidates:
+                continue
+            candidates.sort(key=lambda c: -c[0])
+            new_weak = candidates[0][1]
+            # Only accept if we don't regress the global min gap.
+            if _min_parallel_gap(new_weak) + 1.0 < _min_parallel_gap(weak_pts):
+                continue
+            _commit_weak(wi, new_weak)
+            changed = True
+            break
+        if not changed:
+            break
+
+    # Re-assert required junctions if spacing moved endpoints.
+    by = {r["name"]: r for r in out}
+    need = False
+    for a_name, b_name in REQUIRED_JUNCTIONS:
+        if a_name not in by or b_name not in by:
+            continue
+        pa = [(float(x), float(y)) for x, y in by[a_name]["points"]]
+        pb = [(float(x), float(y)) for x, y in by[b_name]["points"]]
+        if min(dist(p, q) for p in pa for q in pb) >= 1.0:
+            need = True
+            break
+    if need:
+        out = force_required_junctions(out)
+
+    # Final light clean to kill any reverse folds from offsets/absorbs.
+    shared = _shared_junction_keys(out)
+    fixed: list[dict] = []
+    for r in out:
+        prefer = STRAIGHT_CORRIDORS.get(r["name"], {}).get("axis")
+        pts = [(float(x), float(y)) for x, y in r["points"]]
+        pts = _clean_polyline(pts, shared, prefer_axis=prefer)
+        if len(pts) < 2:
+            continue
+        fixed.append(
+            {
+                "name": r["name"],
+                "class": r["class"],
+                "points": [[round(x, 1), round(y, 1)] for x, y in pts],
+            }
+        )
+    return fixed
+
+
+def _resnap_required_meets(
+    weak_pts: list[tuple[float, float]],
+    roads: list[dict],
+    weak_i: int,
+    *,
+    shared_before: set[tuple[float, float]],
+) -> list[tuple[float, float]]:
+    """After offset, pin endpoints that belonged to shared hubs / REQUIRED pairs."""
+    weak_name = str(roads[weak_i]["name"])
+    pts = list(weak_pts)
+    # Collect partner roads that must share a vertex with weak.
+    partners: list[str] = []
+    for a, b in REQUIRED_JUNCTIONS:
+        if a == weak_name:
+            partners.append(b)
+        elif b == weak_name:
+            partners.append(a)
+    by = {r["name"]: r for r in roads}
+    for pname in partners:
+        if pname not in by:
+            continue
+        partner = [(float(x), float(y)) for x, y in by[pname]["points"]]
+        # If any shared_before key still on partner, snap nearest weak end to it.
+        hubs = [p for p in partner if point_key(p) in shared_before]
+        if not hubs:
+            # Fallback: nearest partner vertex to either weak end.
+            hubs = partner
+        # Choose which weak end is closer to a hub.
+        best = None
+        for end_i in (0, len(pts) - 1):
+            for h in hubs:
+                d = dist(pts[end_i], h)
+                if best is None or d < best[0]:
+                    best = (d, end_i, h)
+        if best is None:
+            continue
+        _d, end_i, hub = best
+        if _d < 1.0:
+            continue
+        # Only resnap if we moved away from a hub that should still meet.
+        if end_i == 0:
+            rest = pts[1:]
+            pts = list(octilinear_leg(hub, rest[0]))
+            pts.extend(rest[1:])
+        else:
+            head = pts[:-1]
+            pts = list(head[:-1]) if len(head) > 1 else []
+            pts.extend(octilinear_leg(head[-1], hub))
+        pts = _dedupe_polyline(pts)
+    return pts if len(pts) >= 2 else weak_pts
+
+
 def clean_corners(roads: list[dict]) -> list[dict]:
     """Post-pass: kill reverse folds / micros / colinear junk; protect shared junctions."""
     shared = _shared_junction_keys(roads)
@@ -1593,6 +2261,7 @@ def main() -> None:
     roads_out = connect_network(roads_out)
     roads_out = force_required_junctions(roads_out)
     roads_out = clean_corners(roads_out)
+    roads_out = resolve_near_parallels(roads_out)
     validate_octilinear(roads_out)
     validate_required_junctions(roads_out)
     junctions = cluster_junctions(roads_out)
@@ -1609,6 +2278,9 @@ def main() -> None:
             "connect_near_wu": CONNECT_NEAR,
             "connect_interior_wu": CONNECT_INTERIOR,
             "min_corner_seg_wu": MIN_CORNER_SEG_WU,
+            "parallel_too_close_wu": PARALLEL_TOO_CLOSE,
+            "parallel_absorb_wu": PARALLEL_ABSORB,
+            "parallel_min_gap_wu": PARALLEL_MIN_GAP,
             "straight_corridors": sorted(STRAIGHT_CORRIDORS.keys()),
             "note": "Not wired into world_sandbox yet; live game still uses seuzach_roads.json",
         },
