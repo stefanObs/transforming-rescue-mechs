@@ -27,6 +27,8 @@ func _ready() -> void:
 	)
 	if _player and _player.has_signal("form_changed"):
 		_player.form_changed.connect(_on_form_changed)
+	if not GameState.coins_changed.is_connected(_on_coins_changed):
+		GameState.coins_changed.connect(_on_coins_changed)
 	_sync_actor_z()
 	_refresh_status()
 
@@ -75,7 +77,6 @@ func _process(_delta: float) -> void:
 		return
 	if _player_in_exit and Input.is_action_just_pressed("interact"):
 		exit_to_world_for_test()
-	_refresh_status()
 	_sync_actor_z()
 
 
@@ -83,9 +84,16 @@ func _switch_character(id: String) -> void:
 	if _player and _player.has_method("set_character"):
 		if str(_player.get("character_id")) != id:
 			_player.call("set_character", id)
+			if not _paused:
+				_refresh_status()
 
 
 func _on_form_changed(_new_form: Variant) -> void:
+	if not _paused:
+		_refresh_status()
+
+
+func _on_coins_changed(_new_amount: int) -> void:
 	if not _paused:
 		_refresh_status()
 

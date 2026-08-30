@@ -15,6 +15,7 @@ func _run() -> void:
 	_test_straight_and_roundabout()
 	_test_roundabout_default_no_centerline()
 	_test_roundabout_centerline_opt_in()
+	_test_dashed_line_batches_stripes()
 	_test_polyline_covers_bend_corner()
 	_test_readable_label_rotation()
 	_test_label_samples_follow_tangent()
@@ -81,6 +82,56 @@ func _test_roundabout_centerline_opt_in() -> void:
 	_assert(int(counts["stripe"]) >= 1, "roundabout centerline opt-in stripes >= 1 (got %d)" % counts["stripe"])
 
 	parent.queue_free()
+
+
+func _test_dashed_line_batches_stripes() -> void:
+	## S02: one stripe node per dashed segment; dash_count still covers full length.
+	var parent := Node2D.new()
+	root.add_child(parent)
+
+	var length := 320.0
+	var dash_len := 18.0
+	var gap_len := 14.0
+	RoadKitLib.add_straight(parent, Vector2(0, 0), Vector2(length, 0), {
+		"centerline": true,
+		"half_w": 40.0,
+		"dash_len": dash_len,
+		"gap_len": gap_len,
+	})
+
+	var stripe_nodes := 0
+	var dash_total := 0
+	for child in parent.get_children():
+		if child.has_meta("road_kit") and str(child.get_meta("road_kit")) == "stripe":
+			stripe_nodes += 1
+			if child.has_meta("dash_count"):
+				dash_total += int(child.get_meta("dash_count"))
+	## Pre-merge baseline for this length: ~ceil(length / (dash+gap)) Polygon2Ds (~10).
+	var period := dash_len + gap_len
+	var legacy_min := int(floor((length - 0.5) / period)) + 1
+	_assert(stripe_nodes == 1, "dashed segment uses 1 stripe node (got %d)" % stripe_nodes)
+	_assert(dash_total >= 2, "batch still draws multiple dashes (got %d)" % dash_total)
+	_assert(
+		stripe_nodes < legacy_min,
+		"stripe nodes (%d) < legacy per-dash count (%d)" % [stripe_nodes, legacy_min]
+	)
+
+	## Roundabout centerline opt-in also batches into one stripe node.
+	var parent2 := Node2D.new()
+	root.add_child(parent2)
+	RoadKitLib.add_roundabout(parent2, Vector2(0, 0), 80.0, 24.0, {"centerline": true})
+	var rb_stripes := 0
+	var rb_dashes := 0
+	for child in parent2.get_children():
+		if child.has_meta("road_kit") and str(child.get_meta("road_kit")) == "stripe":
+			rb_stripes += 1
+			if child.has_meta("dash_count"):
+				rb_dashes += int(child.get_meta("dash_count"))
+	_assert(rb_stripes == 1, "roundabout centerline uses 1 stripe node (got %d)" % rb_stripes)
+	_assert(rb_dashes >= 2, "roundabout batch has multiple dashes (got %d)" % rb_dashes)
+
+	parent.queue_free()
+	parent2.queue_free()
 
 
 func _test_polyline_covers_bend_corner() -> void:

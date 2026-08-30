@@ -32,3 +32,13 @@ Schnelleres First Paint (Housing erst near-spawn), bessere FPS während des Spie
 
 - First paint: nur near-spawn Housing sichtbar/geladen; entfernte Quartiere laden nach ohne starke Hitches; Straßen durchgängig befahrbar
 - Weniger Polygon2D-/Sprite-Last bzw. spürbar glattere FPS; HUD aktualisiert nur bei Statuswechsel
+- Unit: lazy near-spawn + `ensure_all_housing_loaded`; dash batch node count < legacy; status stable across `_process`
+
+## Akzeptanz
+
+- [ ] Start: WINT-WEST + KIRCHE-KERN (und near margin) geladen; Ohringen-Housing deferred
+- [ ] `ensure_all_housing_loaded()` / `force_load_all_housing_quarters()` idempotent; Full-Map-Tests grün
+- [ ] RoadKit-Dashes: 1 Stripe-Node pro Segment, weißes Dash-Look unverändert
+- [ ] `_refresh_status` nicht mehr jedes Frame; Refresh bei Form/Char/Debug/Hub/Pause
+- [ ] house_street_*/landmark_*.import: `process/size_limit=768`; Reimport gelaufen
+- [ ] `./scripts/run_tests.sh` grün

@@ -121,6 +121,15 @@ var _named_roads_cache: Array[Dictionary] = []
 var _indexed_roads: Array[Dictionary] = []
 var _road_index: Dictionary = {}
 var _texture_cache: Dictionary = {}
+## S02: quarter lazy-load housing (near-spawn first; stream rest).
+const HOUSING_STREAM_MARGIN_CELLS := 2
+var _housing_loaded: Dictionary = {}
+var _housing_placed: Array[Vector2] = []
+var _housing_counters: Vector2i = Vector2i.ZERO
+var _housing_variants: Array[String] = []
+var _housing_landmark_positions: Array[Vector2] = []
+var _housing_stream_ready: bool = false
+var _status_debug_cell: Vector2i = Vector2i(0x7fffffff, 0x7fffffff)
 
 
 func _ready() -> void:
@@ -144,6 +153,8 @@ func _ready() -> void:
 	)
 	if _player and _player.has_signal("form_changed"):
 		_player.form_changed.connect(_on_form_changed)
+	if not GameState.coins_changed.is_connected(_on_coins_changed):
+		GameState.coins_changed.connect(_on_coins_changed)
 	if _player:
 		if GameState.has_world_spawn:
 			_player.global_position = GameState.consume_world_spawn()
@@ -190,7 +201,12 @@ func _process(_delta: float) -> void:
 	if _player_in_hub_enter and Input.is_action_just_pressed("interact"):
 		enter_hub_for_test()
 		return
-	_refresh_status()
+	_stream_housing_near_player()
+	if _road_debug_enabled and _player != null:
+		var feld: Vector2i = DEBUG_GRID_SCRIPT.world_to_cell(_player.global_position, DEBUG_GRID_CELL)
+		if feld != _status_debug_cell:
+			_status_debug_cell = feld
+			_refresh_status()
 	_sync_actor_z()
 
 
@@ -287,9 +303,16 @@ func _switch_character(id: String) -> void:
 	if _player and _player.has_method("set_character"):
 		if str(_player.get("character_id")) != id:
 			_player.call("set_character", id)
+			if not _paused:
+				_refresh_status()
 
 
 func _on_form_changed(_new_form: Variant) -> void:
+	if not _paused:
+		_refresh_status()
+
+
+func _on_coins_changed(_new_amount: int) -> void:
 	if not _paused:
 		_refresh_status()
 
@@ -304,9 +327,9 @@ func _refresh_status() -> void:
 		hub_hint = " | %s — Erdstation betreten" % InputGlyphs.glyph_for("interact")
 	var debug_hint := ""
 	if _road_debug_enabled:
-		var feld: Vector2i = DEBUG_GRID_SCRIPT.world_to_cell(_player.global_position, DEBUG_GRID_CELL)
+		_status_debug_cell = DEBUG_GRID_SCRIPT.world_to_cell(_player.global_position, DEBUG_GRID_CELL)
 		debug_hint = " | Debug: Strassen | Raster %d | Feld %d,%d" % [
-			int(DEBUG_GRID_CELL), feld.x, feld.y
+			int(DEBUG_GRID_CELL), _status_debug_cell.x, _status_debug_cell.y
 		]
 	_status.text = "M3 Strassenkarte | %s | Form: %s | Münzen: %d%s%s" % [
 		char_id.capitalize(), form_name, GameState.coins, hub_hint, debug_hint
@@ -704,10 +727,11 @@ func _place_landmarks() -> void:
 
 
 func _place_spawn_housing() -> void:
-	## F1 quarter cells (S01–S06); Schneckenwiese band is REUT-MITTE (no legacy radius).
+	## S02: near-spawn quarters only at start; rest stream via _stream_housing_near_player.
+	## Landmarks (schools/kigas/bahnhof/badi/forests) stay always-on (placed separately).
 	## Ohringen housing stays under %Props (campus/kiga remain under DistrictOhringen).
 	_prop_parent = _props
-	var variants: Array[String] = [
+	_housing_variants = [
 		"house_street_a",
 		"house_street_b",
 		"house_street_flachdach",
@@ -715,23 +739,99 @@ func _place_spawn_housing() -> void:
 	]
 	var roads := _named_road_polylines()
 	if roads.is_empty():
+		_housing_stream_ready = false
 		return
-	var landmark_positions: Array[Vector2] = []
+	_housing_landmark_positions.clear()
 	for child in _collect_prop_sprites(_props):
 		if child.has_meta("landmark_id"):
-			landmark_positions.append(child.position)
+			_housing_landmark_positions.append(child.position)
 	## Shared across all passes — prevents double-stack in overlapping field rects.
-	var placed: Array[Vector2] = []
-	var counters := Vector2i(0, 0) ## x=variant_i, y=house_i
+	_housing_placed.clear()
+	_housing_counters = Vector2i(0, 0) ## x=variant_i, y=house_i
+	_housing_loaded.clear()
+	var spawn := SeuzachGeo.winterthurer_spawn()
+	var near_ids: Array[String] = HousingQuarters.ids_near_world(spawn, HOUSING_STREAM_MARGIN_CELLS)
+	for qid in near_ids:
+		_load_housing_quarter(str(qid), roads)
+	_housing_stream_ready = true
+
+
+## Public: place every active quarter (idempotent). Tests that assert full-map housing call this.
+func ensure_all_housing_loaded() -> void:
+	force_load_all_housing_quarters()
+
+
+func force_load_all_housing_quarters() -> void:
+	if not _housing_stream_ready and _housing_variants.is_empty():
+		## World not built yet / no roads — nothing to load.
+		return
+	_prop_parent = _props
+	var roads := _named_road_polylines()
+	if roads.is_empty():
+		return
+	if _housing_variants.is_empty():
+		_housing_variants = [
+			"house_street_a",
+			"house_street_b",
+			"house_street_flachdach",
+			"house_street_reihen",
+		]
+	if _housing_landmark_positions.is_empty():
+		for child in _collect_prop_sprites(_props):
+			if child.has_meta("landmark_id"):
+				_housing_landmark_positions.append(child.position)
 	for qid in HousingQuarters.active_ids():
-		counters = _place_housing_in_quarter(
-			str(qid),
-			roads,
-			variants,
-			landmark_positions,
-			placed,
-			counters
-		)
+		_load_housing_quarter(str(qid), roads)
+	_housing_stream_ready = true
+
+
+func is_housing_quarter_loaded(quarter_id: String) -> bool:
+	return _housing_loaded.has(quarter_id)
+
+
+func loaded_housing_quarter_ids() -> Array[String]:
+	var out: Array[String] = []
+	for key in _housing_loaded.keys():
+		out.append(str(key))
+	return out
+
+
+func _load_housing_quarter(quarter_id: String, roads: Array[Dictionary] = []) -> void:
+	if _housing_loaded.has(quarter_id):
+		return
+	if roads.is_empty():
+		roads = _named_road_polylines()
+	if roads.is_empty() or _housing_variants.is_empty():
+		return
+	_housing_counters = _place_housing_in_quarter(
+		quarter_id,
+		roads,
+		_housing_variants,
+		_housing_landmark_positions,
+		_housing_placed,
+		_housing_counters
+	)
+	_housing_loaded[quarter_id] = true
+
+
+func _stream_housing_near_player() -> void:
+	if not _housing_stream_ready or _player == null:
+		return
+	var pos: Vector2 = _player.global_position
+	var roads: Array[Dictionary] = []
+	## One quarter per frame to avoid hitch bursts when entering dense areas.
+	for qid in HousingQuarters.active_ids():
+		var id := str(qid)
+		if _housing_loaded.has(id):
+			continue
+		if not HousingQuarters.is_near_quarter(pos, id, HOUSING_STREAM_MARGIN_CELLS):
+			continue
+		if roads.is_empty():
+			roads = _named_road_polylines()
+			if roads.is_empty():
+				return
+		_load_housing_quarter(id, roads)
+		return
 
 
 func _place_housing_in_quarter(

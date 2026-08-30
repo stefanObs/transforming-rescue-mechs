@@ -236,3 +236,42 @@ static func quarter_contains_world(id: String, pos: Vector2) -> bool:
 
 static func world_to_cell(pos: Vector2) -> Vector2i:
 	return DEBUG_GRID_SCRIPT.world_to_cell(pos, SeuzachGeo.FIELD_WU)
+
+
+## Chebyshev distance from a field cell to a quarter AABB (0 = inside).
+static func cell_distance_to_bounds(cell: Vector2i, bounds: Dictionary) -> int:
+	if bounds.is_empty():
+		return 999999
+	var dx := 0
+	if cell.x < int(bounds["ix_min"]):
+		dx = int(bounds["ix_min"]) - cell.x
+	elif cell.x > int(bounds["ix_max"]):
+		dx = cell.x - int(bounds["ix_max"])
+	var dy := 0
+	if cell.y < int(bounds["iy_min"]):
+		dy = int(bounds["iy_min"]) - cell.y
+	elif cell.y > int(bounds["iy_max"]):
+		dy = cell.y - int(bounds["iy_max"])
+	return maxi(dx, dy)
+
+
+## Quarters near a world position (margin in field cells). Always includes S01 spawn pair.
+static func ids_near_world(pos: Vector2, margin_cells: int = 2) -> Array[String]:
+	var cell: Vector2i = world_to_cell(pos)
+	var out: Array[String] = []
+	for id in s01_ids():
+		out.append(id)
+	for id in active_ids():
+		if out.has(id):
+			continue
+		var bounds: Dictionary = field_bounds(id)
+		if cell_distance_to_bounds(cell, bounds) <= margin_cells:
+			out.append(id)
+	return out
+
+
+static func is_near_quarter(pos: Vector2, quarter_id: String, margin_cells: int = 2) -> bool:
+	var bounds: Dictionary = field_bounds(quarter_id)
+	if bounds.is_empty():
+		return false
+	return cell_distance_to_bounds(world_to_cell(pos), bounds) <= margin_cells

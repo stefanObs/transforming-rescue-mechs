@@ -129,6 +129,22 @@ func _run() -> void:
 		_finish()
 		return
 
+	## S02: after _ready only near-spawn quarters are loaded; force-load for full-map asserts.
+	_assert_lazy_housing_before_force(world, props)
+	if world.has_method("ensure_all_housing_loaded"):
+		world.call("ensure_all_housing_loaded")
+	else:
+		_failed += 1
+		printerr("FAIL world missing ensure_all_housing_loaded")
+	_assert(
+		world.call("is_housing_quarter_loaded", "OHR-NORD"),
+		"force_load brings OHR-NORD"
+	)
+	_assert(
+		world.call("loaded_housing_quarter_ids").size() == HousingQuarters.active_ids().size(),
+		"force_load places every active quarter"
+	)
+
 	var all_sprites := _collect_sprites(props)
 	var house_n := 0
 	var forest_n := 0
@@ -139,6 +155,8 @@ func _run() -> void:
 			forest_n += 1
 	_assert(house_n >= 12, "spawn+corridor housing props present (got %d)" % house_n)
 	_assert(forest_n >= 1, "forest silhouette props present (got %d)" % forest_n)
+
+	_assert_hud_status_not_per_frame(world)
 
 	_assert_landmark_scales(world, all_sprites)
 	_assert_spawn_housing(world, all_sprites)
@@ -3310,6 +3328,61 @@ func _finish() -> void:
 	else:
 		printerr("=== m3_world_landmarks_test FAIL (%d) ===" % _failed)
 		quit(1)
+
+
+func _assert_lazy_housing_before_force(world: Node, props: Node2D) -> void:
+	_assert(world.has_method("is_housing_quarter_loaded"), "is_housing_quarter_loaded API")
+	_assert(
+		bool(world.call("is_housing_quarter_loaded", "WINT-WEST")),
+		"WINT-WEST loaded near spawn"
+	)
+	_assert(
+		bool(world.call("is_housing_quarter_loaded", "KIRCHE-KERN")),
+		"KIRCHE-KERN loaded near spawn"
+	)
+	_assert(
+		not bool(world.call("is_housing_quarter_loaded", "OHR-NORD")),
+		"OHR-NORD deferred at start"
+	)
+	_assert(
+		not bool(world.call("is_housing_quarter_loaded", "OHR-SUED")),
+		"OHR-SUED deferred at start"
+	)
+	var near_houses := 0
+	for spr in _collect_sprites(props):
+		if spr.has_meta("house_variant"):
+			near_houses += 1
+	_assert(near_houses >= 1, "near-spawn houses before force-load (got %d)" % near_houses)
+	var loaded: Variant = world.call("loaded_housing_quarter_ids")
+	var loaded_n := 0
+	if loaded is Array:
+		loaded_n = (loaded as Array).size()
+	_assert(
+		loaded_n < HousingQuarters.active_ids().size(),
+		"not all quarters at start (got %d)" % loaded_n
+	)
+
+
+func _assert_hud_status_not_per_frame(world: Node) -> void:
+	var status: Label = world.get_node_or_null("%StatusLabel") as Label
+	_assert(status != null, "StatusLabel exists for HUD debounce")
+	if status == null:
+		return
+	var before := status.text
+	if world.has_method("_process"):
+		world.call("_process", 0.016)
+		world.call("_process", 0.016)
+	_assert(status.text == before, "status unchanged across _process without events")
+	var player: Node = world.get_node_or_null("%Player")
+	if player != null and player.has_method("set_form"):
+		player.call("set_form", 1) ## Form.VEHICLE
+		_assert(status.text != before, "status refreshes on form change")
+		if world.has_method("_refresh_status"):
+			## Character switch path also refreshes via _switch_character.
+			before = status.text
+			if world.has_method("_switch_character"):
+				world.call("_switch_character", "marina")
+				_assert(status.text != before, "status refreshes on character switch")
 
 
 func _collect_sprites(root_node: Node) -> Array[Sprite2D]:

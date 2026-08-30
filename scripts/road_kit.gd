@@ -304,6 +304,17 @@ static func _add_ribbon(
 	parent.add_child(poly)
 
 
+## One Node2D draws all dash quads for a segment (S02: fewer nodes than 1 Polygon2D/dash).
+class DashBatch2D extends Node2D:
+	var stripe_color: Color = Color("F5F5F5")
+	var dash_polys: Array[PackedVector2Array] = []
+
+	func _draw() -> void:
+		for poly in dash_polys:
+			if poly.size() >= 3:
+				draw_colored_polygon(poly, stripe_color)
+
+
 static func _add_dashed_line(
 	parent: Node2D,
 	a: Vector2,
@@ -317,23 +328,28 @@ static func _add_dashed_line(
 	var gap_len: float = float(opts.get("gap_len", DEFAULT_GAP_LEN))
 	var half_sw: float = float(opts.get("stripe_half_w", DEFAULT_STRIPE_HALF_W))
 	var n := normal.normalized()
+	var batch := DashBatch2D.new()
+	batch.stripe_color = COLOR_STRIPE
+	batch.z_index = Z_STRIPE
 	var t := 0.0
 	while t < length - 0.5:
 		var t1 := minf(t + dash_len, length)
 		var p0 := a + tangent * t
 		var p1 := a + tangent * t1
-		var poly := Polygon2D.new()
-		poly.color = COLOR_STRIPE
-		poly.z_index = Z_STRIPE
-		poly.polygon = PackedVector2Array([
-			p0 + n * half_sw,
-			p1 + n * half_sw,
-			p1 - n * half_sw,
-			p0 - n * half_sw,
-		])
-		poly.set_meta("road_kit", "stripe")
-		parent.add_child(poly)
+		batch.dash_polys.append(
+			PackedVector2Array([
+				p0 + n * half_sw,
+				p1 + n * half_sw,
+				p1 - n * half_sw,
+				p0 - n * half_sw,
+			])
+		)
 		t = t1 + gap_len
+	if batch.dash_polys.is_empty():
+		return
+	batch.set_meta("road_kit", "stripe")
+	batch.set_meta("dash_count", batch.dash_polys.size())
+	parent.add_child(batch)
 
 
 static func _add_dashed_circle(parent: Node2D, center: Vector2, radius: float, opts: Dictionary) -> void:
@@ -343,6 +359,9 @@ static func _add_dashed_circle(parent: Node2D, center: Vector2, radius: float, o
 	var circ := TAU * radius
 	if circ < 1.0:
 		return
+	var batch := DashBatch2D.new()
+	batch.stripe_color = COLOR_STRIPE
+	batch.z_index = Z_STRIPE
 	var t := 0.0
 	while t < circ - 0.5:
 		var t1 := minf(t + dash_len, circ)
@@ -353,18 +372,20 @@ static func _add_dashed_circle(parent: Node2D, center: Vector2, radius: float, o
 		var p0 := center + Vector2(cos(ang0), sin(ang0)) * radius
 		var p1 := center + Vector2(cos(ang1), sin(ang1)) * radius
 		# Slight radial thickness so dashes read on the ring.
-		var poly := Polygon2D.new()
-		poly.color = COLOR_STRIPE
-		poly.z_index = Z_STRIPE
-		poly.polygon = PackedVector2Array([
-			p0 + radial * half_sw,
-			p1 + radial * half_sw,
-			p1 - radial * half_sw,
-			p0 - radial * half_sw,
-		])
-		poly.set_meta("road_kit", "stripe")
-		parent.add_child(poly)
+		batch.dash_polys.append(
+			PackedVector2Array([
+				p0 + radial * half_sw,
+				p1 + radial * half_sw,
+				p1 - radial * half_sw,
+				p0 - radial * half_sw,
+			])
+		)
 		t = t1 + gap_len
+	if batch.dash_polys.is_empty():
+		return
+	batch.set_meta("road_kit", "stripe")
+	batch.set_meta("dash_count", batch.dash_polys.size())
+	parent.add_child(batch)
 
 
 static func _add_annulus(
