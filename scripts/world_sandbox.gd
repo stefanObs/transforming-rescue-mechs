@@ -26,6 +26,9 @@ const HOUSE_CLEAR_W_FRAC := 0.70
 const HOUSE_CLEAR_H_FRAC := 0.55
 const HOUSE_CLEAR_EDGE_MARGIN := 12.0
 const HOUSE_CURB_SLACK := 6.0
+## S01 world-perf: nudge step (was 8) + spatial road grid cell size.
+const NUDGE_STEP := 28.0
+const ROAD_SPATIAL_CELL := 512.0
 ## S02: Birch/Rietacker per-building multipliers on SCHOOL_SCALE (OSM footprint ratios).
 const BIRCH_A_SCALE_MULT := 1.68
 const BIRCH_B_SCALE_MULT := 1.34
@@ -113,13 +116,23 @@ var _hub_enter: Area2D = null
 var _player_in_hub_enter: bool = false
 var _road_debug_enabled: bool = false
 var _road_debug_root: Node2D = null
+## S01: cached named-road polylines + spatial cell → road-index set; path → Texture2D.
+var _named_roads_cache: Array[Dictionary] = []
+var _indexed_roads: Array[Dictionary] = []
+var _road_index: Dictionary = {}
+var _texture_cache: Dictionary = {}
 
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	_sky.color = COLOR_SKY
+	var t0 := Time.get_ticks_msec()
 	_build_flat_ground()
+	var t_ground := Time.get_ticks_msec()
+	print("[world_sandbox] _build_flat_ground: %d ms" % (t_ground - t0))
 	_place_landmarks()
+	var t_done := Time.get_ticks_msec()
+	print("[world_sandbox] _ready total: %d ms" % (t_done - t0))
 	_hint.text = (
 		"Bewegen: %s | Transform: %s/Q | Char: 1=Bolt 2=Marina 3=Rush | Pause: %s | Debug: %s"
 		% [
@@ -674,13 +687,20 @@ func _place_landmarks() -> void:
 	for child in _props.get_children():
 		child.free()
 	_prop_parent = _props
+	var t0 := Time.get_ticks_msec()
 	_add_hub_enter_zone()
 	_place_school_clusters()
 	_place_kindergartens()
 	_place_bahnhof()
 	_place_badi()
+	var t_landmarks := Time.get_ticks_msec()
+	print("[world_sandbox] landmarks: %d ms" % (t_landmarks - t0))
 	_place_spawn_housing()
+	var t_housing := Time.get_ticks_msec()
+	print("[world_sandbox] housing: %d ms" % (t_housing - t_landmarks))
 	_place_forest_silhouettes()
+	var t_forest := Time.get_ticks_msec()
+	print("[world_sandbox] forest: %d ms" % (t_forest - t_housing))
 
 
 func _place_spawn_housing() -> void:
@@ -801,7 +821,7 @@ func _place_housing_along_roads(
 				if not ResourceLoader.exists(path):
 					variant_i += 1
 					continue
-				var tex: Texture2D = load(path)
+				var tex: Texture2D = _load_art_texture(file_name)
 				var clear_sz := _house_clear_size(tex, HOUSE_SCALE)
 				## Street-facing half-extent: NS → clear.x (left façade); EW → clear.y (bottom).
 				var street_half := (clear_sz.x if bearing == "ns" else clear_sz.y) * 0.5
@@ -869,7 +889,7 @@ func _place_housing_along_roads(
 					variant_i += 1
 					continue
 				## Final texture may differ after EW↔NS; recompute clear and re-nudge if needed.
-				tex = load(path)
+				tex = _load_art_texture(file_name)
 				if not _sprite_clears_named_roads(pos, tex, HOUSE_SCALE, roads, true, bearing):
 					pos = _nudge_off_named_roads(pos, tex, HOUSE_SCALE, roads, 700.0, true, bearing)
 					if not _sprite_clears_named_roads(pos, tex, HOUSE_SCALE, roads, true, bearing):
@@ -908,7 +928,7 @@ func _place_housing_along_roads(
 						if not ResourceLoader.exists(path):
 							variant_i += 1
 							continue
-						tex = load(path)
+						tex = _load_art_texture(file_name)
 						if not _sprite_clears_named_roads(pos, tex, HOUSE_SCALE, roads, true, bearing):
 							variant_i += 1
 							continue
@@ -1035,11 +1055,16 @@ func _nearest_road_segment_tangent(pos: Vector2, roads: Array[Dictionary]) -> Ve
 
 
 func _named_road_polylines() -> Array[Dictionary]:
+	if not _named_roads_cache.is_empty():
+		return _named_roads_cache
 	var out: Array[Dictionary] = []
 	if _ground == null:
 		return out
 	for node in _ground.get_children():
 		_collect_named_road_markers(node, out)
+	if not out.is_empty():
+		_named_roads_cache = out
+		_build_road_spatial_index(out)
 	return out
 
 
@@ -1054,6 +1079,118 @@ func _collect_named_road_markers(node: Node, out: Array[Dictionary]) -> void:
 			})
 	for child in node.get_children():
 		_collect_named_road_markers(child, out)
+
+
+func _road_spatial_cell(p: Vector2) -> Vector2i:
+	return Vector2i(floori(p.x / ROAD_SPATIAL_CELL), floori(p.y / ROAD_SPATIAL_CELL))
+
+
+func _build_road_spatial_index(roads: Array[Dictionary]) -> void:
+	## Grid cells → road indices whose polylines (expanded by half_w) touch the cell.
+	_indexed_roads = roads
+	_road_index.clear()
+	for ri in range(roads.size()):
+		var road: Dictionary = roads[ri]
+		var pts: PackedVector2Array = road["points"]
+		var half_w: float = float(road["half_w"])
+		if pts.size() < 2:
+			continue
+		for i in range(pts.size() - 1):
+			_index_road_segment(pts[i], pts[i + 1], half_w, ri)
+
+
+func _index_road_segment(a: Vector2, b: Vector2, pad: float, road_i: int) -> void:
+	var mn := Vector2(minf(a.x, b.x) - pad, minf(a.y, b.y) - pad)
+	var mx := Vector2(maxf(a.x, b.x) + pad, maxf(a.y, b.y) + pad)
+	var c0 := _road_spatial_cell(mn)
+	var c1 := _road_spatial_cell(mx)
+	for cx in range(c0.x, c1.x + 1):
+		for cy in range(c0.y, c1.y + 1):
+			var cell := Vector2i(cx, cy)
+			if not _road_index.has(cell):
+				_road_index[cell] = {}
+			(_road_index[cell] as Dictionary)[road_i] = true
+
+
+func _query_road_index(pos: Vector2, margin: float) -> Array[Dictionary]:
+	## Roads registered in cells covering pos ± margin (unique, stable order by index).
+	var out: Array[Dictionary] = []
+	if _indexed_roads.is_empty() or margin < 0.0:
+		return out
+	var mn := pos - Vector2(margin, margin)
+	var mx := pos + Vector2(margin, margin)
+	var c0 := _road_spatial_cell(mn)
+	var c1 := _road_spatial_cell(mx)
+	var seen: Dictionary = {}
+	for cx in range(c0.x, c1.x + 1):
+		for cy in range(c0.y, c1.y + 1):
+			var cell := Vector2i(cx, cy)
+			if not _road_index.has(cell):
+				continue
+			var bucket: Dictionary = _road_index[cell]
+			for ri in bucket.keys():
+				var idx := int(ri)
+				if seen.has(idx):
+					continue
+				seen[idx] = true
+	var keys: Array = seen.keys()
+	keys.sort()
+	for idx in keys:
+		var i := int(idx)
+		if i >= 0 and i < _indexed_roads.size():
+			out.append(_indexed_roads[i])
+	return out
+
+
+func _clearance_query_margin(
+	tex: Texture2D,
+	spr_scale: Vector2,
+	house_mode: bool,
+	street_bearing: String,
+	extra: float = 0.0
+) -> float:
+	## Enough for half_w + clear + edge (+ nudge extra) so local queries match full scans.
+	var clear := (
+		_house_clear_size(tex, spr_scale) if house_mode else _building_clear_size(tex, spr_scale)
+	)
+	var edge := HOUSE_CLEAR_EDGE_MARGIN if house_mode else BUILDING_CLEAR_EDGE_MARGIN
+	var street_half := _clear_street_half(clear, house_mode, street_bearing)
+	var tex_h := 0.0
+	if tex != null:
+		tex_h = float(tex.get_height()) * absf(spr_scale.y)
+	var aabb_reach := clear.length() * 0.5 + tex_h * 0.5
+	return ROAD_HW_MOTORWAY + street_half + edge + aabb_reach + extra
+
+
+func _roads_for_clearance(
+	pos: Vector2,
+	tex: Texture2D,
+	spr_scale: Vector2,
+	roads: Array[Dictionary],
+	house_mode: bool,
+	street_bearing: String,
+	extra_margin: float = 0.0
+) -> Array[Dictionary]:
+	if roads.is_empty():
+		return roads
+	## Small lists (single corridor / push fallback): skip index.
+	if roads.size() <= 8:
+		return roads
+	if _road_index.is_empty() or not is_same(roads, _indexed_roads):
+		_build_road_spatial_index(roads)
+	var margin := _clearance_query_margin(tex, spr_scale, house_mode, street_bearing, extra_margin)
+	return _query_road_index(pos, margin)
+
+
+func _load_art_texture(file_name: String) -> Texture2D:
+	var path := file_name if file_name.begins_with("res://") else ART + file_name
+	if _texture_cache.has(path):
+		return _texture_cache[path] as Texture2D
+	if not ResourceLoader.exists(path):
+		return null
+	var tex: Texture2D = load(path)
+	_texture_cache[path] = tex
+	return tex
 
 
 func _sample_polyline(pts: PackedVector2Array, spacing: float) -> Array[Dictionary]:
@@ -1140,23 +1277,53 @@ func _sprite_clears_named_roads(
 	house_mode: bool = false,
 	street_bearing: String = ""
 ) -> bool:
+	var local := _roads_for_clearance(pos, tex, spr_scale, roads, house_mode, street_bearing)
+	if local.is_empty() and not roads.is_empty():
+		local = roads
+	return _sprite_clears_roads_list(pos, tex, spr_scale, local, house_mode, street_bearing)
+
+
+func _sprite_clears_roads_list(
+	pos: Vector2,
+	tex: Texture2D,
+	spr_scale: Vector2,
+	roads: Array[Dictionary],
+	house_mode: bool = false,
+	street_bearing: String = ""
+) -> bool:
+	## Brute-force clearance over the given road list (no spatial filter).
 	var clear := (
 		_house_clear_size(tex, spr_scale) if house_mode else _building_clear_size(tex, spr_scale)
 	)
-	var aabb := (
-		_house_clear_aabb(pos, tex, spr_scale) if house_mode else _building_clear_aabb(pos, tex, spr_scale)
-	)
 	var edge := HOUSE_CLEAR_EDGE_MARGIN if house_mode else BUILDING_CLEAR_EDGE_MARGIN
+	var street_half := _clear_street_half(clear, house_mode, street_bearing)
+	var need_feet := 0.0
+	var need_aabb := 0.0
+	var tex_h := 0.0
+	if tex != null:
+		tex_h = float(tex.get_height()) * absf(spr_scale.y)
+	var aabb_reach := clear.length() * 0.5 + tex_h * 0.5
+	var aabb := Rect2()
+	var aabb_ready := false
 	for road in roads:
 		var pts: PackedVector2Array = road["points"]
 		var half_w: float = float(road["half_w"])
+		need_feet = half_w + street_half + edge
+		need_aabb = half_w + edge
 		var d_feet := _dist_point_to_polyline(pos, pts)
-		var d_aabb := _dist_aabb_to_polyline(aabb, pts)
-		var street_half := _clear_street_half(clear, house_mode, street_bearing)
-		var need_feet := half_w + street_half + edge
-		var need_aabb := half_w + edge
 		if d_feet < need_feet:
 			return false
+		## Feet far enough that AABB cannot violate — skip AABB polyline scan.
+		if d_feet >= need_aabb + aabb_reach:
+			continue
+		if not aabb_ready:
+			aabb = (
+				_house_clear_aabb(pos, tex, spr_scale)
+				if house_mode
+				else _building_clear_aabb(pos, tex, spr_scale)
+			)
+			aabb_ready = true
+		var d_aabb := _dist_aabb_to_polyline(aabb, pts)
 		if d_aabb < need_aabb:
 			return false
 	return true
@@ -1164,9 +1331,15 @@ func _sprite_clears_named_roads(
 
 func _nearest_road_segment_perp(pos: Vector2, roads: Array[Dictionary]) -> Vector2:
 	## Unit perpendicular of the nearest named-road segment (or RIGHT if none).
+	var local := roads
+	if roads.size() > 8 and not _road_index.is_empty() and is_same(roads, _indexed_roads):
+		## Cover large landmark AABB reach + max housing nudge (~700).
+		local = _query_road_index(pos, ROAD_HW_MOTORWAY + 1400.0)
+		if local.is_empty():
+			local = roads
 	var best_d := 1.0e9
 	var best_perp := Vector2.RIGHT
-	for road in roads:
+	for road in local:
 		var pts: PackedVector2Array = road["points"]
 		for i in range(pts.size() - 1):
 			var a: Vector2 = pts[i]
@@ -1197,11 +1370,16 @@ func _nudge_off_named_roads(
 ) -> Vector2:
 	## Push perpendicular (and along axes) until visual AABB clears asphalt.
 	## Optional prefer_away is tried first (GPS curb side); housing omits it so +perp stays first.
-	if roads.is_empty() or _sprite_clears_named_roads(
-		pos, tex, spr_scale, roads, house_mode, street_bearing
-	):
+	var local := _roads_for_clearance(
+		pos, tex, spr_scale, roads, house_mode, street_bearing, max_nudge
+	)
+	if roads.is_empty():
 		return pos
-	var perp := _nearest_road_segment_perp(pos, roads)
+	if local.is_empty():
+		local = roads
+	if _sprite_clears_roads_list(pos, tex, spr_scale, local, house_mode, street_bearing):
+		return pos
+	var perp := _nearest_road_segment_perp(pos, local)
 	if perp.length_squared() < 0.0001:
 		perp = Vector2.RIGHT
 	else:
@@ -1223,35 +1401,120 @@ func _nudge_off_named_roads(
 		Vector2(-1, 1).normalized(),
 		Vector2(-1, -1).normalized(),
 	])
-	var step := 8.0
+	var step := NUDGE_STEP
+	var fine := 8.0
 	for dir in dirs:
 		var candidate := pos
 		var traveled := 0.0
 		while traveled < max_nudge:
 			candidate += dir * step
 			traveled += step
-			if _sprite_clears_named_roads(
-				candidate, tex, spr_scale, roads, house_mode, street_bearing
+			## Re-query local roads as we move (margin covers remaining nudge from origin).
+			var cand_roads := _roads_for_clearance(
+				candidate, tex, spr_scale, roads, house_mode, street_bearing, max_nudge - traveled
+			)
+			if cand_roads.is_empty():
+				cand_roads = roads
+			if _sprite_clears_roads_list(
+				candidate, tex, spr_scale, cand_roads, house_mode, street_bearing
 			):
-				return candidate
+				## Coarse hit — walk back with fine step so curb setback matches pre-S01.
+				return _nudge_refine_back(
+					pos,
+					candidate,
+					dir,
+					tex,
+					spr_scale,
+					roads,
+					house_mode,
+					street_bearing,
+					fine
+				)
 	## Iterative push away from the most-violating road (tight street grids).
 	var candidate := pos
 	var traveled := 0.0
 	while traveled < max_nudge:
-		if _sprite_clears_named_roads(
-			candidate, tex, spr_scale, roads, house_mode, street_bearing
+		var cand_roads := _roads_for_clearance(
+			candidate, tex, spr_scale, roads, house_mode, street_bearing, max_nudge - traveled
+		)
+		if cand_roads.is_empty():
+			cand_roads = roads
+		if _sprite_clears_roads_list(
+			candidate, tex, spr_scale, cand_roads, house_mode, street_bearing
 		):
-			return candidate
+			if candidate.is_equal_approx(pos):
+				return candidate
+			return _nudge_refine_back(
+				pos,
+				candidate,
+				candidate - pos,
+				tex,
+				spr_scale,
+				roads,
+				house_mode,
+				street_bearing,
+				fine
+			)
 		var push := _clearance_push_away(
-			candidate, tex, spr_scale, roads, house_mode, street_bearing
+			candidate, tex, spr_scale, cand_roads, house_mode, street_bearing
 		)
 		if push.length_squared() < 0.0001:
 			break
 		candidate += push.normalized() * step
 		traveled += step
-	if _sprite_clears_named_roads(candidate, tex, spr_scale, roads, house_mode, street_bearing):
-		return candidate
+	var final_roads := _roads_for_clearance(
+		candidate, tex, spr_scale, roads, house_mode, street_bearing, 0.0
+	)
+	if final_roads.is_empty():
+		final_roads = roads
+	if _sprite_clears_roads_list(candidate, tex, spr_scale, final_roads, house_mode, street_bearing):
+		if candidate.is_equal_approx(pos):
+			return candidate
+		return _nudge_refine_back(
+			pos,
+			candidate,
+			candidate - pos,
+			tex,
+			spr_scale,
+			roads,
+			house_mode,
+			street_bearing,
+			fine
+		)
 	return pos
+
+
+func _nudge_refine_back(
+	origin: Vector2,
+	cleared: Vector2,
+	dir: Vector2,
+	tex: Texture2D,
+	spr_scale: Vector2,
+	roads: Array[Dictionary],
+	house_mode: bool,
+	street_bearing: String,
+	fine: float
+) -> Vector2:
+	## After a coarse NUDGE_STEP hit, step back toward origin until just clear.
+	if fine <= 0.0 or dir.length_squared() < 0.0001:
+		return cleared
+	var unit := dir.normalized()
+	var refined := cleared
+	while refined.distance_to(origin) > fine + 0.01:
+		var back := refined - unit * fine
+		if (back - origin).dot(unit) < -0.01:
+			break
+		var back_roads := _roads_for_clearance(
+			back, tex, spr_scale, roads, house_mode, street_bearing, 0.0
+		)
+		if back_roads.is_empty():
+			back_roads = roads
+		if not _sprite_clears_roads_list(
+			back, tex, spr_scale, back_roads, house_mode, street_bearing
+		):
+			break
+		refined = back
+	return refined
 
 
 func _clearance_push_away(
@@ -1266,20 +1529,35 @@ func _clearance_push_away(
 	var clear := (
 		_house_clear_size(tex, spr_scale) if house_mode else _building_clear_size(tex, spr_scale)
 	)
-	var aabb := (
-		_house_clear_aabb(pos, tex, spr_scale) if house_mode else _building_clear_aabb(pos, tex, spr_scale)
-	)
 	var edge := HOUSE_CLEAR_EDGE_MARGIN if house_mode else BUILDING_CLEAR_EDGE_MARGIN
+	var street_half := _clear_street_half(clear, house_mode, street_bearing)
+	var tex_h := 0.0
+	if tex != null:
+		tex_h = float(tex.get_height()) * absf(spr_scale.y)
+	var aabb_reach := clear.length() * 0.5 + tex_h * 0.5
+	var aabb := Rect2()
+	var aabb_ready := false
 	var worst_deficit := 0.0
 	var push := Vector2.ZERO
 	for road in roads:
 		var pts: PackedVector2Array = road["points"]
 		var half_w: float = float(road["half_w"])
-		var d_feet := _dist_point_to_polyline(pos, pts)
-		var d_aabb := _dist_aabb_to_polyline(aabb, pts)
-		var street_half := _clear_street_half(clear, house_mode, street_bearing)
 		var need_feet := half_w + street_half + edge
 		var need_aabb := half_w + edge
+		var d_feet := _dist_point_to_polyline(pos, pts)
+		## Far enough: neither feet nor AABB can violate.
+		if d_feet >= need_feet and d_feet >= need_aabb + aabb_reach:
+			continue
+		var d_aabb := d_feet
+		if d_feet < need_aabb + aabb_reach:
+			if not aabb_ready:
+				aabb = (
+					_house_clear_aabb(pos, tex, spr_scale)
+					if house_mode
+					else _building_clear_aabb(pos, tex, spr_scale)
+				)
+				aabb_ready = true
+			d_aabb = _dist_aabb_to_polyline(aabb, pts)
 		var deficit := maxf(need_feet - d_feet, need_aabb - d_aabb)
 		if deficit <= 0.0:
 			continue
@@ -1390,10 +1668,9 @@ func _add_building_prop(
 	flip_h: bool = false
 ) -> Sprite2D:
 	## Place a building sprite, nudging perpendicular off RoadKit asphalt when visual clear fails.
-	var path := ART + file_name
-	if not ResourceLoader.exists(path):
+	var tex: Texture2D = _load_art_texture(file_name)
+	if tex == null:
 		return null
-	var tex: Texture2D = load(path)
 	var roads := _named_road_polylines()
 	var cleared := _nudge_off_named_roads(pos, tex, scale, roads, 700.0)
 	if not _sprite_clears_named_roads(cleared, tex, scale, roads):
@@ -1442,10 +1719,9 @@ func _add_school_street_prop(
 	var fallback_perp := _nearest_road_segment_perp(pos, [target])
 	var bearing := _street_bearing_from_tangent(fallback_tangent)
 	var file_name := "%s_%s.png" % [base_without_suffix, bearing]
-	var path := ART + file_name
-	if not ResourceLoader.exists(path):
+	var tex: Texture2D = _load_art_texture(file_name)
+	if tex == null:
 		return null
-	var tex: Texture2D = load(path)
 	var clear := _building_clear_size(tex, scale)
 	var street_half := _house_street_half(clear, bearing)
 	var half_w := float(target["half_w"])
@@ -1462,10 +1738,9 @@ func _add_school_street_prop(
 		return null
 	bearing = str(facing["bearing"])
 	file_name = "%s_%s.png" % [base_without_suffix, bearing]
-	path = ART + file_name
-	if not ResourceLoader.exists(path):
+	tex = _load_art_texture(file_name)
+	if tex == null:
 		return null
-	tex = load(path)
 	var bank_pos := pos
 	pos = _nudge_off_named_roads(pos, tex, scale, roads, 700.0, false, bearing, away)
 	closest = _closest_point_on_polyline(pos, pts)
@@ -1504,10 +1779,9 @@ func _add_school_street_prop(
 	var local_perp: Vector2 = facing["perp"]
 	bearing = str(facing["bearing"])
 	file_name = "%s_%s.png" % [base_without_suffix, bearing]
-	path = ART + file_name
-	if not ResourceLoader.exists(path):
+	tex = _load_art_texture(file_name)
+	if tex == null:
 		return null
-	tex = load(path)
 	if not _sprite_clears_named_roads(pos, tex, scale, roads, false, bearing):
 		return null
 	var toward_road := (-local_perp * side).normalized()
@@ -1721,10 +1995,9 @@ func _add_forest_silhouette(
 	node_name: String = ""
 ) -> Sprite2D:
 	## Cluster sprite only — no BuildingCollision. Nudge off RoadKit asphalt; floors stay put.
-	var path := ART + file_name
-	if not ResourceLoader.exists(path):
+	var tex: Texture2D = _load_art_texture(file_name)
+	if tex == null:
 		return null
-	var tex: Texture2D = load(path)
 	var roads := _named_road_polylines()
 	var cleared := _nudge_off_named_roads(pos, tex, FOREST_SCALE, roads)
 	var spr := Sprite2D.new()
@@ -1831,13 +2104,13 @@ func _add_prop(
 	node_name: String = "",
 	flip_h: bool = false
 ) -> Sprite2D:
-	var path := ART + file_name
-	if not ResourceLoader.exists(path):
+	var tex: Texture2D = _load_art_texture(file_name)
+	if tex == null:
 		return null
 	var spr := Sprite2D.new()
 	if node_name != "":
 		spr.name = node_name
-	spr.texture = load(path)
+	spr.texture = tex
 	spr.scale = scale
 	spr.position = pos
 	spr.centered = true
