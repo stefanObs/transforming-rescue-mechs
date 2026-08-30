@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
-"""Google Maps WGS84 trace → octilinear seuzach_roads JSON + big SVG.
+"""Road trace → octilinear seuzach_roads JSON + big SVG.
 
-Input:  data/seuzach_roads_gmaps_trace.json
+Input (preferred):  data/seuzach_roads_swiss_trace.json
+Fallback:           data/seuzach_roads_gmaps_trace.json
 Output: data/seuzach_roads_octilinear.json
         docs/maps/seuzach_octilinear_roads.svg
 
@@ -18,7 +19,8 @@ from collections import defaultdict
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-SRC = ROOT / "data" / "seuzach_roads_gmaps_trace.json"
+SRC_SWISS = ROOT / "data" / "seuzach_roads_swiss_trace.json"
+SRC_FALLBACK = ROOT / "data" / "seuzach_roads_gmaps_trace.json"
 OUT_JSON = ROOT / "data" / "seuzach_roads_octilinear.json"
 OUT_SVG = ROOT / "docs" / "maps" / "seuzach_octilinear_roads.svg"
 
@@ -716,8 +718,8 @@ def emit_svg(roads: list[dict], junctions: list[list[float]], path: Path) -> Non
 
     parts.append(
         f'<text x="{x0 + 800}" y="{y1 - 800}" font-family="sans-serif" font-size="320" '
-        f'fill="#555">Schematic octilinear streets digitized from Google Maps; '
-        f'world scale matches project CLIP (Kirche origin). Not live game roads.</text>'
+        f'fill="#555">Schematic octilinear streets aligned to Swiss Map Raster 10 '
+        f'(1072-1 + 1052-3); world scale = project CLIP (Kirche origin). Not live game roads.</text>'
     )
     parts.append("</svg>\n")
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -734,7 +736,8 @@ def _xml_esc(s: str) -> str:
 
 
 def main() -> None:
-    raw = json.loads(SRC.read_text(encoding="utf-8"))
+    src = SRC_SWISS if SRC_SWISS.exists() else SRC_FALLBACK
+    raw = json.loads(src.read_text(encoding="utf-8"))
     roads_out: list[dict] = []
     for r in raw["roads"]:
         wpts = r["waypoints"]
@@ -769,8 +772,8 @@ def main() -> None:
 
     payload = {
         "meta": {
-            "source": "Google Maps digitization → octilinear (H/V/45°) + junction connect",
-            "trace": "data/seuzach_roads_gmaps_trace.json",
+            "source": "Swiss Map Raster 10 ref (1072-1 + 1052-3) + named highway centerlines → octilinear (H/V/45°) + junction connect",
+            "trace": str(src.relative_to(ROOT)),
             "church": [CHURCH_LAT, CHURCH_LON],
             "field_m": FIELD_M,
             "field_wu": FIELD_WU,

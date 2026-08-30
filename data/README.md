@@ -16,12 +16,16 @@
 
 `seuzach_forests.json` ist daraus generiert (`scripts/gen_seuzach_forests.py`): Waldflächen in CLIP (Buechwäldli, Laubholz, Forrenberg/A1, Ohringen, Seuzach-Nord, …) plus wenige Silhouette-Positionen in denselben Weltkoordinaten. Winterthur-Wälder (Lindberg, Wolfensberg, Schoren, Stadlerberg, Fröschholz) nur als CLIP-Schnitt, nicht als Pflicht-Patches.
 
-## Octilinear / Google-Maps-Trace (noch nicht live)
+## Octilinear / Swiss-Raster-Trace (noch nicht live)
 
-`seuzach_roads_gmaps_trace.json` ist eine **Google-Maps-Digitalisierung** (WGS84-Waypoints entlang der sichtbaren Strassen in Seuzach + Ohringen). **Nicht** aus `seuzach_roads.json` / `seuzach_ways.json` abgeleitet.
+`seuzach_roads_gmaps_trace.json` ist eine frühere Google-Maps-Digitalisierung (WGS84).
+
+`seuzach_roads_swiss_trace.json` ist die aktuelle Quelle: benannte befahrbare Highways im Seuzach+Ohringen-Gebiet, **geprüft gegen** Swiss Map Raster 10 (Sheets **1072-1** + **1052-3** / `seuzach_swiss_raster_ref.jpg`).
 
 `seuzach_roads_octilinear.json` und `docs/maps/seuzach_octilinear_roads.svg` erzeugt `scripts/gen_seuzach_octilinear_roads.py` daraus: nur H/V/45°-Segmente (Arrow-Key-8-dir), gleiche Kirche-Origin / FIELD / CLIP wie die Spielwelt.
 
+Referenz-Mosaik: `docs/maps/seuzach_swiss_raster_ref.jpg` (`scripts/build_seuzach_swiss_raster_ref.py`).
+
 Die Live-Sandbox lädt weiterhin `seuzach_roads.json` — das octilineare Netz ist noch **nicht** umgeschaltet.
 
-Schematic street layout digitized from Google Maps; world scale matches project CLIP. OSM-Karten unten: © OpenStreetMap-Mitwirkende, [ODbL](https://opendatacommons.org/licenses/odbl/).
+Schematic street layout aligned to Swiss Map Raster 10; world scale matches project CLIP. OSM-Hilfsgeometrie für Centerlines © OpenStreetMap-Mitwirkende, [ODbL](https://opendatacommons.org/licenses/odbl/).

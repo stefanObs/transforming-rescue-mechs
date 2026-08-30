@@ -29,3 +29,9 @@ build/
 # Local test / crash dumps
 *.log
 core
+
+# Official Swiss Map Raster tiles (hundreds of MB; keep local under docs/maps/)
+*.tif
+*.tiff
+docs/maps/*.tif
+docs/maps/*.tiff
