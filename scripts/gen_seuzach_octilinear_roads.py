@@ -32,7 +32,9 @@ M_LON = 111320.0 * math.cos(math.radians(CHURCH_LAT))
 
 CLIP = (-25000.0, -24000.0, 32000.0, 18000.0)
 LATTICE = 200.0
-JUNCTION_SNAP = 250.0
+JUNCTION_SNAP = 400.0
+CONNECT_NEAR = 3000.0  # snap near-miss vertices within ~160 m
+CONNECT_MAIN = 5000.0  # component bridges may span farther
 MIN_SEG_WU = 120.0
 ANGLE_EPS_DEG = 0.75
 
@@ -97,59 +99,45 @@ def octilinear_leg(a: tuple[float, float], b: tuple[float, float]) -> list[tuple
 
     dx = b[0] - a[0]
     dy = b[1] - a[1]
-    direct = nearest_octilinear(bearing_deg(a, b))
-    ux, uy = dir_vec(direct)
-    # Project onto snapped direction; if residual is large, use two-leg L/45 path.
-    proj = dx * ux + dy * uy
-    mid = (a[0] + ux * proj, a[1] + uy * proj)
-    mid = snap_lattice(mid)
-    residual = dist(mid, b)
 
-    if residual <= LATTICE * 0.6:
-        # Single leg: end exactly at b along octilinear if possible
-        if abs(dx) < 1e-6 or abs(dy) < 1e-6 or abs(abs(dx) - abs(dy)) < LATTICE * 0.6:
-            return [a, b]
-        # Force exact octilinear by choosing axis-aligned or 45° two-leg
-        pass
+    # Exact axis or exact 45°
+    if abs(dx) < 1e-6 or abs(dy) < 1e-6 or abs(abs(dx) - abs(dy)) < 1e-6:
+        return [a, b]
 
-    # Two-leg candidates: axis-then-axis, or axis-then-diagonal
     candidates: list[list[tuple[float, float]]] = []
-    # H then V
+    # H then V / V then H
     candidates.append([a, snap_lattice((b[0], a[1])), b])
-    # V then H
     candidates.append([a, snap_lattice((a[0], b[1])), b])
-    # Match |dx| on 45° then finish axis
-    if abs(dx) >= 1.0 and abs(dy) >= 1.0:
-        s = math.copysign(min(abs(dx), abs(dy)), dx)
-        t = math.copysign(abs(s), dy)
-        m1 = snap_lattice((a[0] + s, a[1] + t))
-        candidates.append([a, m1, b])
-        # Prefer finishing the longer axis first
-        if abs(dx) > abs(dy):
-            m2 = snap_lattice((a[0] + math.copysign(abs(dx) - abs(dy), dx), a[1]))
-            candidates.append([a, m2, b])
-        else:
-            m2 = snap_lattice((a[0], a[1] + math.copysign(abs(dy) - abs(dx), dy)))
-            candidates.append([a, m2, b])
+    # 45° then axis finish
+    s = math.copysign(min(abs(dx), abs(dy)), dx)
+    t = math.copysign(abs(s), dy)
+    m1 = snap_lattice((a[0] + s, a[1] + t))
+    candidates.append([a, m1, b])
+    if abs(dx) > abs(dy):
+        m2 = snap_lattice((a[0] + math.copysign(abs(dx) - abs(dy), dx), a[1]))
+        candidates.append([a, m2, b])
+    else:
+        m2 = snap_lattice((a[0], a[1] + math.copysign(abs(dy) - abs(dx), dy)))
+        candidates.append([a, m2, b])
 
     def path_ok(path: list[tuple[float, float]]) -> bool:
         for i in range(len(path) - 1):
             if dist(path[i], path[i + 1]) < 1.0:
                 continue
-            ang = bearing_deg(path[i], path[i + 1])
-            if abs((ang - nearest_octilinear(ang) + 180) % 360 - 180) > ANGLE_EPS_DEG:
-                return False
+            pdx = path[i + 1][0] - path[i][0]
+            pdy = path[i + 1][1] - path[i][1]
+            if abs(pdx) < 1e-6 or abs(pdy) < 1e-6 or abs(abs(pdx) - abs(pdy)) < 1e-6:
+                continue
+            return False
         return True
 
     def path_err(path: list[tuple[float, float]]) -> float:
-        # Prefer short total length + few corners
         length = sum(dist(path[i], path[i + 1]) for i in range(len(path) - 1))
         return length + 40.0 * (len(path) - 2)
 
     best = None
     best_e = 1e18
     for cand in candidates:
-        # Dedup consecutive
         clean = [cand[0]]
         for p in cand[1:]:
             if dist(clean[-1], p) >= 1.0:
@@ -161,9 +149,12 @@ def octilinear_leg(a: tuple[float, float], b: tuple[float, float]) -> list[tuple
             best_e = e
             best = clean
     if best is None:
-        # Fallback: H then V (always octilinear)
         mid = snap_lattice((b[0], a[1]))
         best = [a, mid, b] if dist(a, mid) >= 1.0 and dist(mid, b) >= 1.0 else [a, b]
+        # last resort axis path must still be octilinear
+        if not path_ok(best):
+            mid = snap_lattice((a[0], b[1]))
+            best = [a, mid, b]
     return best
 
 
@@ -260,6 +251,360 @@ def validate_octilinear(roads: list[dict]) -> None:
         raise SystemExit(f"octilinear validation failed ({len(bad)} segs): {sample}")
 
 
+def _dedupe_polyline(pts: list[tuple[float, float]]) -> list[tuple[float, float]]:
+    if not pts:
+        return pts
+    out = [pts[0]]
+    for p in pts[1:]:
+        if dist(out[-1], p) >= 1.0:
+            out.append(p)
+    return out
+
+
+def connect_network(roads: list[dict]) -> list[dict]:
+    """Snap near vertices to shared junctions; add short octilinear stubs for near-misses."""
+    # Mutable point lists
+    polys: list[list[tuple[float, float]]] = [
+        [(float(x), float(y)) for x, y in r["points"]] for r in roads
+    ]
+
+    # --- Pass 1: cluster all vertices within JUNCTION_SNAP, snap clusters ---
+    verts: list[tuple[int, int, tuple[float, float]]] = []
+    for ri, pts in enumerate(polys):
+        for pi, p in enumerate(pts):
+            verts.append((ri, pi, p))
+
+    parent = list(range(len(verts)))
+
+    def find(i: int) -> int:
+        while parent[i] != i:
+            parent[i] = parent[parent[i]]
+            i = parent[i]
+        return i
+
+    def union(i: int, j: int) -> None:
+        ri, rj = find(i), find(j)
+        if ri != rj:
+            parent[rj] = ri
+
+    for i in range(len(verts)):
+        for j in range(i + 1, len(verts)):
+            if verts[i][0] == verts[j][0]:
+                continue
+            if dist(verts[i][2], verts[j][2]) <= JUNCTION_SNAP:
+                union(i, j)
+
+    clusters: dict[int, list[int]] = defaultdict(list)
+    for i in range(len(verts)):
+        clusters[find(i)].append(i)
+
+    for members in clusters.values():
+        roads_in = {verts[i][0] for i in members}
+        if len(roads_in) < 2 and len(members) < 2:
+            continue
+        if len(roads_in) < 2:
+            continue
+        cx = sum(verts[i][2][0] for i in members) / len(members)
+        cy = sum(verts[i][2][1] for i in members) / len(members)
+        jp = snap_lattice((cx, cy))
+        for i in members:
+            ri, pi, _ = verts[i]
+            polys[ri][pi] = jp
+
+    for ri in range(len(polys)):
+        polys[ri] = _dedupe_polyline(polys[ri])
+
+    # --- Pass 2: snap near-miss vertices (no stubs yet) ---
+    n = len(polys)
+    class_of = [roads[i]["class"] for i in range(n)]
+    for i in range(n):
+        if len(polys[i]) < 2:
+            continue
+        for j in range(i + 1, n):
+            if len(polys[j]) < 2:
+                continue
+            best = 1e18
+            bi = bj = 0
+            for pi, p in enumerate(polys[i]):
+                for pj, q in enumerate(polys[j]):
+                    d = dist(p, q)
+                    if d < best:
+                        best = d
+                        bi, bj = pi, pj
+            if best < 1.0 or best > CONNECT_NEAR:
+                continue
+            mid = snap_lattice(
+                (
+                    (polys[i][bi][0] + polys[j][bj][0]) * 0.5,
+                    (polys[i][bi][1] + polys[j][bj][1]) * 0.5,
+                )
+            )
+            polys[i][bi] = mid
+            polys[j][bj] = mid
+
+    for ri in range(len(polys)):
+        polys[ri] = _dedupe_polyline(polys[ri])
+
+    # Re-octilinearize after snaps so mid-vertex moves don't create illegal angles.
+    for ri in range(len(polys)):
+        if len(polys[ri]) < 2:
+            continue
+        rebuilt: list[tuple[float, float]] = [snap_lattice(polys[ri][0])]
+        for p in polys[ri][1:]:
+            leg = octilinear_leg(rebuilt[-1], snap_lattice(p))
+            for q in leg[1:]:
+                if dist(rebuilt[-1], q) >= 1.0:
+                    rebuilt.append(q)
+        polys[ri] = _dedupe_polyline(rebuilt)
+
+    # --- Pass 3: bridge remaining components with few octilinear stubs ---
+    connectors: list[dict] = []
+
+    def road_keys(pts: list[tuple[float, float]]) -> set[tuple[int, int]]:
+        cell = JUNCTION_SNAP
+        return {(int(round(p[0] / cell)), int(round(p[1] / cell))) for p in pts}
+
+    def components_of(poly_list: list[list[tuple[float, float]]]) -> dict[int, list[int]]:
+        parent: dict[tuple[int, int], tuple[int, int]] = {}
+
+        def find(a):
+            parent.setdefault(a, a)
+            while parent[a] != a:
+                parent[a] = parent[parent[a]]
+                a = parent[a]
+            return a
+
+        def union(a, b):
+            ra, rb = find(a), find(b)
+            if ra != rb:
+                parent[rb] = ra
+
+        for pts in poly_list:
+            if len(pts) < 2:
+                continue
+            keys = list(road_keys(pts))
+            for i in range(len(pts) - 1):
+                ka = (int(round(pts[i][0] / JUNCTION_SNAP)), int(round(pts[i][1] / JUNCTION_SNAP)))
+                kb = (
+                    int(round(pts[i + 1][0] / JUNCTION_SNAP)),
+                    int(round(pts[i + 1][1] / JUNCTION_SNAP)),
+                )
+                union(ka, kb)
+            for a in keys:
+                for b in keys:
+                    if abs(a[0] - b[0]) <= 1 and abs(a[1] - b[1]) <= 1:
+                        union(a, b)
+        # map road index -> component root
+        road_comp: dict[int, tuple[int, int]] = {}
+        for ri, pts in enumerate(poly_list):
+            if len(pts) < 2:
+                continue
+            k0 = (int(round(pts[0][0] / JUNCTION_SNAP)), int(round(pts[0][1] / JUNCTION_SNAP)))
+            road_comp[ri] = find(k0)
+        comps: dict[tuple[int, int], list[int]] = defaultdict(list)
+        for ri, root in road_comp.items():
+            comps[root].append(ri)
+        # reindex
+        return {i: members for i, members in enumerate(comps.values())}
+
+    link_id = 0
+    for _ in range(12):  # at most a handful of bridges
+        comps = components_of(polys)
+        if len(comps) <= 1:
+            break
+        # Find closest pair of roads in different components (prefer important classes)
+        best = None
+        items = list(comps.items())
+        for ci, members_i in items:
+            for cj, members_j in items:
+                if cj <= ci:
+                    continue
+                for i in members_i:
+                    for j in members_j:
+                        for pi, p in enumerate(polys[i]):
+                            for pj, q in enumerate(polys[j]):
+                                d = dist(p, q)
+                                if d > CONNECT_MAIN:
+                                    continue
+                                important = class_of[i] in (
+                                    "motorway",
+                                    "main",
+                                    "collector",
+                                ) or class_of[j] in ("motorway", "main", "collector")
+                                score = d - (800.0 if important else 0.0)
+                                if best is None or score < best[0]:
+                                    best = (score, d, i, j, pi, pj)
+        if best is None:
+            break
+        _, d, i, j, bi, bj = best
+        a, b = polys[i][bi], polys[j][bj]
+        if d <= JUNCTION_SNAP:
+            mid = snap_lattice(((a[0] + b[0]) * 0.5, (a[1] + b[1]) * 0.5))
+            polys[i][bi] = mid
+            polys[j][bj] = mid
+        else:
+            leg = _dedupe_polyline(octilinear_leg(a, b))
+            if len(leg) < 2:
+                break
+            polys[i][bi] = leg[0]
+            polys[j][bj] = leg[-1]
+            link_id += 1
+            connectors.append(
+                {
+                    "name": f"link-{link_id}",
+                    "class": "local",
+                    "points": [[round(x, 1), round(y, 1)] for x, y in leg],
+                }
+            )
+            # include connector geometry in component analysis only
+            polys.append([(float(x), float(y)) for x, y in leg])
+            class_of.append("local")
+
+    # Final re-octilinearize of original roads after bridging snaps
+    n_orig = len(roads)
+    for ri in range(n_orig):
+        if len(polys[ri]) < 2:
+            continue
+        rebuilt = [snap_lattice(polys[ri][0])]
+        for p in polys[ri][1:]:
+            leg = octilinear_leg(rebuilt[-1], snap_lattice(p))
+            for q in leg[1:]:
+                if dist(rebuilt[-1], q) >= 1.0:
+                    rebuilt.append(q)
+        polys[ri] = _dedupe_polyline(rebuilt)
+
+    out: list[dict] = []
+    for ri in range(n_orig):
+        r = roads[ri]
+        pts = polys[ri]
+        if len(pts) < 2:
+            continue
+        length = sum(dist(pts[k], pts[k + 1]) for k in range(len(pts) - 1))
+        if length < MIN_SEG_WU:
+            continue
+        out.append(
+            {
+                "name": r["name"],
+                "class": r["class"],
+                "points": [[round(x, 1), round(y, 1)] for x, y in pts],
+            }
+        )
+    # Re-octilinearize connector stubs too
+    fixed_connectors = []
+    for c in connectors:
+        pts = [(float(x), float(y)) for x, y in c["points"]]
+        rebuilt = [snap_lattice(pts[0])]
+        for p in pts[1:]:
+            leg = octilinear_leg(rebuilt[-1], snap_lattice(p))
+            for q in leg[1:]:
+                if dist(rebuilt[-1], q) >= 1.0:
+                    rebuilt.append(q)
+        rebuilt = _dedupe_polyline(rebuilt)
+        if len(rebuilt) < 2:
+            continue
+        fixed_connectors.append(
+            {
+                "name": c["name"],
+                "class": c["class"],
+                "points": [[round(x, 1), round(y, 1)] for x, y in rebuilt],
+            }
+        )
+    out.extend(fixed_connectors)
+
+    # Preserve shared junctions: snap near verts again, then repair only illegal legs
+    # (full re-octilinearize earlier can pull mains apart again).
+    polys2 = [[(float(x), float(y)) for x, y in r["points"]] for r in out]
+    for i in range(len(polys2)):
+        for j in range(i + 1, len(polys2)):
+            best = 1e18
+            bi = bj = 0
+            for pi, p in enumerate(polys2[i]):
+                for pj, q in enumerate(polys2[j]):
+                    d = dist(p, q)
+                    if d < best:
+                        best, bi, bj = d, pi, pj
+            if 1.0 < best <= CONNECT_NEAR:
+                mid = snap_lattice(
+                    (
+                        (polys2[i][bi][0] + polys2[j][bj][0]) * 0.5,
+                        (polys2[i][bi][1] + polys2[j][bj][1]) * 0.5,
+                    )
+                )
+                polys2[i][bi] = mid
+                polys2[j][bj] = mid
+
+    def repair(pts: list[tuple[float, float]]) -> list[tuple[float, float]]:
+        if len(pts) < 2:
+            return pts
+        rebuilt = [snap_lattice(pts[0])]
+        for p in pts[1:]:
+            target = snap_lattice(p)
+            pdx = target[0] - rebuilt[-1][0]
+            pdy = target[1] - rebuilt[-1][1]
+            ok = (
+                dist(rebuilt[-1], target) < 1.0
+                or abs(pdx) < 1e-6
+                or abs(pdy) < 1e-6
+                or abs(abs(pdx) - abs(pdy)) < 1e-6
+            )
+            if ok:
+                if dist(rebuilt[-1], target) >= 1.0:
+                    rebuilt.append(target)
+            else:
+                for q in octilinear_leg(rebuilt[-1], target)[1:]:
+                    if dist(rebuilt[-1], q) >= 1.0:
+                        rebuilt.append(q)
+        return _dedupe_polyline(rebuilt)
+
+    final = []
+    for ri, r in enumerate(out):
+        pts = repair(polys2[ri])
+        if len(pts) < 2:
+            continue
+        length = sum(dist(pts[k], pts[k + 1]) for k in range(len(pts) - 1))
+        if length < MIN_SEG_WU and not str(r["name"]).startswith("link-"):
+            continue
+        final.append(
+            {
+                "name": r["name"],
+                "class": r["class"],
+                "points": pts,
+            }
+        )
+
+    # Last snap pass (no rebuild) so mains that landed one lattice cell apart share a node.
+    polys3 = [[(float(x), float(y)) for x, y in r["points"]] for r in final]
+    for i in range(len(polys3)):
+        for j in range(i + 1, len(polys3)):
+            best = 1e18
+            bi = bj = 0
+            for pi, p in enumerate(polys3[i]):
+                for pj, q in enumerate(polys3[j]):
+                    d = dist(p, q)
+                    if d < best:
+                        best, bi, bj = d, pi, pj
+            if 1.0 < best <= LATTICE * 2.5:
+                mid = snap_lattice(
+                    (
+                        (polys3[i][bi][0] + polys3[j][bj][0]) * 0.5,
+                        (polys3[i][bi][1] + polys3[j][bj][1]) * 0.5,
+                    )
+                )
+                polys3[i][bi] = mid
+                polys3[j][bj] = mid
+    sealed = []
+    for ri, r in enumerate(final):
+        pts = repair(polys3[ri])
+        sealed.append(
+            {
+                "name": r["name"],
+                "class": r["class"],
+                "points": [[round(x, 1), round(y, 1)] for x, y in pts],
+            }
+        )
+    return sealed
+
+
 def cluster_junctions(roads: list[dict]) -> list[list[float]]:
     buckets: dict[tuple[int, int], list] = defaultdict(list)
     cell = JUNCTION_SNAP
@@ -279,7 +624,6 @@ def cluster_junctions(roads: list[dict]) -> list[list[float]]:
         names = {n for n, _, _ in items}
         if len(names) < 2:
             continue
-        # Merge nearby keys
         cluster = list(items)
         used.add(key)
         kx, ky = key
@@ -419,18 +763,20 @@ def main() -> None:
     if missing:
         raise SystemExit(f"missing required mains after octilinearize: {missing}")
 
+    roads_out = connect_network(roads_out)
     validate_octilinear(roads_out)
     junctions = cluster_junctions(roads_out)
 
     payload = {
         "meta": {
-            "source": "Google Maps digitization → octilinear (H/V/45°)",
+            "source": "Google Maps digitization → octilinear (H/V/45°) + junction connect",
             "trace": "data/seuzach_roads_gmaps_trace.json",
             "church": [CHURCH_LAT, CHURCH_LON],
             "field_m": FIELD_M,
             "field_wu": FIELD_WU,
             "clip": list(CLIP),
             "lattice_wu": LATTICE,
+            "connect_near_wu": CONNECT_NEAR,
             "note": "Not wired into world_sandbox yet; live game still uses seuzach_roads.json",
         },
         "roads": roads_out,
