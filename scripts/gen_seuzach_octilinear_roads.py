@@ -56,6 +56,15 @@ PARALLEL_OVERLAP = 800.0  # min longitudinal overlap along shared bearing
 PARALLEL_SUBSET_FRAC = 0.72  # weaker mostly projects onto stronger → absorb
 CLASS_RANK = {"motorway": 4, "main": 3, "collector": 2, "local": 1}
 
+# S08 — T-junction attachment + endpoint hygiene
+JUNCTION_DENSITY_MAX = 10  # max distinct roads within radius of a new hub
+JUNCTION_DENSITY_RADIUS = 800.0
+T_ATTACH_EPS = JUNCTION_SNAP  # max distance endpoint→host for T attach
+T_INTERIOR_T_MIN = 0.05  # interior T: projection t inside host segment
+T_INTERIOR_T_MAX = 0.95
+T_EXTEND_MAX = CONNECT_NEAR  # max extension along side bearing to reach host
+TRACE_PARALLEL_M = 30.0  # trace centerlines closer → likely one corridor (absorb)
+
 # Landmark dots for SVG (lat, lon) — same GPS as seuzach_geo.gd
 LANDMARKS = {
     "Kirche": (47.5335012, 8.7261235),
@@ -865,6 +874,464 @@ def prune_coincident_overlap(
     return rebuilt
 
 
+def _attach_end_to_hub(
+    pts: list[tuple[float, float]],
+    end_i: int,
+    hub: tuple[float, float],
+    prefer: str | None = None,
+) -> list[tuple[float, float]]:
+    """Move polyline endpoint to hub and rebuild the adjacent leg octilinearly."""
+    pts = list(pts)
+    pts[end_i] = hub
+    if end_i == 0 and len(pts) >= 2:
+        rest = pts[1:]
+        out = list(octilinear_leg(hub, rest[0], prefer_axis=prefer))
+        out.extend(rest[1:])
+        return _dedupe_polyline(out)
+    if end_i == len(pts) - 1 and len(pts) >= 2:
+        out = list(pts[:-1])
+        if dist(out[-1], hub) >= 1.0:
+            out.extend(octilinear_leg(out[-1], hub, prefer_axis=prefer)[1:])
+        else:
+            out[-1] = hub
+        return _dedupe_polyline(out)
+    return _rebuild_octi(pts, prefer)
+
+
+def _roads_near_hub(
+    polys: list[list[tuple[float, float]]],
+    names: list[str],
+    hub: tuple[float, float],
+    *,
+    radius: float = JUNCTION_DENSITY_RADIUS,
+) -> set[str]:
+    near: set[str] = set()
+    for ri, pts in enumerate(polys):
+        for p in pts:
+            if dist(p, hub) <= radius:
+                near.add(names[ri])
+                break
+    return near
+
+
+def _junction_density_ok(
+    polys: list[list[tuple[float, float]]],
+    names: list[str],
+    hub: tuple[float, float],
+) -> bool:
+    return len(_roads_near_hub(polys, names, hub)) <= JUNCTION_DENSITY_MAX
+
+
+def _host_is_protected_insert(
+    host_name: str, host_pts: list[tuple[float, float]], insert_idx: int
+) -> bool:
+    """True when inserting into a straight-corridor interior (forbidden)."""
+    if host_name not in STRAIGHT_CORRIDORS:
+        return False
+    return 0 < insert_idx < len(host_pts)
+
+
+def octilinear_seg_intersect(
+    a0: tuple[float, float],
+    a1: tuple[float, float],
+    b0: tuple[float, float],
+    b1: tuple[float, float],
+) -> tuple[float, float] | None:
+    """Intersection of two H/V/45° segments within both spans, or None."""
+
+    def on_seg(p: tuple[float, float], s0: tuple[float, float], s1: tuple[float, float]) -> bool:
+        proj, t = project_onto_segment(p, s0, s1)
+        return dist(p, proj) < 1.0 and -1e-6 <= t <= 1.0 + 1e-6
+
+    def add_candidate(p: tuple[float, float], out: list[tuple[float, float]]) -> None:
+        if on_seg(p, a0, a1) and on_seg(p, b0, b1):
+            if not any(dist(p, q) < 1.0 for q in out):
+                out.append((p[0], p[1]))
+
+    hits: list[tuple[float, float]] = []
+    ax0, ay0 = a0
+    ax1, ay1 = a1
+    bx0, by0 = b0
+    bx1, by1 = b1
+    a_horiz = abs(ay1 - ay0) < 1e-6
+    a_vert = abs(ax1 - ax0) < 1e-6
+    b_horiz = abs(by1 - by0) < 1e-6
+    b_vert = abs(bx1 - bx0) < 1e-6
+
+    if a_horiz and b_vert:
+        add_candidate((bx0, ay0), hits)
+    elif a_vert and b_horiz:
+        add_candidate((ax0, by0), hits)
+    elif a_horiz and b_horiz:
+        if abs(ay0 - by0) < 1.0:
+            overlap_x0 = max(min(ax0, ax1), min(bx0, bx1))
+            overlap_x1 = min(max(ax0, ax1), max(bx0, bx1))
+            if overlap_x1 - overlap_x0 >= 1.0:
+                add_candidate((overlap_x0, ay0), hits)
+    elif a_vert and b_vert:
+        if abs(ax0 - bx0) < 1.0:
+            overlap_y0 = max(min(ay0, ay1), min(by0, by1))
+            overlap_y1 = min(max(ay0, ay1), max(by0, by1))
+            if overlap_y1 - overlap_y0 >= 1.0:
+                add_candidate((ax0, overlap_y0), hits)
+    else:
+        # 45° or mixed: test endpoints and axis-aligned corner candidates
+        for p in (a0, a1, b0, b1):
+            add_candidate(p, hits)
+        for px, py in (
+            (ax0, by0),
+            (ax0, by1),
+            (ax1, by0),
+            (ax1, by1),
+            (bx0, ay0),
+            (bx0, ay1),
+            (bx1, ay0),
+            (bx1, ay1),
+        ):
+            add_candidate((px, py), hits)
+
+    if not hits:
+        return None
+    return hits[0]
+
+
+def _endpoint_on_host_interior(
+    p: tuple[float, float], host_pts: list[tuple[float, float]]
+) -> tuple[float, float, float] | None:
+    """If p lies on host interior, return (proj, seg_i, t). Else None."""
+    best: tuple[float, float, int, float, float] | None = None
+    for i in range(len(host_pts) - 1):
+        a, b = host_pts[i], host_pts[i + 1]
+        proj, t = project_onto_segment(p, a, b)
+        d = dist(p, proj)
+        if d > T_ATTACH_EPS:
+            continue
+        if t <= T_INTERIOR_T_MIN or t >= T_INTERIOR_T_MAX:
+            continue
+        if best is None or d < best[4]:
+            best = (proj, i, t, snap_lattice(proj), d)
+    if best is None:
+        return None
+    return best[3], best[1], best[2]
+
+
+def _commit_host_hub(
+    host_pts: list[tuple[float, float]],
+    host_name: str,
+    hub: tuple[float, float],
+    *,
+    prefer_exact: bool = False,
+) -> tuple[list[tuple[float, float]], tuple[float, float], int | None]:
+    """Ensure host polyline contains hub (insert if needed). Returns (pts, hub, hub_idx)."""
+    if any(dist(p, hub) < 1.0 for p in host_pts):
+        idx = min(range(len(host_pts)), key=lambda i: dist(host_pts[i], hub))
+        return host_pts, host_pts[idx], idx
+    if prefer_exact:
+        for i in range(len(host_pts) - 1):
+            proj, t = project_onto_segment(hub, host_pts[i], host_pts[i + 1])
+            if dist(hub, proj) >= 1.0 or not (T_INTERIOR_T_MIN < t < T_INTERIOR_T_MAX):
+                continue
+            insert_idx = i + 1
+            hub_pt = snap_lattice(proj)
+            if _host_is_protected_insert(host_name, host_pts, insert_idx):
+                trial = host_pts[:insert_idx] + [hub_pt] + host_pts[insert_idx:]
+                if not _hub_turn_ok(trial, insert_idx):
+                    continue
+                return trial, hub_pt, insert_idx
+            trial = host_pts[:insert_idx] + [hub_pt] + host_pts[insert_idx:]
+            if _hub_turn_ok(trial, insert_idx):
+                return trial, hub_pt, insert_idx
+    kind, insert_idx, hub_pt = _nearest_on_polyline(host_pts, hub)
+    if kind == "insert" and _host_is_protected_insert(host_name, host_pts, insert_idx):
+        vi = min(range(len(host_pts)), key=lambda i: dist(host_pts[i], hub))
+        if dist(host_pts[vi], hub) <= T_ATTACH_EPS:
+            return host_pts, host_pts[vi], vi
+        trial = host_pts[:insert_idx] + [hub_pt] + host_pts[insert_idx:]
+        if _hub_turn_ok(trial, insert_idx):
+            return trial, hub_pt, insert_idx
+        return host_pts, hub, None
+    if kind == "insert":
+        trial = host_pts[:insert_idx] + [hub_pt] + host_pts[insert_idx:]
+        if not _hub_turn_ok(trial, insert_idx):
+            return host_pts, hub, None
+        return trial, hub_pt, insert_idx
+    idx = insert_idx
+    hub_pt = host_pts[idx]
+    return host_pts, hub_pt, idx
+
+
+def _score_host_attach(
+    side_ri: int,
+    host_hj: int,
+    dist_to_hub: float,
+    roads: list[dict],
+) -> float:
+    side_cls = CLASS_RANK.get(str(roads[side_ri].get("class", "local")), 0)
+    host_cls = CLASS_RANK.get(str(roads[host_hj].get("class", "local")), 0)
+    side_name = str(roads[side_ri]["name"])
+    host_name = str(roads[host_hj]["name"])
+    score = dist_to_hub
+    score -= (host_cls - side_cls) * 120.0
+    if side_name.startswith("link-"):
+        score += 500.0
+    if host_name.startswith("link-"):
+        score -= 200.0
+    if host_name in REQUIRED_MAINS:
+        score -= 80.0
+    return score
+
+
+def attach_t_junctions(roads: list[dict]) -> list[dict]:
+    """Snap orphan endpoints onto host corridors (T-junctions with vertex insert)."""
+    out: list[dict] = [
+        {
+            "name": r["name"],
+            "class": r["class"],
+            "points": [[float(x), float(y)] for x, y in r["points"]],
+        }
+        for r in roads
+    ]
+    polys = [[(float(x), float(y)) for x, y in r["points"]] for r in out]
+    names = [str(r["name"]) for r in out]
+
+    for _pass in range(5):
+        shared = _shared_junction_keys(out)
+        changed = False
+        for ri, pts in enumerate(polys):
+            if len(pts) < 2:
+                continue
+            for end_i in (0, len(pts) - 1):
+                p = pts[end_i]
+                if point_key(p) in shared:
+                    continue
+                best_score = 1e18
+                best_match: tuple[int, tuple[float, float], int | None, bool] | None = None
+                inward = pts[1] if end_i == 0 else pts[-2]
+
+                for hj in range(len(polys)):
+                    if hj == ri or len(polys[hj]) < 2:
+                        continue
+                    host = polys[hj]
+                    on_int = _endpoint_on_host_interior(p, host)
+                    if on_int is not None:
+                        hub, _si, _t = on_int
+                        sc = _score_host_attach(ri, hj, dist(p, hub), out)
+                        if sc < best_score:
+                            best_score = sc
+                            best_match = (hj, hub, None, True)
+                        continue
+                    kind, idx, hub = _nearest_on_polyline(host, p)
+                    d = dist(p, hub)
+                    if d > T_ATTACH_EPS:
+                        continue
+                    if kind == "vertex":
+                        sc = _score_host_attach(ri, hj, d, out)
+                        if sc < best_score:
+                            best_score = sc
+                            best_match = (hj, hub, idx, False)
+                    elif not _host_is_protected_insert(names[hj], host, idx):
+                        sc = _score_host_attach(ri, hj, d, out)
+                        if sc < best_score:
+                            best_score = sc
+                            best_match = (hj, hub, idx, False)
+
+                if best_match is None and dist(inward, p) >= MIN_SEG_WU:
+                    bearing = bearing_deg(inward, p)
+                    dx, dy = dir_vec(bearing)
+                    trial = p
+                    for _ in range(int(T_EXTEND_MAX / LATTICE) + 1):
+                        for hj in range(len(polys)):
+                            if hj == ri or len(polys[hj]) < 2:
+                                continue
+                            host = polys[hj]
+                            for si in range(len(host) - 1):
+                                hit = octilinear_seg_intersect(
+                                    inward, trial, host[si], host[si + 1]
+                                )
+                                if hit is None:
+                                    continue
+                                d = dist(trial, hit)
+                                if d > T_EXTEND_MAX:
+                                    continue
+                                sc = _score_host_attach(ri, hj, d, out) + d * 0.01
+                                if sc < best_score:
+                                    best_score = sc
+                                    best_match = (hj, hit, None, True)
+                        if best_match is not None:
+                            break
+                        trial = snap_lattice((trial[0] + dx * LATTICE, trial[1] + dy * LATTICE))
+                        if dist(inward, trial) > T_EXTEND_MAX:
+                            break
+
+                if best_match is None:
+                    continue
+                hj, hub, _, exact = best_match
+                if not _junction_density_ok(polys, names, hub):
+                    continue
+
+                host_name = names[hj]
+                prefer_host = STRAIGHT_CORRIDORS.get(host_name, {}).get("axis")
+                new_host, hub_pt, hub_idx = _commit_host_hub(
+                    polys[hj], host_name, hub, prefer_exact=exact
+                )
+                if hub_idx is None and not any(dist(q, hub) < 1.0 for q in polys[hj]):
+                    continue
+                if new_host != polys[hj]:
+                    polys[hj] = _rebuild_octi(new_host, prefer_host)
+                    hub_idx = min(
+                        range(len(polys[hj])), key=lambda i: dist(polys[hj][i], hub_pt)
+                    )
+                    hub_pt = polys[hj][hub_idx]
+                if hub_idx is not None and not _hub_turn_ok(polys[hj], hub_idx):
+                    continue
+
+                prefer_side = STRAIGHT_CORRIDORS.get(names[ri], {}).get("axis")
+                new_side = _attach_end_to_hub(polys[ri], end_i, hub_pt, prefer_side)
+                if len(new_side) < 2:
+                    continue
+                old_len = _polyline_length(polys[ri])
+                new_len = _polyline_length(new_side)
+                if (
+                    not names[ri].startswith("link-")
+                    and (new_len < 800.0 or new_len < old_len * 0.75)
+                ):
+                    continue
+                polys[ri] = new_side
+                changed = True
+
+        if not changed:
+            break
+        for ri, r in enumerate(out):
+            prefer = STRAIGHT_CORRIDORS.get(r["name"], {}).get("axis")
+            pts = _rebuild_octi(polys[ri], prefer)
+            if len(pts) >= 2:
+                polys[ri] = pts
+                out[ri]["points"] = [[round(x, 1), round(y, 1)] for x, y in pts]
+
+    fixed: list[dict] = []
+    for ri, r in enumerate(out):
+        if len(polys[ri]) < 2:
+            continue
+        length = _polyline_length(polys[ri])
+        if length < MIN_SEG_WU and not names[ri].startswith("link-"):
+            continue
+        fixed.append(
+            {
+                "name": r["name"],
+                "class": r["class"],
+                "points": [[round(x, 1), round(y, 1)] for x, y in polys[ri]],
+            }
+        )
+    return fixed
+
+
+def trim_endpoint_overshoot(roads: list[dict]) -> list[dict]:
+    """Trim side-street endpoints that overshoot past a host intersection."""
+    out: list[dict] = [
+        {
+            "name": r["name"],
+            "class": r["class"],
+            "points": [[float(x), float(y)] for x, y in r["points"]],
+        }
+        for r in roads
+    ]
+    polys = [[(float(x), float(y)) for x, y in r["points"]] for r in out]
+
+    for ri, pts in enumerate(polys):
+        if len(pts) < 2:
+            continue
+        for end_i in (0, len(pts) - 1):
+            if end_i == 0:
+                inward, outward = pts[1], pts[0]
+            else:
+                inward, outward = pts[-2], pts[-1]
+            if dist(inward, outward) < MIN_SEG_WU:
+                continue
+            best_hit: tuple[tuple[float, float], float] | None = None
+            for hj, host in enumerate(polys):
+                if hj == ri or len(host) < 2:
+                    continue
+                for si in range(len(host) - 1):
+                    hit = octilinear_seg_intersect(inward, outward, host[si], host[si + 1])
+                    if hit is None:
+                        continue
+                    d_out = dist(outward, hit)
+                    d_in = dist(inward, hit)
+                    leg_len = dist(inward, outward)
+                    if d_out < 1.0 or d_in < 1.0:
+                        continue
+                    # Trim only when the endpoint overshoots past the crossing (hit nearer outward).
+                    if d_in < MIN_SEG_WU or d_in + MIN_SEG_WU >= leg_len:
+                        continue
+                    if d_out >= d_in:
+                        continue
+                    if best_hit is None or d_out < best_hit[1]:
+                        best_hit = (hit, d_out)
+            if best_hit is None:
+                continue
+            hit, _ = best_hit
+            prefer = STRAIGHT_CORRIDORS.get(str(out[ri]["name"]), {}).get("axis")
+            polys[ri] = _attach_end_to_hub(pts, end_i, hit, prefer)
+
+    fixed: list[dict] = []
+    for ri, r in enumerate(out):
+        pts = polys[ri]
+        if len(pts) < 2:
+            continue
+        fixed.append(
+            {
+                "name": r["name"],
+                "class": r["class"],
+                "points": [[round(x, 1), round(y, 1)] for x, y in pts],
+            }
+        )
+    return fixed
+
+
+def prune_orphan_links(roads: list[dict]) -> list[dict]:
+    """Drop synthetic link-* stubs once both ends sit on shared junctions."""
+    shared = _shared_junction_keys(roads)
+    out: list[dict] = []
+    for r in roads:
+        name = str(r["name"])
+        if not name.startswith("link-"):
+            out.append(r)
+            continue
+        pts = [(float(x), float(y)) for x, y in r["points"]]
+        if len(pts) < 2:
+            continue
+        if point_key(pts[0]) in shared and point_key(pts[-1]) in shared:
+            continue
+        out.append(r)
+    return out
+
+
+def count_t_miss(roads: list[dict]) -> int:
+    """Endpoints on another road's interior without a shared junction vertex."""
+    polys = [[(float(x), float(y)) for x, y in r["points"]] for r in roads]
+    shared = _shared_junction_keys(roads)
+    n = 0
+    for ri, pts in enumerate(polys):
+        for end_i in (0, len(pts) - 1):
+            p = pts[end_i]
+            if point_key(p) in shared:
+                continue
+            for hj, host in enumerate(polys):
+                if hj == ri:
+                    continue
+                if _endpoint_on_host_interior(p, host) is not None:
+                    n += 1
+                    break
+    return n
+
+
+def validate_endpoint_meets(roads: list[dict]) -> None:
+    """Fail when side streets still miss host lines (interior T without shared vertex)."""
+    n = count_t_miss(roads)
+    if n:
+        raise SystemExit(f"endpoint T-junction misses remain: {n}")
+
+
 def force_required_junctions(roads: list[dict]) -> list[dict]:
     """Ensure named corridors share a vertex where the Swiss plan expects them to meet.
 
@@ -941,26 +1408,6 @@ def force_required_junctions(roads: list[dict]) -> list[dict]:
                     break
         return True
 
-    def attach_end_to_hub(
-        pts: list[tuple[float, float]],
-        end_i: int,
-        hub: tuple[float, float],
-        prefer: str | None = None,
-    ) -> list[tuple[float, float]]:
-        pts = list(pts)
-        pts[end_i] = hub
-        if end_i == 0 and len(pts) >= 2:
-            rest = pts[1:]
-            out = list(octilinear_leg(hub, rest[0], prefer_axis=prefer))
-            out.extend(rest[1:])
-            return _dedupe_polyline(out)
-        if end_i == len(pts) - 1 and len(pts) >= 2:
-            head = pts[:-1]
-            out = list(head[:-1]) if len(head) > 1 else []
-            out.extend(octilinear_leg(head[-1], hub, prefer_axis=prefer))
-            return _dedupe_polyline(out)
-        return _rebuild_octi(pts, prefer)
-
     # Triple hub first: attach Ohringer + Stations onto Winter (through-road stays put).
     hub_names = ("Ohringerstrasse", "Winterthurerstrasse", "Stationsstrasse")
     if all(n in by_idx for n in hub_names):
@@ -1016,12 +1463,12 @@ def force_required_junctions(roads: list[dict]) -> list[dict]:
                 hub = pw[w_idx]
 
         prefer_o = STRAIGHT_CORRIDORS.get("Ohringerstrasse", {}).get("axis")
-        polys[io] = attach_end_to_hub(po, o_end_i, hub, prefer_o)
+        polys[io] = _attach_end_to_hub(po, o_end_i, hub, prefer_o)
         polys[iw] = _dedupe_polyline(pw)
         # Stations: prefer endpoint nearest to hub.
         s_end_i = 0 if dist(ps[0], hub) <= dist(ps[-1], hub) else len(ps) - 1
         if dist(ps[s_end_i], hub) <= CONNECT_MAIN:
-            polys[is_] = attach_end_to_hub(ps, s_end_i, hub, None)
+            polys[is_] = _attach_end_to_hub(ps, s_end_i, hub, None)
         else:
             si = min(range(len(ps)), key=lambda i: dist(ps[i], hub))
             ps = list(ps)
@@ -1037,7 +1484,7 @@ def force_required_junctions(roads: list[dict]) -> list[dict]:
         # Re-assert single hub meet after prune.
         if min(dist(q, hub) for q in polys[is_]) >= 1.0:
             s_end_i = 0 if dist(polys[is_][0], hub) <= dist(polys[is_][-1], hub) else len(polys[is_]) - 1
-            polys[is_] = attach_end_to_hub(polys[is_], s_end_i, hub, None)
+            polys[is_] = _attach_end_to_hub(polys[is_], s_end_i, hub, None)
             polys[is_] = prune_coincident_overlap(polys[is_], polys[iw])
 
         # Ensure Winter still has hub vertex and turn is ok.
@@ -1076,13 +1523,13 @@ def force_required_junctions(roads: list[dict]) -> list[dict]:
                 if polys[io][-1][0] >= polys[io][0][0]
                 else 0
             )
-            polys[io] = attach_end_to_hub(polys[io], o_end_i2, hub, prefer_o)
+            polys[io] = _attach_end_to_hub(polys[io], o_end_i2, hub, prefer_o)
             s_end_i = (
                 0
                 if dist(polys[is_][0], hub) <= dist(polys[is_][-1], hub)
                 else len(polys[is_]) - 1
             )
-            polys[is_] = attach_end_to_hub(polys[is_], s_end_i, hub, None)
+            polys[is_] = _attach_end_to_hub(polys[is_], s_end_i, hub, None)
             polys[is_] = prune_coincident_overlap(polys[is_], polys[iw])
             break
 
@@ -1444,7 +1891,8 @@ def _road_priority(road: dict) -> tuple[int, float, int]:
 
 
 def _is_artifact_pair(
-    strong: dict, weak: dict, subset_frac: float, *, perp_dist: float
+    strong: dict, weak: dict, subset_frac: float, *, perp_dist: float,
+    trace_min_m: float | None = None,
 ) -> bool:
     """Absorb when double-trace artifact, not two distinct real streets."""
     wn = str(weak["name"])
@@ -1455,6 +1903,25 @@ def _is_artifact_pair(
     # Colinear / on-top: only absorb when weak mostly rides on strong.
     if perp_dist <= max(1.0, LATTICE * 0.25):
         return subset_frac >= 0.55
+    # Trace says one corridor (S08): absorb high-subset doubles.
+    if (
+        subset_frac >= 0.9
+        and trace_min_m is not None
+        and trace_min_m < TRACE_PARALLEL_M
+    ):
+        return True
+    if (
+        subset_frac >= 0.85
+        and trace_min_m is not None
+        and trace_min_m < 50.0
+    ):
+        return True
+    if (
+        subset_frac >= 0.95
+        and perp_dist <= PARALLEL_ABSORB
+        and CLASS_RANK.get(sc, 0) >= CLASS_RANK.get(wc, 0)
+    ):
+        return True
     # Higher-class corridor with a local riding close → absorb only if mostly subset.
     if (
         perp_dist <= PARALLEL_ABSORB
@@ -1732,7 +2199,26 @@ def _choose_mover(
     return b, a
 
 
-def resolve_near_parallels(roads: list[dict]) -> list[dict]:
+def _trace_min_dist_m(trace: dict | None, name_a: str, name_b: str) -> float | None:
+    """Minimum GPS distance (m) between two named trace ways."""
+    if trace is None:
+        return None
+    by = {r["name"]: r for r in trace.get("roads", [])}
+    if name_a not in by or name_b not in by:
+        return None
+    wa, wb = by[name_a]["waypoints"], by[name_b]["waypoints"]
+    best = 1e18
+    for lat1, lon1 in wa:
+        for lat2, lon2 in wb:
+            dx = (lon1 - lon2) * M_LON
+            dy = (lat1 - lat2) * M_LAT
+            best = min(best, math.hypot(dx, dy))
+    return best if best < 1e17 else None
+
+
+def resolve_near_parallels(
+    roads: list[dict], *, trace: dict | None = None
+) -> list[dict]:
     """Post-pass (after clean_corners): absorb artifact doubles; separate real pairs."""
     if len(roads) < 2:
         return roads
@@ -1780,7 +2266,13 @@ def resolve_near_parallels(roads: list[dict]) -> list[dict]:
             subset = _projection_subset_frac(weak_pts, strong_pts, bearing)
             prefer = STRAIGHT_CORRIDORS.get(str(out[wi]["name"]), {}).get("axis")
             artifact = _is_artifact_pair(
-                out[si], out[wi], subset, perp_dist=md
+                out[si],
+                out[wi],
+                subset,
+                perp_dist=md,
+                trace_min_m=_trace_min_dist_m(
+                    trace, str(out[si]["name"]), str(out[wi]["name"])
+                ),
             )
 
             # 1) Absorb colinear / close artifact doubles.
@@ -1818,9 +2310,10 @@ def resolve_near_parallels(roads: list[dict]) -> list[dict]:
                     new_weak = weak_pts
                 weak_len = _polyline_length(weak_pts)
                 new_len = _polyline_length(new_weak) if new_weak else 0.0
-                # Refuse absorb that guts a named corridor (keep ≥40% length unless
-                # almost entirely subset already).
-                if (
+                # Never gut a named corridor to a stub (S08).
+                if not str(out[wi]["name"]).startswith("link-") and new_len < 800.0:
+                    new_weak = weak_pts
+                elif (
                     not str(out[wi]["name"]).startswith("link-")
                     and weak_len > MIN_SEG_WU * 4
                     and new_len < weak_len * 0.4
@@ -2259,11 +2752,22 @@ def main() -> None:
         raise SystemExit(f"missing required mains after octilinearize: {missing}")
 
     roads_out = connect_network(roads_out)
+    roads_out = attach_t_junctions(roads_out)
     roads_out = force_required_junctions(roads_out)
     roads_out = clean_corners(roads_out)
-    roads_out = resolve_near_parallels(roads_out)
+    roads_out = resolve_near_parallels(roads_out, trace=raw)
+    roads_out = attach_t_junctions(roads_out)
+    roads_out = trim_endpoint_overshoot(roads_out)
+    roads_out = attach_t_junctions(roads_out)
+    roads_out = clean_corners(roads_out)
+    roads_out = attach_t_junctions(roads_out)
+    roads_out = prune_orphan_links(roads_out)
+    roads_out = attach_t_junctions(roads_out)
+    roads_out = resolve_near_parallels(roads_out, trace=raw)
+    roads_out = attach_t_junctions(roads_out)
     validate_octilinear(roads_out)
     validate_required_junctions(roads_out)
+    validate_endpoint_meets(roads_out)
     junctions = cluster_junctions(roads_out)
 
     payload = {
@@ -2281,6 +2785,8 @@ def main() -> None:
             "parallel_too_close_wu": PARALLEL_TOO_CLOSE,
             "parallel_absorb_wu": PARALLEL_ABSORB,
             "parallel_min_gap_wu": PARALLEL_MIN_GAP,
+            "t_attach_eps_wu": T_ATTACH_EPS,
+            "junction_density_max": JUNCTION_DENSITY_MAX,
             "straight_corridors": sorted(STRAIGHT_CORRIDORS.keys()),
             "note": "Not wired into world_sandbox yet; live game still uses seuzach_roads.json",
         },

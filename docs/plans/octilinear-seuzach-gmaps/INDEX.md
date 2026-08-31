@@ -18,6 +18,7 @@ Feature-Schritte, keine Prozess-Schritte. Pro Zeile folgt der Ablauf (Plan nur w
 | S05 | `S05-ohringer-straight-hub-qa.md` | Ohringer begradigen + korrekte Hubs + Zoom-QA | S04 | erledigt |
 | S06 | `S06-junction-corner-geometry.md` | Saubere Treffpunkte + sinnvolle Straßen-Knicke | S05 | erledigt |
 | S07 | `S07-parallel-street-spacing.md` | Zu dichte Parallel-Straßen mergen oder trennen | S06 | erledigt |
+| S08 | `S08-t-junction-endpoint-hygiene.md` | T-Anschlüsse + Endpoint-Trim + Phantom-Parallel | S07 | erledigt |
 
 Status nur: `offen` → `in Arbeit` (Implement-Start) → `erledigt` (nach Phase-4-Pass + Git). Kein Slice-File-Phasen-Churn.
 
