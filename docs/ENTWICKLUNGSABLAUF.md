@@ -2,217 +2,215 @@
 
 Verbindlicher Ablauf für Features und größere Änderungen an *Transformierende Rettungsmechs*.
 
-**Engine:** Godot 4 · **Art:** Stil C (Comic-Rettung) · **Git:** nach **jedem Slice** commit + push + SemVer-Tag
+**Engine:** Godot 4 · **Art:** Stil C (Comic-Rettung) · **Git:** nach jedem Slice commit + push + SemVer-Tag (`git-release`)
 
-Ziel des Loops: **ca. 2× so viel** zusammengehörige, spieler-sichtbare Arbeit **pro Slice**, und **keine Doppelarbeit** (Planner-Skip, kein Suite-Replay, INDEX-Status nur drei Werte) — ohne merkbaren Qualitätsverlust. Code-Review und Playtest bleiben **getrennte** Pflicht für spielsichtbare Arbeit.
+**Test-Default:** Headless- und automatisierte Tests reichen (`./scripts/run_tests.sh`). **Physisches Spielen / Godot-GUI** nur auf **explizite User-Anforderung**.
+
+**Preis-Leistung:** Subagenten nur wenn sie Scope oder Qualität wirklich tragen. Kleine Arbeit läuft im **Parent-Fast-Path** (eine Runde).
 
 ```mermaid
 flowchart TB
-  Task[User_Aufgabe] --> S[S_Zerlegung_task-slicer]
-  S --> Q[Naechster_offener_Slice]
-  Q --> Bug{Bug-Slice?}
-  Bug -->|ja| RCA[0_Repro_und_RootCause]
-  Bug -->|nein| PlanQ{Planner_noetig?}
-  RCA --> P
-  PlanQ -->|ja_Bug_Art_Multi_unklar| P[1_Plan_im_Slice-Markdown]
-  PlanQ -->|nein_Stub_reicht| I
-  P --> I[2_Implement_Tests]
-  I --> A[2b_Art_nur_dieser_Slice]
-  I --> R[3_Code_Review]
-  R --> F[3b_Findings_fixen]
-  F --> RCA2[0_bei_BugFindings]
-  RCA2 --> F
-  F --> R
-  R --> T[4_Playtest_Godot]
-  T --> Git[Commit_Push_Tag]
-  Git --> More{Weitere_Slices?}
-  More -->|ja| Q
-  More -->|nein| Done[Aufgabe_fertig]
+  Task[User_Aufgabe] --> Size{Mehr_als_ein_Slice_oder_unklar?}
+  Size -->|nein_FastPath| Parent[Parent_INDEX_S01_plus_Umsetzen]
+  Size -->|ja| Slicer[task-slicer]
+  Slicer --> Next[Naechster_Slice]
+  Parent --> Bug0{Bug?}
+  Next --> Bug0
+  Bug0 -->|ja| RcaMode[SwitchMode_plan_RCA]
+  Bug0 -->|nein| PlanQ{Planner?}
+  RcaMode --> RcaOut[RCA_ohne_Dateien]
+  RcaOut --> RcaWrite[Agent_schreibt_RCA]
+  RcaWrite --> PlanQ
+  PlanQ -->|ja| PlanMode[SwitchMode_plan]
+  PlanQ -->|nein| Impl[Umsetzen_Tests]
+  PlanMode --> PlanOut[Plan_ohne_Dateien]
+  PlanOut --> Write[Agent_schreibt_Slice_md]
+  Write --> Impl
+  Impl --> ArtQ{Art_ja_plus_Dateinamen?}
+  ArtQ -->|ja| Art[comic-rettung-art]
+  ArtQ -->|nein_Platzhalter_ok| RevQ
+  Art --> RevQ{Review_pflicht?}
+  RevQ -->|ja| Review[code-reviewer]
+  RevQ -->|nein| Green
+  Review --> Green{Suite_gruen_kein_Nachcode?}
+  Green -->|ja| Git[Commit_Push_Tag]
+  Green -->|nein| Verify[automated-verifier]
+  Verify --> Git
+  Git --> More{Mehr_Slices?}
+  More -->|ja| Next
+  More -->|nein| Done[Fertig]
 ```
 
 ---
 
-## Phase S — Zerlegung in Feature-Schritte (immer zuerst)
+## Parent-Fast-Path (Default für kleine Arbeit)
 
-**Wann:** **Jede** neue Aufgabe — **bevor** geplant oder gebaut wird.
+**Kein** `task-slicer`, **kein** `feature-implementer`, **kein** `code-reviewer`, **kein** `automated-verifier`, **kein** `comic-rettung-art`, wenn **alle** gelten:
+
+- klar **ein** Slice (oder Hotfix)
+- Docs-only **oder** eine Datei / Konstanten / offensichtliche Single-System-Änderung
+- Scope nicht unklar
+
+**Wer:** Hauptagent.
+
+**Was:** Mini-INDEX (`docs/plans/<kurzname>/INDEX.md`, eine Zeile S01) + Stub mit Feature + In + Nicht → umsetzen → automatisierte Tests (falls Code) → kurzer Selbstcheck (Akzeptanz, Suite grün ja/nein) → commit + push + SemVer-Tag.
+
+INDEX trotzdem anlegen. Ohne INDEX keine Lieferung der Gesamtaufgabe.
+
+---
+
+## Phase S — Zerlegung (nur ab Größe)
+
+**Wann:** Aufgabe braucht **zwei oder mehr** Slices **oder** der Scope ist unklar. Sonst Fast-Path: Parent legt S01 selbst an.
 
 **Wer:** Subagent `task-slicer`.
 
-**Was:** Das User-Feature in **Feature-Schritte** schneiden. **Nicht** in Prozess-Phasen schneiden.
+**Was:** Feature-Schritte, keine Prozess-Phasen.
 
-**Packing (Default):** ein Slice = **zwei verwandte** / **zwei zusammengehörige** spieler-sichtbare Inkremente, wenn sie Systeme teilen und **zusammen** review- und playtestbar sind (~2× so viel Arbeit wie ein einzelnes Haus/eine einzelne Zelle). Weniger Plan→Review→Playtest→Git-Schleifen, gleiche Gates.
+**Packing:** ein Slice = **zwei verwandte** / **zwei zusammengehörige** spieler-sichtbare Inkremente, wenn sie Systeme teilen und zusammen review-/testbar sind (~2×).
 
-**Keine** Slices für Review, Tests, Playtest, Git, RCA, „Datei speichern“ vs. „Docs verdrahten“. Das steckt schon in Phase 0–4 + Git **pro Feature-Schritt**.
+**Keine** Slices für Review, Tests, Verify, Git, RCA, „Datei speichern“ vs. „verdrahten“.
 
-**Output:** kurzes INDEX + ein **kurzer Stub** pro Feature (`docs/plans/_SLICE_INDEX.md`, `docs/plans/_SLICE.md`). Stub: Feature + In + Nicht; optional Art ja/nein und 2-Bullet-Testplan (damit Phase 1 übersprungen werden kann). Den vollen Plan (RCA, lange Technische Schritte) schreibt Phase 1 **nur wenn nötig**.
+**Output:** INDEX + Stub pro Feature (`docs/plans/_SLICE_INDEX.md`, `docs/plans/_SLICE.md`). Optional Art ja/nein **mit Dateinamen** + 2-Bullet-Testplan.
 
 ### Zuschnitt (Beispiele)
 
-- **Häuser:** zwei Häuser derselben Strasse / desselben Quartiers — nicht die ganze Siedlung.
-- **Karte:** zwei benachbarte Rasterzellen / ein kleines Quartier-Paar.
-- **Art:** zwei verwandte Landmarks (z. B. zwei Kigas desselben Typs), wenn der Slice beide nennt.
-- **Gameplay:** zwei zusammengehörige Verhaltensweisen, oder **eine** User-Beschwerde die zwei enge Punkte ist (z. B. Spawn + sichtbare Strassen).
-- **Prozess/Docs:** ein Thema = **ein** Slice (Bild+Bible+Regel zusammen, nicht „Datei speichern“ dann „verdrahten“).
-- **Schulen:** ein Campus (bereits 3-Gebäude-Cluster) bleibt **ein** Slice — schon gepackt.
-- **Ohringen:** eigene Zellen; ein Slice darf **zwei** verwandte Ohringen-Zellen umfassen.
+- **Häuser:** zwei Häuser derselben Strasse / desselben Quartiers — nicht die ganze Siedlung
+- **Karte:** zwei benachbarte Rasterzellen / ein kleines Quartier-Paar
+- **Art:** zwei verwandte Landmarks, wenn der Slice beide nennt
+- **Gameplay:** zwei zusammengehörige Verhaltensweisen, oder eine User-Beschwerde mit zwei engen Punkten
+- **Schulen:** ein Campus (Cluster) = ein Slice
+- **Prozess/Docs:** ein Thema = ein Slice
 
-**Zu groß:** komplette Karte, alle Strassen, Housing überall, alle Schulen, ganz Seuzach.
+**Zu groß:** komplette Karte, alle Strassen, Housing überall, alle Schulen, ganz Seuzach/Schema-Dorf.
 
-Ohne INDEX **keine** Phase 1–4 für die Gesamtaufgabe. Slices **nacheinander**: für jeden den Ablauf 0–4 + Git.
-
-Ausnahme: **Hotfix** — INDEX mit einem Slice.
+Slices nacheinander: Ablauf 0–4 + Git pro Slice. **Hotfix** = Fast-Path, ein Slice.
 
 ---
 
-## Phase 0 — Reproduktion & Root-Cause (bei Fehlern Pflicht)
+## Phase 0 — Repro & RCA (bei Fehlern Pflicht)
 
-**Wann:** Jeder Bug, Playtest-Fail, Test-Fail, Crash, Regression oder Review-Finding, das ein **Fehlverhalten** beschreibt — **bevor** eine Fix-Umsetzung (Phase 2) **dieses Slices** beginnt.
+**Wann:** Bug, Verify-/Test-Fail, Crash, Regression, Review-Finding mit Fehlverhalten — **bevor** Phase 2 dieses Slices.
 
-**Wer:** Hauptagent und/oder `godot-playtester` (Repro) + Analyse; Ergebnis steht im **Slice-Markdown** (Abschnitt „Repro & RCA“) oder in `docs/plans/bugs/<kurzname>.md`.
+**Wer:** Hauptagent (Tests/Logs). Ergebnis im Slice („Repro & RCA“) oder `docs/plans/bugs/<kurzname>.md` — **erst im Agent-Modus nach Freigabe**.
 
-### Pflichtschritte (Reihenfolge)
+### Plan-Modus zuerst (Pflicht)
 
-1. **Reproduzieren**
-   - Konkrete Schritte, Build/Branch, Input-Gerät, Scene
-   - Tatsächliches vs. erwartetes Verhalten
-   - Logs, Stacktraces, Screenshots wo sinnvoll
-   - Ergebnis: **Repro bestätigt** (oder **nicht reproduzierbar** — dann kein Blind-Fix; stattdessen mehr Instrumentierung/Fragen)
-2. **Root-Cause-Analyse (RCA)**
-   - Hypothesen → gezielt widerlegen/bestätigen
-   - Ursache benennen (Datei/System/Annahme), nicht nur Symptome
-   - Abgrenzung: Was ist *nicht* die Ursache
-   - Vorgeschlagene Fix-Richtung + Risiko von Nebenwirkungen
-3. **Dokumentieren** im Slice-Plan (Abschnitt „Repro & RCA“)
-4. **Erst danach** Phase 1 (Fix-Plan) bzw. Phase 2 **dieses Slices**
+1. **Sofort** in den Cursor-**Plan-Modus** wechseln (`SwitchMode` → `plan`). Repro/RCA **nicht** vorher in Dateien schreiben.
+2. Im Plan-Modus: reproduzieren (read-only/tests soweit der Modus es erlaubt), Hypothesen, Ursache, Nicht-Ursache, Fix-Richtung, Risiken vorlegen. **Keine** Repo-Writes.
+3. **Bei Unklarheit immer nachfragen** — nicht raten, Plan/RCA nicht still festlegen.
+4. Nach User-Freigabe und **zurück im Agent-Modus:** erst dann Repro & RCA ins Slice-File oder `docs/plans/bugs/<kurzname>.md` schreiben.
 
-### Verboten
+Pflichtinhalt der RCA (nach dem Schreiben):
 
-- Fixes „auf Verdacht“ ohne bestätigte Repro (außer User-Override als Hotfix *und* RCA-Nachzug im gleichen Slice)
-- Mehrere unrelated Änderungen unter dem Dec eines ungeklärten Bugs
-- Den nächsten Slice beginnen, während der aktuelle Slice Phase 3/4 nicht bestanden hat
+1. Reproduktion (Schritte, erwartet/tatsächlich, failender Test bevorzugt) → bestätigt oder nicht reproduzierbar (kein Blind-Fix)
+2. Ursache, Nicht-Ursache, Fix-Richtung, Risiken
 
-### Review-/Playtest-Findings
+**Verboten:** Verdachts-Fixes ohne Repro (außer Hotfix + RCA-Nachzug); unrelated Änderungen; nächsten Slice vor Pass des aktuellen; RCA-Dateien schreiben solange noch Plan-Modus.
 
-Wenn Phase 3 oder 4 einen **Bug** meldet: vor dem Fix erneut **Phase 0** (Repro + RCA), dann fixen, dann Review/Playtest **dieses Slices** wiederholen.
+Findings aus Phase 3/4 die Bugs sind: erneut Phase 0 (wieder Plan-Modus zuerst), dann Fix, dann Review/Verify dieses Slices wiederholen.
 
 ---
 
-## Phase 1 — Plan (Markdown des Slices) — oft überspringen
+## Phase 1 — Plan (oft überspringen)
 
-**Wer:** Hauptagent oder Subagent `feature-planner`  
-**Input:** genau **ein** Slice aus dem INDEX (`docs/plans/<kurzname>/S<nn>-<slug>.md`)  
-**Output:** dasselbe File, ausgebaut nach `docs/plans/_SLICE.md` / `_TEMPLATE.md`
+**Wer:** Hauptagent oder `feature-planner`  
+**Input:** genau ein Slice aus dem INDEX.  
+**Output:** dasselbe Slice-File, ausgebaut nach `_TEMPLATE.md` — **erst im Agent-Modus nach Plan-Freigabe**.
 
-**Skip (keine Doppelarbeit):** Phase 1 / `feature-planner` **überspringen**, wenn der Slicer-Stub bereits **Feature + In + Nicht** hat **und** die Änderung offensichtlich ist (Docs-Wording, Konstanten, Single-File). Implementer oder Parent zieht Testplan/Akzeptanz **in dieselbe Datei** nach, während er umsetzt.
+**Skip:** Stub hat Feature + In + Nicht **und** Änderung offensichtlich. Implementer/Parent ergänzt Testplan/Akzeptanz in derselben Datei. Kein Plan-Modus nötig.
 
-**Planner behalten** bei: Bugs (RCA), art-lastigen Slices, Multi-System-Tradeoffs, unklarem Scope.
+**Planner behalten:** Bugs (RCA), Art mit echten Dateien, Multi-System, unklarer Scope.
 
-Wenn Phase 1 läuft, enthält der Plan mindestens:
+### Plan-Modus zuerst (Pflicht, wenn Planner läuft)
 
-1. Ziel / User-Nutzen **dieses Slices** (1–3 Sätze)
-2. Scope / Nicht-Scope (**Grenzen:** was Nachbar-Slices gehören)
-3. Betroffene Systeme (World, Mission, Save, UI, Art, …)
-4. Technische Schritte (Godot-Scenes/Scripts)
-5. Testplan (Unit/Integration + manuelle Playtest-Checks) — bei Bugs: **Regressionstest für die Repro**
-6. Art-Bedarf (ja/nein; welche Assets; Verweis Style-Bible C) — nur Assets **dieses** Slices
-7. Akzeptanzkriterien (checkbox-fähig)
-8. Bei Fehlern: Abschnitt **Repro & RCA** (Phase 0 erfüllt, Checkboxen)
+1. **Sofort** in den Cursor-**Plan-Modus** wechseln (`SwitchMode` → `plan`). Nicht vorher Slice-Dateien vollschreiben.
+2. Im Plan-Modus: recherchieren, Plan vorlegen (Ziel, Scope, Schritte, Tests, Art-Dateinamen, Gates). **Keine** Repo-Writes.
+3. **Bei Unklarheit immer nachfragen**. Nicht raten, nicht still festlegen.
+4. Nach User-Freigabe und **zurück im Agent-Modus:** erst dann `S<nn>-<slug>.md` nach `_TEMPLATE.md` schreiben.
 
-Ohne Feature+In+Nicht im Slice-File **keine** Implementierung (außer dokumentierter Hotfix). Bei Bugs: ohne Phase 0 **keine** Phase 2.
+**Verboten:** Annahmen als beschlossene Sache ohne Frage. Innerhalb einer Umsetzung neu auftauchende Unklarheit → wieder Plan-Modus + Frage.
 
-`feature-planner` darf die Zerlegung **nicht** ersetzen oder Slices zusammenlegen.
+Ohne Feature+In+Nicht keine Implementierung (außer Hotfix). Bei Bugs ohne Phase 0 keine Phase 2. Planner darf Slices nicht neu schneiden.
 
----
+Voller Plan-Inhalt: Ziel, Scope, Systeme, Schritte, Testplan (automatisiert Pflicht), Art-Bedarf mit **konkreten Dateinamen** oder „keine“, Akzeptanz, bei Bugs Repro & RCA.
 
-## Phase 2 — Umsetzen (Subagent)
-
-**Wer:** Subagent `feature-implementer`  
-**INDEX:** beim Start dieses Slices auf `in Arbeit` setzen.  
-**Pflicht:**
-
-- Umsetzung laut **Slice-File**, nicht laut gesamter User-Story
-- Bei Bugs: Fix erst starten, wenn Slice „Repro bestätigt“ + RCA ausgefüllt ist; zuerst **Regressionstest**, der die Repro rot macht, dann Fix bis grün
-- **Automatisierte Tests** mitliefern (Godot-Test-Framework des Repos; bis dahin `*.gd`-Tests / `./scripts/run_tests.sh`) — Suite in diesem Slice **einmal** grün fahren und im Handoff melden
-- Bei Grafiken oder Animationen **immer** Subagent `comic-rettung-art` hinzuziehen (Referenzen `docs/design-refs/c-*.png` inkl. `c-iso-city-map.png` für Welt/Karte/Gebäude = **Haus–Strasse-Interaktion**, nicht Masse/Kamera/Größe; Proportionen aus `c-umgebung`/`c-basis`/bestehenden C-Assets, Style-Bible C) — **nur** die im Slice genannten Assets
-- Art unter `assets/art/`: `process_art_alpha.py` + `verify_art_alpha.py` (Pflicht, keine weißen Sprite-Platten)
-- Keine Stil-A/B-Assets
-- Am Ende: kurze Handoff-Liste (geänderte Dateien, wie Tests starten, **Suite grün ja/nein**)
-- Slice-File **nicht** durch Phasen-Status jagen (`Entwurf` / `In Umsetzung` / `Review` / `Playtest`). INDEX trägt den Status.
-
-Der Implementer merged Art-Ergebnisse ins Godot-Projekt (`assets/…`, SpriteFrames, etc.).
+Art-Hinweise (wenn Art: ja): Stil C; Referenzen `docs/design-refs/c-*.png` inkl. `c-iso-city-map.png` für Welt/Karte/Gebäude = **Haus–Strasse-Interaktion**, nicht Masse/Kamera/Größe; Proportionen aus `c-umgebung`/`c-basis`/bestehenden C-Assets.
 
 ---
 
-## Phase 3 — Code Review (Subagent)
+## Phase 2 — Umsetzen
 
-**Wer:** Subagent `code-reviewer` (read-focused Review, Findings als Liste)
+**Wer:** `feature-implementer` — **außer Fast-Path** (dann Parent).  
+INDEX-Zeile zu Beginn `in Arbeit`.
 
-Pflicht für **spielsichtbare** Arbeit — nicht mit Playtest zusammenlegen, nicht überspringen.
-
-Prüft u. a.:
-
-- Slice-Abdeckung und Akzeptanzkriterien; **keine** Lieferungen aus Nachbar-Slices
-- Bei Bugfixes: Repro/RCA dokumentiert; Regressionstest vorhanden
-- Tests vorhanden und sinnvoll
-- Godot-Konventionen, keine Secrets
-- Kindgerecht / Konzept-Konformität (kein Online, keine Gewalt gegen Personen)
-- Art nur Stil C, wenn Assets neu
-
-**Findings beheben:** Bug-artige Findings → **Phase 0**, dann Fix durch Hauptagent/`feature-implementer`. Danach **erneuter Review**, bis keine offenen Critical/High mehr. Nach Review-Fixes: Implementer fährt die Suite erneut grün (Handoff aktualisieren).
+- Nur dieses Slice-File
+- Bugs: erst Regressionstest rot, dann Fix grün
+- Suite **einmal** grün (`./scripts/run_tests.sh`), Handoff `suite green: yes/no`
+- **Art:** `comic-rettung-art` **nur** wenn Slice `Art: ja` **und** eine Dateiliste hat. Sonst bestehende Assets / Platzhalter. Nie „mitdenken“
+- Nach Art **Pflicht:** `python3 scripts/process_art_alpha.py` und `python3 scripts/verify_art_alpha.py` (Exit 0). Keine weiße/graue/schwarze KI-Platte. Verify rot = nicht übergeben. Neue PNGs ggf. `godot --headless --path . --import`
+- Gebäude: nie RoadKit-Asphalt übermalen; street-aligned `_ew`/`_ns` (kein `_ns` aus `_ew` rotieren)
+- Kein Scope auf Nachbarn; kein INDEX `erledigt`
 
 ---
 
-## Phase 4 — Playtest (Subagent)
+## Phase 3 — Code Review
 
-**Wer:** Subagent `godot-playtester`
+**Wer:** `code-reviewer`
 
-**Keine doppelte Suite:** Playtest **läuft nicht** erneut `./scripts/run_tests.sh` oder `verify_art_alpha.py`, wenn der Implementer in **diesem** Slice die Suite grün gemeldet hat **und** Review keine weiteren Code-/Art-Änderungen verlangt hat. Fehlt der Handoff: Suite einmal nachziehen.
+**Pflicht** nur wenn **spielsichtbar und nicht trivial:** Gameplay, World/RoadKit, Landmark-Placement, Art-Integration, nicht-triviale Bugs.
 
-**Immer (spielsichtbar):** einzigartiger Check — Godot-Smoke (`godot --path` / `--quit-after`) + slice-spezifisch visuell.
+**Skip (Parent-Selbstcheck reicht):** Docs-Wording, Konstanten, Fast-Path-Single-File ohne die Systeme oben.
 
-**Art-Alpha** nur wenn `assets/art/` in diesem Slice geändert wurde (und dann nur, wenn der Implementer sie nicht schon grün gemeldet hat).
-
-**Docs-only:** kein Godot, kein Art-Alpha — nur Docs-Tests / Read-through.
-
-- Bei GUI/Display-Problemen: Headless-Tests + Log-Analyse; Blocker klar melden
-- Bei Fail: Repro-Schritte für Phase 0 liefern (nicht nur „kaputt“)
-- Ergebnis: Pass/Fail + was manuell noch offen ist
-
-Nur bei **Pass** (oder explizitem User-Override) gilt **dieser Slice** als fertig → Git-Release → INDEX-Status `erledigt` → nächster Slice.
-
-**INDEX-Status nur:** `offen` → `in Arbeit` (Implement-Start) → `erledigt` (nach Pass + Git). Slice-File: **Erledigt** nach Pass+Git, kein Phasen-Churn.
+Nicht mit Phase 4 zusammenlegen. Critical/High vor Git; bug-artige Findings → Phase 0.
 
 ---
 
-## Subagenten-Übersicht
+## Phase 4 — Automatisierte Verifikation
 
-| Name | Datei | Rolle |
-|------|-------|--------|
-| `task-slicer` | `.cursor/agents/task-slicer.md` | Phase S: Feature-Schritte (~2 verwandte Inkremente; kein Review/Test/Git als Slice) |
-| `feature-planner` | `.cursor/agents/feature-planner.md` | Slice zum Plan ausbauen **wenn nötig**; Skip bei offensichtlichem Stub |
-| `feature-implementer` | `.cursor/agents/feature-implementer.md` | Code + Tests **eines** Slices; ruft Art; Suite einmal grün |
-| `comic-rettung-art` | `.cursor/agents/comic-rettung-art.md` | Grafik & Animation Stil C, nur Slice-Assets |
-| `code-reviewer` | `.cursor/agents/code-reviewer.md` | Review gegen das Slice-File (Pflicht spielsichtbar) |
-| `godot-playtester` | `.cursor/agents/godot-playtester.md` | Einzigartiger Smoke/Visuell; keine doppelte Suite; Docs-only ohne Godot |
+**Kein Subagent**, wenn Implementer-/Parent-Handoff `suite green: yes` **und** Review keinen weiteren Code/Art verlangt hat (oder Review geskippt). Dann Pass → Git.
 
-Orchestration liegt beim **Hauptagenten**: zuerst `task-slicer`, dann **pro Slice** Phase 0 (bei Fehlern), Phase 1 nur wenn nötig, dann 2→3→4→Git. Findings-Loop mit erneuter Phase 0 **innerhalb** des Slices.
+**`automated-verifier` nur wenn:** Handoff fehlt, Suite nicht grün, Review Nachcode verlangt, oder User Verify ausdrücklich will.
+
+Keine doppelte Suite, wenn schon grün gemeldet. Docs-only: Read-through, kein Game-Launch.
+
+Phase 4b (Godot-GUI / manuelles Spielen) **nur** auf User-Anforderung — sonst kein Blocker.
+
+Pass (oder User-Override) → Git → INDEX `erledigt` → nächster Slice.
+
+**INDEX-Status nur:** `offen` → `in Arbeit` → `erledigt`. Kein Phasen-Churn im Slice-File.
 
 ---
 
-## Ausnahme: Hotfix
+## Git
 
-Nur wenn der User klar „Hotfix“ / „nur schnell fixen“ sagt:
+Nach Pass jedes Slices: **commit + push** auf den Tracking-Branch, dann **annotiertes SemVer-Tag** und Tag pushen (siehe `.cursor/rules/git-release.mdc`).
 
-- Mini-INDEX mit **einem** Slice
-- **Repro trotzdem versuchen**; RCA darf kurz sein, muss aber im Slice/Commit stehen
-- Fehlt die Repro: im Slice als „Hotfix ohne stabile Repro“ kennzeichnen und Follow-up-RCA nachziehen
-- Phase 3+4 bleiben Pflicht für spielsichtbare Arbeit
+---
+
+## Subagenten
+
+| Name | Wann starten |
+|------|----------------|
+| `task-slicer` | ≥2 Slices oder unklarer Scope — nicht Fast-Path |
+| `feature-planner` | Bugs / Art-Dateien / Multi-System / unklar; zuerst Plan-Modus, Dateien erst im Agent-Modus |
+| `feature-implementer` | Nicht Fast-Path; ein Slice inkl. Tests |
+| `comic-rettung-art` | Nur `Art: ja` + Dateinamen im Slice; danach Alpha-Verify grün |
+| `code-reviewer` | Spielsichtbar und nicht trivial |
+| `automated-verifier` | Suite nicht grün / kein Handoff / Nachcode nach Review / User will Verify |
+
+Orchestration: Hauptagent. Fast-Path oder Slicer, dann pro Slice 0 (Plan-Modus, dann RCA schreiben) → (1: Plan-Modus, dann Slice-File) → 2 → (3) → (4) → Git.
+
+---
+
+## Hotfix
+
+User sagt „Hotfix“ / „nur schnell fixen“ → Fast-Path, ein Slice. Repro versuchen; RCA zuerst im Plan-Modus, nach Freigabe kurz ins Slice/Commit. Fehlt Repro: kennzeichnen, RCA nachziehen. Review/Verifier nur nach den Skip-Regeln oben (nicht pauschal Pflicht).
 
 ---
 
 ## Vorlagen
 
-- Slice-Index: `docs/plans/_SLICE_INDEX.md`
-- Ein Schritt: `docs/plans/_SLICE.md`
-- Feature/Bug-Plan (Felder, die der Planner in den Slice schreibt): `docs/plans/_TEMPLATE.md`
-- MVP: `docs/plans/mvp.md`
+- `docs/plans/_SLICE_INDEX.md` · `docs/plans/_SLICE.md` · `docs/plans/_TEMPLATE.md`
+- Spielkonzept: `docs/KONZEPT.md`
+- Style: `docs/STYLE-BIBLE-C.md`

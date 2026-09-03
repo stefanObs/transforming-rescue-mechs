@@ -350,4 +350,5 @@ Online-Multiplayer, Monetarisierung, realistische Physik, PvP-Arena, Gewalt gege
 | 2026-08-09 | Stil C gewählt; Style-Bible + Art-Subagent |
 | 2026-08-09 | Rush (roter Supercar) als dritte spielbare Figur (MVP-Abweichung) |
 | 2026-08-09 | Entwicklungsablauf mit Subagenten (Plan→Implement→Review→Playtest) |
+| 2026-09-03 | Entwicklungsablauf an Schreiblernspiel-2d-jump-1 angeglichen (Fast-Path, Plan-Modus zuerst, automated-verifier; SemVer-Tag bleibt) |
 | 2026-08-09 | MVP-Umsetzungsplan (`docs/plans/mvp.md`) |

@@ -3,13 +3,13 @@
 **Parent:** `docs/plans/<kurzname>/INDEX.md`  
 **Hängt ab von:** — | S01 | …
 
-Nur der **Feature-Schritt** (typisch **zwei verwandte** / **zwei zusammengehörige** spieler-sichtbare Inkremente). Plan nur wenn nötig; Tests, Review, Playtest und Git sind der normale Ablauf für *dieses* Stück — nicht extra Slices.
+Nur der Feature-Schritt (typisch zwei verwandte spieler-sichtbare Inkremente). Tests, optionales Review, optionales Verify und Git sind Ablauf, keine Extra-Slices.
 
-INDEX-Status: `offen` → `in Arbeit` → `erledigt`. Dieses File nicht durch Phasen jagen.
+INDEX: `offen` → `in Arbeit` → `erledigt`.
 
 ## Feature
 
-<Was nach diesem Schritt existiert, 1–3 Sätze. Spieler-/User-sichtbar.>
+<1–3 Sätze, spieler-sichtbar>
 
 ## In diesem Schritt
 
@@ -19,11 +19,14 @@ INDEX-Status: `offen` → `in Arbeit` → `erledigt`. Dieses File nicht durch Ph
 
 - …
 
-## Art (optional, damit Planner übersprungen werden kann)
+## Art
 
-- ja / nein — …
+- nein — bestehende Assets / Platzhalter
+- ja — **nur** diese Dateien (sonst kein `comic-rettung-art`):
+  - `assets/art/…`
+- Bei `ja`: Hintergründe transparent (`process_art_alpha.py` + `verify_art_alpha.py` Exit 0)
 
 ## Testplan (optional, 2 Bullets)
 
-- …
+- Automatisiert: …
 - …

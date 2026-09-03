@@ -17,7 +17,7 @@ Wenn der User Grafiken, Sprites, Tiles, UI-Art, Moodboards, Transformationen, Wa
    - `python3 scripts/verify_art_alpha.py` (muss grün sein)
    - Walk-Sets: `python3 scripts/pad_walk_frames.py`
 5. Neue PNGs: ggf. `godot --headless --path . --import` bevor Tests `ResourceLoader.exists` erwarten
-6. Playtest (`godot-playtester`) prüft Transparenz / weiße oder schwarze AI-Platten
+6. Verify (`verify_art_alpha.py` / `automated-verifier` bei Bedarf) prüft Transparenz / weiße oder schwarze AI-Platten — Godot-GUI nur auf User-Wunsch
 7. Facing-Dir-Art muss dem statischen generierten Look entsprechen (kein Lean/Turn darüber im Spiel)
 8. Ausreichend **verschiedene** Häuser über die Slices hinweg; Schulen als **Gebäudecluster** (ein Campus pro Slice); Feuerwehr/Badi/Bahnhof an Seuzach; **Ohringen gehört zu Seuzach** (eigene Rasterzellen)
 9. Gebäude-Art parallel zur lokalen Strasse (E–W/N–S Varianten, axis-aligned Fassaden — nicht Iso-Diamant); nie Asphalt übermalen

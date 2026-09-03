@@ -1,5 +1,5 @@
 ---
-description: Entwicklungsablauf — Zerlegung (~2 verwandte Inkremente), dann Loop pro Slice ohne Doppelarbeit
+description: Entwicklungsablauf — Fast-Path für Kleines; Zerlegung nur ab Größe; Verifier nur wenn nötig
 alwaysApply: true
 ---
 
@@ -7,20 +7,20 @@ alwaysApply: true
 
 Strikt `docs/ENTWICKLUNGSABLAUF.md` befolgen:
 
-**S. Zerlegung (immer zuerst):** Subagent `task-slicer` → Feature-Schritte. Default: **zwei verwandte** / **zwei zusammengehörige** spieler-sichtbare Inkremente pro Slice (~2×), wenn sie Systeme teilen und zusammen review-/playtestbar sind. **Keine** Slices für Review/Tests/Playtest/Git/RCA — das ist der Ablauf pro Feature. Ohne INDEX nicht bauen.
+**Fast-Path (Default für Kleines):** ein klarer Slice / Docs / Konstanten / Single-File → Parent legt Mini-INDEX + S01 an, setzt um, Suite einmal, commit + push + Tag. **Kein** Slicer/Implementer/Reviewer/Verifier/Art-Subagent.
+
+**S. Zerlegung nur ab Größe:** ≥2 Slices oder unklarer Scope → `task-slicer`. Packing: **zwei verwandte** spieler-sichtbare Inkremente pro Slice (~2×). **Keine** Slices für Review/Tests/Verify/Git/RCA.
 
 Dann **jeden Slice nacheinander**:
 
-0. **Bei Fehlern:** Repro + RCA im Slice-File
-1. **Plan** → `feature-planner` **nur wenn nötig** (Bugs/RCA, Art, Multi-System, unklarer Scope). **Überspringen**, wenn der Stub Feature+In+Nicht hat und die Änderung offensichtlich ist (Docs-Wording, Konstanten, Single-File)
-2. **Umsetzen** → `feature-implementer` (nur dieser Slice); Art → `comic-rettung-art`; Suite **einmal** grün und im Handoff
-3. **Code Review** → `code-reviewer` (Pflicht für spielsichtbare Arbeit, nicht mit Playtest zusammenlegen); Bug-Findings über Phase 0, dann Review wiederholen
-4. **Playtest** → `godot-playtester`; **keine doppelte Suite** / kein Art-Alpha-Replay, wenn Implementer grün und Review ohne Folge-Code/Art. Docs-only: **kein Godot**. Failures mit Repro zurück in Phase 0
+0. **Bei Fehlern:** zuerst `SwitchMode` → `plan` (RCA ohne Dateien); nach Freigabe RCA ins Slice schreiben
+1. **Plan** → nur wenn nötig (Bugs/Art-Dateien/Multi/unklar); sonst Stub reicht. Planner: zuerst Plan-Modus, Dateien erst im Agent-Modus
+2. **Umsetzen** → `feature-implementer` (nicht Fast-Path); Art nur bei `Art: ja` + Dateinamen → `comic-rettung-art`; Suite **einmal** grün im Handoff
+3. **Code Review** → `code-reviewer` nur spielsichtbar **und** nicht trivial; Docs/Konstanten/Fast-Path skip
+4. **Verify** → kein Subagent wenn Suite schon grün und kein Review-Nachcode; sonst `automated-verifier`. Godot-GUI nur auf User-Wunsch
 
-INDEX-Status nur: `offen` → `in Arbeit` (Implement-Start) → `erledigt` (nach Pass+Git). Kein Slice-File-Phasen-Churn.
+INDEX-Status nur: `offen` → `in Arbeit` → `erledigt` (nach Pass+Git). Kein Slice-File-Phasen-Churn.
 
-Nach Phase-4-Pass **dieses Slices:** Commit, Push, Tag (`git-release`). Erst dann der nächste Slice.
+Nach Pass **dieses Slices:** Commit, Push, SemVer-Tag (`git-release`). Erst dann der nächste Slice.
 
-Keine Blind-Fixes. Phasen 3+4 nicht überspringen für spielsichtbare Arbeit, außer dokumentierter Hotfix (dann INDEX mit einem Slice; Repro trotzdem anstreben).
-
-Agent-Learnings: `.cursor/agents/*.md` — Zerlegung `task-slicer`, Art `comic-rettung-art`.
+Keine Blind-Fixes. Bei Unklarheit nachfragen, nicht raten.
