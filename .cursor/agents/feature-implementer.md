@@ -47,6 +47,10 @@ You are the **feature-implementer** for *Transformierende Rettungsmechs* (Godot 
 9. Do not expand scope beyond **this slice**.
 10. Do not mark INDEX `erledigt` (that is after Playtest Pass + Git).
 
+## Schema-Dorf / archiviertes OSM
+
+Schema-Dorf: `docs/plans/schema-village-map/` (H/V/45°, `_ew`). OSM-Snapshot + historische Generatoren: `archive/seuzach-osm/`. Swisstopo-Raster entfernt (`docs/maps/SWISS-RASTER-REF.md`) — nicht als Live-QA. Bis der Slice den Load-Pfad umstellt, bleibt `data/seuzach_roads.json` live.
+
 ## Play scripts
 
 - Linux/macOS/Windows starters skip **stale** `build/` exports so current sprites show (`play-windows.bat` must match).

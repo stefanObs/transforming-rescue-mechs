@@ -1,31 +1,7 @@
 # Kartendaten
 
-`seuzach_ways.json` ist ein OpenStreetMap-Overpass-Dump (benannte Highways + A1) für Seuzach und Ohringen.
+Der **OSM-Seuzach-Stand** (Ways, Roads, Rails, Water, Forests, GPS-Geo, Swiss-Trace, Octilinear) liegt unter [`archive/seuzach-osm/`](../archive/seuzach-osm/README.md). Swisstopo-Raster sind entfernt.
 
-`seuzach_roads.json` ist daraus generiert (`scripts/gen_seuzach_roads.py`) in Spielwelt-Koordinaten (Kirche = Ursprung, 1 Feld = 5,3 m = 100 wu).
+Live-Karte: Schema-Dorf (`docs/plans/schema-village-map/`). Bis S02 kann `data/seuzach_roads.json` noch der alte OSM-Live-Pfad sein.
 
-`seuzach_rails_osm.json` ist ein Overpass-Dump (`railway=rail` / `railway=platform` / `railway=stop`, BBox 47.520–47.555 N, 8.700–8.760 E). Nicht mit den Highway-Ways mischen.
-
-`seuzach_rails.json` ist daraus generiert (`scripts/gen_seuzach_rails.py`): SBB-Linie 821 (Durchgang `track_ref=1`, Stations-Gleis 2, Perron 2) in denselben Weltkoordinaten und CLIP wie die Strassen.
-
-`seuzach_water_osm.json` ist ein Overpass-Dump (`waterway=stream|river|drain`, BBox 47.520–47.555 N, 8.700–8.760 E). Nicht mit Highway- oder Railway-Ways mischen.
-
-`seuzach_water.json` ist daraus generiert (`scripts/gen_seuzach_water.py`): benannte Bäche in CLIP (Chrebsbach, Welsikonerbach, Bachtobelgraben, Ohringerbach, …) in denselben Weltkoordinaten. Feldgräben (`ditch`) und der OSM-Riedbach (Eulach, ausserhalb CLIP) sind nicht enthalten.
-
-`seuzach_forests_osm.json` ist ein Overpass-Dump (`landuse=forest` / `natural=wood`, BBox 47.520–47.555 N, 8.700–8.760 E). Nicht mit Highway-, Railway- oder Waterway-Ways mischen.
-
-`seuzach_forests.json` ist daraus generiert (`scripts/gen_seuzach_forests.py`): Waldflächen in CLIP (Buechwäldli, Laubholz, Forrenberg/A1, Ohringen, Seuzach-Nord, …) plus wenige Silhouette-Positionen in denselben Weltkoordinaten. Winterthur-Wälder (Lindberg, Wolfensberg, Schoren, Stadlerberg, Fröschholz) nur als CLIP-Schnitt, nicht als Pflicht-Patches.
-
-## Octilinear / Swiss-Raster-Trace (noch nicht live)
-
-`seuzach_roads_gmaps_trace.json` ist eine frühere Google-Maps-Digitalisierung (WGS84).
-
-`seuzach_roads_swiss_trace.json` ist die aktuelle Quelle: benannte befahrbare Highways im Seuzach+Ohringen-Gebiet, **geprüft gegen** Swiss Map Raster 10 (Sheets **1072-1** + **1052-3** / `seuzach_swiss_raster_ref.jpg`).
-
-`seuzach_roads_octilinear.json` und `docs/maps/seuzach_octilinear_roads.svg` erzeugt `scripts/gen_seuzach_octilinear_roads.py` daraus: nur H/V/45°-Segmente (Arrow-Key-8-dir), gleiche Kirche-Origin / FIELD / CLIP wie die Spielwelt.
-
-Referenz-Mosaik: `docs/maps/seuzach_swiss_raster_ref.jpg` (`scripts/build_seuzach_swiss_raster_ref.py`).
-
-Die Live-Sandbox lädt weiterhin `seuzach_roads.json` — das octilineare Netz ist noch **nicht** umgeschaltet.
-
-Schematic street layout aligned to Swiss Map Raster 10; world scale matches project CLIP. OSM-Hilfsgeometrie für Centerlines © OpenStreetMap-Mitwirkende, [ODbL](https://opendatacommons.org/licenses/odbl/).
+OSM-Hilfsgeometrie (Archiv) © OpenStreetMap-Mitwirkende, [ODbL](https://opendatacommons.org/licenses/odbl/).

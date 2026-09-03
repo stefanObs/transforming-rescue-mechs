@@ -7,7 +7,7 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-SCRIPT = ROOT / "scripts" / "gen_seuzach_octilinear_roads.py"
+SCRIPT = ROOT / "archive" / "seuzach-osm" / "scripts" / "gen_seuzach_octilinear_roads.py"
 
 
 def _load():
@@ -227,7 +227,7 @@ def test_artifact_hub_metrics(g) -> None:
     """Committed JSON: REQUIRED gaps, hub turn, no W∩S long coincidence, Ohringer EW."""
     import json
 
-    path = ROOT / "data" / "seuzach_roads_octilinear.json"
+    path = ROOT / "archive" / "seuzach-osm" / "data" / "seuzach_roads_octilinear.json"
     if not path.is_file():
         fail(f"missing {path}")
     data = json.loads(path.read_text(encoding="utf-8"))

@@ -39,6 +39,8 @@ Ein Slice = **zwei verwandte** / **zwei zusammengehörige** spieler-sichtbare In
 
 **Zu groß:** komplette Karte, alle Strassen, Housing überall, alle Schulen, ganz Seuzach.
 
+**Schema-Dorf:** Slices unter `docs/plans/schema-village-map/`. OSM/Swisstopo-Stand ist `archive/seuzach-osm/`; keine Raster-QA-Slices.
+
 ## Verboten als Slice
 
 Nicht zerlegen in Workflow-Phasen. **Keine** Slices für:

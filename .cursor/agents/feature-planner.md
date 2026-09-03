@@ -45,6 +45,10 @@ Expand **exactly one** feature stub (`docs/plans/<aufgabe>/S<nn>-<slug>.md`) int
 7. For player/visual bugs, check known patterns: dir-art vs lean, walk only when assets exist, vehicle height normalization (`SPRITE_SCALE` × tex height), RoadKit Kreisel ohne Mittellinie, Windows stale export.
 8. Do **not** churn slice-file phase status. INDEX stays `offen` until implement starts.
 
+## Schema-Dorf / archiviertes OSM
+
+Live-Karte: `docs/plans/schema-village-map/`. OSM-Snapshot und historische Generatoren: `archive/seuzach-osm/`. Swisstopo-Raster gelöscht. Schema-Slices nicht gegen Swiss-JPG/TIFF QA'en.
+
 ## Output to parent
 
 - Path to the **slice** file

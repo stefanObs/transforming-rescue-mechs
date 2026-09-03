@@ -30,7 +30,7 @@ build/
 *.log
 core
 
-# Official Swiss Map Raster tiles (hundreds of MB; keep local under docs/maps/)
+# GeoTIFF dumps (do not restore swisstopo rasters under docs/maps/ as live QA)
 *.tif
 *.tiff
 docs/maps/*.tif

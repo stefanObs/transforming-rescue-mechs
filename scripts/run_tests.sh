@@ -13,6 +13,9 @@ python3 tests/play_windows_launcher_test.py
 echo "---- tests/iso_map_interaction_docs_test.py ----"
 python3 tests/iso_map_interaction_docs_test.py
 
+echo "---- tests/schema_archive_s01_test.py ----"
+python3 tests/schema_archive_s01_test.py
+
 echo "---- tests/entwicklungsablauf_docs_test.py ----"
 python3 tests/entwicklungsablauf_docs_test.py
 

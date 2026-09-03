@@ -37,6 +37,7 @@ Review the current change set against the **assigned slice** (`docs/plans/<aufga
 - `play-windows.bat` stale-export skip aligned with Linux/macOS
 - World landmarks: Seuzach **inkl. Ohringen**; schools as building clusters; house variety
 - New PNGs imported (tests must not rely on bare `Image.load` only)
+- Schema-Dorf slices: H/V/45°, `_ew`, occupancy. OSM snapshot under `archive/seuzach-osm/`; do not require Swisstopo QA. Until S02, live roads may still be `data/seuzach_roads.json`.
 
 ## Output format (mandatory)
 
