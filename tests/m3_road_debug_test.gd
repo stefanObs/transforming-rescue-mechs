@@ -35,8 +35,8 @@ func _run() -> void:
 	_assert(labels.size() >= 10, "debug shows names on named roads (got %d)" % labels.size())
 
 	var named_roads := _named_road_set(world)
-	_assert(named_roads.has("A1"), "A1 is a named road")
-	_assert(named_roads.has("Winterthurerstrasse"), "Winterthurerstrasse is a named road")
+	_assert(named_roads.has("Hauptstrasse"), "Hauptstrasse is a named road")
+	_assert(named_roads.has("Stationsstrasse"), "Stationsstrasse is a named road")
 	var labeled := {}
 	for holder in labels:
 		var n := str(holder.get_meta("road_name"))
@@ -53,17 +53,17 @@ func _run() -> void:
 	for road_name in named_roads.keys():
 		_assert(bool(labeled.get(road_name, false)), "debug labels include %s" % str(road_name))
 
-	var a1 := _first_label(labels, "A1")
-	if a1:
+	var haupt := _first_label(labels, "Hauptstrasse")
+	if haupt:
 		_assert(
-			absf(a1.rotation) < 0.45,
-			"A1 (east-west) label stays nearly horizontal (got %.3f)" % a1.rotation
+			absf(haupt.rotation) < 0.45,
+			"Hauptstrasse (east-west) label stays nearly horizontal (got %.3f)" % haupt.rotation
 		)
-	var winter := _first_label(labels, "Winterthurerstrasse")
-	if winter:
+	var stations := _first_label(labels, "Stationsstrasse")
+	if stations:
 		_assert(
-			absf(absf(winter.rotation) - PI * 0.5) < 0.45,
-			"Winterthurerstrasse (north-south) label is nearly vertical (got %.3f)" % winter.rotation
+			absf(absf(stations.rotation) - PI * 0.5) < 0.45,
+			"Stationsstrasse (north-south) label is nearly vertical (got %.3f)" % stations.rotation
 		)
 
 	var grid := _find_debug_grid(world)
@@ -102,8 +102,8 @@ func _run() -> void:
 			"status shows %s and Raster 100 (got %s)" % [feld_txt, status.text]
 		)
 		_assert(
-			status.text.contains("Feld 38,-2"),
-			"status shows Feld 38,-2 for WINT-KERN spawn (got %s)" % status.text
+			status.text.contains("Feld 5,0"),
+			"status shows Feld 5,0 for schema Hauptstrasse spawn (got %s)" % status.text
 		)
 	var ground: Node = world.get_node_or_null("%Ground")
 	if ground:
@@ -152,52 +152,46 @@ func _run() -> void:
 
 
 func _assert_winterthurer_world_spawn(spawn: Vector2, spawn_feld: Vector2i, world: Node) -> void:
-	var winter_vertex := Vector2(3861.9, -101.0)
-	var old_forrenberg := SeuzachGeo.forrenberg_world() + Vector2(0.0, 200.0)
+	var schema_spawn := Vector2(500.0, 0.0)
 	_assert(
-		spawn.distance_to(winter_vertex) < 0.05,
-		"default_world_spawn is Winterthurer vertex (got %s)" % str(spawn)
+		spawn.distance_to(schema_spawn) < 0.05,
+		"default_world_spawn is schema Hauptstrasse (got %s)" % str(spawn)
 	)
 	_assert(
 		spawn.is_equal_approx(SeuzachGeo.winterthurer_spawn()),
 		"default_world_spawn matches winterthurer_spawn()"
 	)
 	_assert(
-		spawn_feld == Vector2i(38, -2),
-		"default spawn is Feld 38,-2 (got %s)" % str(spawn_feld)
-	)
-	_assert(
-		spawn_feld.x >= 30 and spawn_feld.x <= 45 and spawn_feld.y >= -15 and spawn_feld.y <= 10,
-		"default spawn Feld %s is in WINT-KERN 30..45, −15..10" % str(spawn_feld)
+		spawn_feld == Vector2i(5, 0),
+		"default spawn is Feld 5,0 (got %s)" % str(spawn_feld)
 	)
 	_assert(
 		SeuzachGeo.WORLD_BOUNDS.has_point(spawn),
 		"default spawn is inside WORLD_BOUNDS"
 	)
 	_assert(
-		spawn.distance_to(old_forrenberg) > 40.0,
-		"default spawn is not forrenberg_world()+(0,200) (got %s old %s)"
-		% [str(spawn), str(old_forrenberg)]
+		spawn.distance_to(SeuzachGeo.hub_enter_pos()) > 40.0,
+		"default spawn is not HubEnter"
 	)
 	var ground: Node = world.get_node_or_null("%Ground")
-	_assert(ground != null, "Ground exists for Winterthurerstrasse distance")
+	_assert(ground != null, "Ground exists for Hauptstrasse distance")
 	if ground == null:
 		return
 	var best_d := 1.0e9
-	var saw_winter := false
+	var saw := false
 	for node in ground.get_children():
-		if not node.has_meta("road_name") or str(node.get_meta("road_name")) != "Winterthurerstrasse":
+		if not node.has_meta("road_name") or str(node.get_meta("road_name")) != "Hauptstrasse":
 			continue
 		if not node.has_meta("road_points"):
 			continue
-		saw_winter = true
+		saw = true
 		var pts: PackedVector2Array = PackedVector2Array(node.get_meta("road_points"))
 		var pair: Dictionary = _nearest_segment_tangent_dist(pts, spawn)
 		best_d = minf(best_d, float(pair["d"]))
-	_assert(saw_winter, "Winterthurerstrasse road_points exist on Ground")
+	_assert(saw, "Hauptstrasse road_points exist on Ground")
 	_assert(
 		best_d <= 40.0,
-		"spawn distance to Winterthurerstrasse polyline ≤ 40 wu (got %.1f)" % best_d
+		"spawn distance to Hauptstrasse polyline ≤ 40 wu (got %.1f)" % best_d
 	)
 
 
@@ -218,7 +212,7 @@ func _assert_spawn_viewport_shows_streets(player: Node2D, world: Node) -> void:
 			var pts: PackedVector2Array = PackedVector2Array(node.get_meta("road_points"))
 			if _polyline_hits_rect(pts, view):
 				names[str(node.get_meta("road_name"))] = true
-	_assert(names.has("Winterthurerstrasse"), "start viewport includes Winterthurerstrasse")
+	_assert(names.has("Hauptstrasse"), "start viewport includes Hauptstrasse")
 
 
 func _spawn_viewport_rect(center: Vector2, zoom: Vector2) -> Rect2:

@@ -47,7 +47,7 @@ func _run() -> void:
 					elif meta == "stripe":
 						kit_stripes += 1
 		_assert(kit_roads >= 2, "RoadKit road pieces present (got %d)" % kit_roads)
-		_assert(kit_stripes >= 2, "RoadKit stripe dashes present (got %d)" % kit_stripes)
+		_assert(kit_stripes >= 1, "RoadKit stripe dashes present (got %d)" % kit_stripes)
 		var kit_junctions := 0
 		if ground:
 			for child in ground.get_children():

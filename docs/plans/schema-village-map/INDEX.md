@@ -11,12 +11,12 @@ Feature-Schritte, keine Prozess-Schritte. Pro Zeile folgt der Ablauf (Plan nur w
 
 | ID | Datei | Feature | Hängt ab von | Status |
 |----|-------|---------|----------------|--------|
-| S01 | `S01-archive-drop-swisstopo.md` | OSM-Live archivieren, Swisstopo-Karten weg, Docs/Regeln + restore-stripped-landmarks überholt | — | in Arbeit |
-| S02 | `S02-schema-streets-live.md` | Schema-Straßen (H/V/45°) live, Spawn Hauptstrasse, Schienen-Stub | S01 | offen |
-| S03 | `S03-dorfkern-laeden.md` | Dorfkern Civic + Läden/Sport/Spielplatz, Occupancy, `_ew` | S02 | offen |
-| S04 | `S04-schulen-birch-rietacker.md` | Campus Birch + Campus Rietacker inkl. zugehörige Kigas `_ew` | S03 | offen |
-| S05 | `S05-bahnhof-badi-ohringen-hub.md` | Bahnhof+Gleis, Badi, St. Martin + Ohringen-Campus/Kiga, Hub+Tankstelle+Enter | S04 | offen |
-| S06 | `S06-housing-wald.md` | EW-Häuser an Haupt-/Wohnstrasse, Waldrand, volle Overlap-Suite | S05 | offen |
+| S01 | `S01-archive-drop-swisstopo.md` | OSM-Live archivieren, Swisstopo-Karten weg, Docs/Regeln + restore-stripped-landmarks überholt | — | erledigt |
+| S02 | `S02-schema-streets-live.md` | Schema-Straßen (H/V/45°) live, Spawn Hauptstrasse, Schienen-Stub | S01 | erledigt |
+| S03 | `S03-dorfkern-laeden.md` | Dorfkern Civic + Läden/Sport/Spielplatz, Occupancy, `_ew` | S02 | erledigt |
+| S04 | `S04-schulen-birch-rietacker.md` | Campus Birch + Campus Rietacker inkl. zugehörige Kigas `_ew` | S03 | erledigt |
+| S05 | `S05-bahnhof-badi-ohringen-hub.md` | Bahnhof+Gleis, Badi, St. Martin + Ohringen-Campus/Kiga, Hub+Tankstelle+Enter | S04 | erledigt |
+| S06 | `S06-housing-wald.md` | EW-Häuser an Haupt-/Wohnstrasse, Waldrand, volle Overlap-Suite | S05 | erledigt |
 
 Status nur: `offen` → `in Arbeit` (Implement-Start) → `erledigt` (nach Phase-4-Pass + Git). Kein Slice-File-Phasen-Churn.
 

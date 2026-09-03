@@ -1,200 +1,55 @@
 extends Object
 ## Named F1 housing quarter cells. Kirche = Ursprung, 1 Feld = SeuzachGeo.FIELD_WU.
-## No class_name: preload from world_sandbox / tests (same pattern as debug_grid).
+## Schema-Dorf: Hauptstrasse + Wohnstrasse only.
 
 const DEBUG_GRID_SCRIPT := preload("res://scripts/debug_grid.gd")
 
-## S01–S06 quarters. Do not invent a second grid.
 const REGISTRY := {
-	"KIRCHE-KERN": {
+	"KERN": {
 		"ix_min": -15,
-		"ix_max": 25,
-		"iy_min": -30,
-		"iy_max": 25,
-		"roads": ["Kirchgasse", "Kirchhügelstrasse", "Winterthurerstrasse"],
-		## Legacy corridor tag for facing/bearing suite compatibility.
-		"corridor_id": "kirche",
+		"ix_max": 18,
+		"iy_min": -8,
+		"iy_max": 8,
+		"roads": ["Hauptstrasse"],
+		"corridor_id": "haupt",
 	},
-	"WINT-WEST": {
-		"ix_min": 20,
-		"ix_max": 50,
-		"iy_min": -35,
-		"iy_max": 40,
-		"roads": ["Winterthurerstrasse"],
-		"corridor_id": "spawn",
-	},
-	"WINT-NORD": {
-		## INDEX 25..55, −90..−30; ix_max +10 so east-side curb offsets stay in-cell.
-		"ix_min": 25,
-		"ix_max": 65,
-		"iy_min": -90,
-		"iy_max": -30,
-		"roads": ["Winterthurerstrasse"],
-		"corridor_id": "wint-nord",
-	},
-	"LAND-MITTE": {
-		"ix_min": 40,
-		"ix_max": 120,
-		"iy_min": -130,
-		"iy_max": -50,
-		"roads": ["Landstrasse"],
-		"corridor_id": "land-mitte",
-	},
-	"STAT-WEST": {
-		## INDEX 80..160, −70..−20; ±10 on axes for Stationsstrasse/Stadler curb samples.
-		"ix_min": 70,
-		"ix_max": 170,
-		"iy_min": -80,
-		"iy_max": -10,
-		"roads": ["Stationsstrasse", "Strehlgasse", "Stadlerstrasse"],
-		"corridor_id": "stat-west",
-	},
-	"STAT-BHF": {
-		## INDEX 155..210, −70..−25; ±10 so Bahnhof-band curb samples stay placeable.
-		"ix_min": 145,
-		"ix_max": 220,
-		"iy_min": -80,
-		"iy_max": -15,
-		"roads": ["Stationsstrasse", "Stadlerstrasse"],
-		"corridor_id": "stat-bhf",
-	},
-	"REUT-MITTE": {
-		## INDEX 45..95, −45..10; ±10 for Reutlinger/Schneckenwiese curb samples.
-		## Locals that cut the rect; exclude Winterthurer / Breite / Seebühl (other slices).
-		"ix_min": 35,
-		"ix_max": 105,
-		"iy_min": -55,
-		"iy_max": 20,
-		"roads": [
-			"Reutlingerstrasse",
-			"Schneckenwiesenstrasse",
-			"Eibenstrasse",
-			"Gartenstrasse",
-			"Oberwiesenstrasse",
-			"Schwalbenweg",
-			"Seestrasse",
-		],
-		"corridor_id": "reut-mitte",
-	},
-	"REUT-SE": {
-		## INDEX 70..120, −20..40; ±10 for SE curb samples / Wohnstiche.
-		## Locals that cut the rect; exclude Breite / Seebühl / Birch campus arterial.
-		"ix_min": 60,
-		"ix_max": 130,
-		"iy_min": -30,
-		"iy_max": 50,
-		"roads": [
-			"Reutlingerstrasse",
-			"Birchweg",
-			"Buchenstrasse",
-			"Gartenstrasse",
-			"Handschüsselweg",
-			"Oberwiesenstrasse",
-			"Schwalbenweg",
-			"Seestrasse",
-		],
-		"corridor_id": "reut-se",
-	},
-	"BREITE": {
-		## INDEX 70..140, −55..15; ±10 for Breitestrasse / Birchstrasse curb samples.
-		## Birchstrasse only campus-clear via landmark sep; exclude Seebühl primary.
-		"ix_min": 60,
-		"ix_max": 150,
-		"iy_min": -65,
-		"iy_max": 25,
-		"roads": ["Breitestrasse", "Birchstrasse"],
-		"corridor_id": "breite",
-	},
-	"SEEBUEHL": {
-		## INDEX 100..160, −50..20; ±10 so Seebühlstrasse west tip + Birch–Breite band fit.
-		## Birchstrasse residential / campus-clear stretches only (landmark sep).
-		"ix_min": 90,
-		"ix_max": 170,
-		"iy_min": -60,
-		"iy_max": 30,
-		"roads": ["Seebühlstrasse", "Breitestrasse", "Birchstrasse"],
-		"corridor_id": "seebuehl",
-	},
-	"OHR-NORD": {
-		## INDEX −230..−170, 80..130; ±10 for Ohringen SW curb samples.
-		## Ohringerstrasse listed (slice); OSM ribbon is N of these cells — locals place.
-		## Exclude Forrenberg/A1; campus/kiga cleared via landmark sep.
-		"ix_min": -240,
-		"ix_max": -160,
-		"iy_min": 70,
-		"iy_max": 140,
-		"roads": [
-			"Ohringerstrasse",
-			"Schulstrasse",
-			"Schaffhauserstrasse",
-			"Trottenstrasse",
-			"Rundstrasse",
-			"Friedenstrasse",
-			"Münzerstrasse",
-			"Rebhogerstrasse",
-			"Rütistrasse",
-			"Aspstrasse",
-			"Aubodenstrasse",
-		],
-		"corridor_id": "ohr-nord",
-	},
-	"OHR-SUED": {
-		## INDEX −230..−170, 125..175; ±10 for Schulstrasse-/Süd-Wohnzeilen.
-		## Locals that cut the rect; campus/kiga cleared via landmark sep.
-		"ix_min": -240,
-		"ix_max": -160,
-		"iy_min": 115,
-		"iy_max": 185,
-		"roads": [
-			"Ohringerstrasse",
-			"Schulstrasse",
-			"Schaffhauserstrasse",
-			"Trottenstrasse",
-			"Friedenstrasse",
-			"Rütistrasse",
-			"Aubodenstrasse",
-			"Erlenstrasse",
-			"Rebweg",
-		],
-		"corridor_id": "ohr-sued",
+	"WOHN": {
+		"ix_min": -8,
+		"ix_max": 18,
+		"iy_min": -14,
+		"iy_max": -5,
+		"roads": ["Wohnstrasse"],
+		"corridor_id": "wohn",
 	},
 }
 
 
 static func s01_ids() -> Array[String]:
-	return ["KIRCHE-KERN", "WINT-WEST"]
+	return ["KERN", "WOHN"]
 
 
 static func s02_ids() -> Array[String]:
-	return ["WINT-NORD", "LAND-MITTE"]
+	return []
 
 
 static func s03_ids() -> Array[String]:
-	return ["STAT-WEST", "STAT-BHF"]
+	return []
 
 
 static func s04_ids() -> Array[String]:
-	return ["REUT-MITTE", "REUT-SE"]
+	return []
 
 
 static func s05_ids() -> Array[String]:
-	return ["BREITE", "SEEBUEHL"]
+	return []
 
 
 static func s06_ids() -> Array[String]:
-	return ["OHR-NORD", "OHR-SUED"]
+	return []
 
 
 static func active_ids() -> Array[String]:
-	## Placement order: S01 → … → S06; shared placed[] across all.
-	var out: Array[String] = []
-	out.append_array(s01_ids())
-	out.append_array(s02_ids())
-	out.append_array(s03_ids())
-	out.append_array(s04_ids())
-	out.append_array(s05_ids())
-	out.append_array(s06_ids())
-	return out
+	return s01_ids()
 
 
 static func get_quarter(id: String) -> Dictionary:
@@ -238,7 +93,6 @@ static func world_to_cell(pos: Vector2) -> Vector2i:
 	return DEBUG_GRID_SCRIPT.world_to_cell(pos, SeuzachGeo.FIELD_WU)
 
 
-## Chebyshev distance from a field cell to a quarter AABB (0 = inside).
 static func cell_distance_to_bounds(cell: Vector2i, bounds: Dictionary) -> int:
 	if bounds.is_empty():
 		return 999999
@@ -255,7 +109,6 @@ static func cell_distance_to_bounds(cell: Vector2i, bounds: Dictionary) -> int:
 	return maxi(dx, dy)
 
 
-## Quarters near a world position (margin in field cells). Always includes S01 spawn pair.
 static func ids_near_world(pos: Vector2, margin_cells: int = 2) -> Array[String]:
 	var cell: Vector2i = world_to_cell(pos)
 	var out: Array[String] = []

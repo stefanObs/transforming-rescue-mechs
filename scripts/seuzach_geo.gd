@@ -79,11 +79,12 @@ const KIGA_OHRINGEN_LON := 8.7126832
 
 ## z_index = ACTOR_Z_BASE + floor(y / Z_Y_DIV) + 1; Canvas-Max 4096.
 const Z_Y_DIV := 20.0
-## Gras / F1-Raster: Seuzach-Dorf + Ohringen + Forrenberg.
-const WORLD_BOUNDS := Rect2(Vector2(-25000, -24000), Vector2(57000, 42000))
-## OSM Winterthurerstrasse vertex in WINT-KERN (Feld 38, −2); Kirche = (0,0).
-const WINTERTHURER_SPAWN := Vector2(3861.9, -101.0)
-const HUB_ENTER_SOUTH_WU := 320.0
+const SchemaVillage := preload("res://scripts/schema_village.gd")
+## Compact schema-dorf (~80×60 Felder). OSM CLIP lives in archive/seuzach-osm/.
+const WORLD_BOUNDS := Rect2(Vector2(-2400, -2400), Vector2(8000, 6000))
+## Hauptstrasse east of Kirche (schema).
+const WINTERTHURER_SPAWN := Vector2(500, 0)
+const HUB_ENTER_SOUTH_WU := 200.0
 
 
 static func meters_per_deg_lon() -> float:
@@ -113,11 +114,11 @@ static func village_east() -> Vector2:
 
 
 static func village_ns_fields() -> float:
-	return absf(village_north().y - village_south().y) / FIELD_WU
+	return WORLD_BOUNDS.size.y / FIELD_WU
 
 
 static func village_ew_fields() -> float:
-	return absf(village_east().x - village_west().x) / FIELD_WU
+	return WORLD_BOUNDS.size.x / FIELD_WU
 
 
 static func actor_z(world_y: float, z_base: int) -> int:
@@ -129,11 +130,11 @@ static func prop_z(world_y: float, z_base: int) -> int:
 
 
 static func forrenberg_world() -> Vector2:
-	return gps_to_world(FORRENBERG_LAT, FORRENBERG_LON)
+	return SchemaVillage.HUB
 
 
 static func winterthurer_spawn() -> Vector2:
-	return WINTERTHURER_SPAWN
+	return SchemaVillage.SPAWN
 
 
 static func default_world_spawn() -> Vector2:
@@ -141,76 +142,76 @@ static func default_world_spawn() -> Vector2:
 
 
 static func hub_enter_pos() -> Vector2:
-	return forrenberg_world() + Vector2(0.0, HUB_ENTER_SOUTH_WU)
+	return SchemaVillage.HUB_ENTER
 
 
 static func birch_world() -> Vector2:
-	return gps_to_world(BIRCH_LAT, BIRCH_LON)
+	return SchemaVillage.BIRCH_A
 
 
 static func birch_schulhaus_a_world() -> Vector2:
-	return gps_to_world(BIRCH_SCHULHAUS_A_LAT, BIRCH_SCHULHAUS_A_LON)
+	return SchemaVillage.BIRCH_A
 
 
 static func birch_schulhaus_b_world() -> Vector2:
-	return gps_to_world(BIRCH_SCHULHAUS_B_LAT, BIRCH_SCHULHAUS_B_LON)
+	return SchemaVillage.BIRCH_B
 
 
 static func birch_turnhalle_world() -> Vector2:
-	return gps_to_world(BIRCH_TURNHALLE_LAT, BIRCH_TURNHALLE_LON)
+	return SchemaVillage.BIRCH_TURN
 
 
 static func rietacker_world() -> Vector2:
-	return gps_to_world(RIETACKER_LAT, RIETACKER_LON)
+	return SchemaVillage.RIETACKER_A
 
 
 static func rietacker_schulhaus_a_world() -> Vector2:
-	return gps_to_world(RIETACKER_SCHULHAUS_A_LAT, RIETACKER_SCHULHAUS_A_LON)
+	return SchemaVillage.RIETACKER_A
 
 
 static func rietacker_schulhaus_b_world() -> Vector2:
-	return gps_to_world(RIETACKER_SCHULHAUS_B_LAT, RIETACKER_SCHULHAUS_B_LON)
+	return SchemaVillage.RIETACKER_B
 
 
 static func rietacker_turnhalle_world() -> Vector2:
-	return gps_to_world(RIETACKER_TURNHALLE_LAT, RIETACKER_TURNHALLE_LON)
+	return SchemaVillage.RIETACKER_TURN
 
 
 static func ohringen_world() -> Vector2:
-	return gps_to_world(OHRINGEN_LAT, OHRINGEN_LON)
+	return SchemaVillage.OHRINGEN_A
 
 
 static func ohringen_schulhaus_a_world() -> Vector2:
-	return gps_to_world(OHRINGEN_SCHULHAUS_A_LAT, OHRINGEN_SCHULHAUS_A_LON)
+	return SchemaVillage.OHRINGEN_A
 
 
 static func ohringen_schulhaus_b_world() -> Vector2:
-	return gps_to_world(OHRINGEN_SCHULHAUS_B_LAT, OHRINGEN_SCHULHAUS_B_LON)
+	return SchemaVillage.OHRINGEN_B
 
 
 static func ohringen_turnhalle_world() -> Vector2:
-	return gps_to_world(OHRINGEN_TURNHALLE_LAT, OHRINGEN_TURNHALLE_LON)
+	return SchemaVillage.OHRINGEN_TURN
 
 
 static func bahnhof_world() -> Vector2:
-	return gps_to_world(BAHNHOF_LAT, BAHNHOF_LON)
+	return SchemaVillage.BAHNHOF
 
 
 static func badi_world() -> Vector2:
-	return gps_to_world(BADI_LAT, BADI_LON)
+	return SchemaVillage.BADI
 
 
 static func kiga_bachtobel_world() -> Vector2:
-	return gps_to_world(KIGA_BACHTOBEL_LAT, KIGA_BACHTOBEL_LON)
+	return SchemaVillage.KIGA_BACHTOBEL
 
 
 static func kiga_weid_world() -> Vector2:
-	return gps_to_world(KIGA_WEID_LAT, KIGA_WEID_LON)
+	return SchemaVillage.KIGA_WEID
 
 
 static func kiga_schneckenwiese_world() -> Vector2:
-	return gps_to_world(KIGA_SCHNECKENWIESE_LAT, KIGA_SCHNECKENWIESE_LON)
+	return SchemaVillage.KIGA_SCHNECKENWIESE
 
 
 static func kiga_ohringen_world() -> Vector2:
-	return gps_to_world(KIGA_OHRINGEN_LAT, KIGA_OHRINGEN_LON)
+	return SchemaVillage.KIGA_OHRINGEN

@@ -6,6 +6,7 @@ const RoadKitLib := preload("res://scripts/road_kit.gd")
 const RailwayKitLib := preload("res://scripts/railway_kit.gd")
 const WaterKitLib := preload("res://scripts/water_kit.gd")
 const HousingQuarters := preload("res://scripts/housing_quarters.gd")
+const SchemaVillage := preload("res://scripts/schema_village.gd")
 const ART := "res://assets/art/"
 const HUB_SCENE := "res://scenes/hub_station.tscn"
 ## Unused; buildings use SCHOOL_SCALE / LANDMARK_SCALE (not PROP_SCALE).
@@ -29,25 +30,22 @@ const HOUSE_CURB_SLACK := 6.0
 ## S01 world-perf: nudge step (was 8) + spatial road grid cell size.
 const NUDGE_STEP := 28.0
 const ROAD_SPATIAL_CELL := 512.0
-## S02: Birch/Rietacker per-building multipliers on SCHOOL_SCALE (OSM footprint ratios).
-const BIRCH_A_SCALE_MULT := 1.68
-const BIRCH_B_SCALE_MULT := 1.34
-const BIRCH_TURNHALLE_SCALE_MULT := 2.22
-const RIETACKER_A_SCALE_MULT := 1.04
-const RIETACKER_B_SCALE_MULT := 1.21
-const RIETACKER_TURNHALLE_SCALE_MULT := 2.62
-## S03: Ohringen campus + kiga per-building multipliers on SCHOOL_SCALE (OSM footprint ratios).
-const OHRINGEN_A_SCALE_MULT := 1.42
-const OHRINGEN_B_SCALE_MULT := 1.28
-const OHRINGEN_TURNHALLE_SCALE_MULT := 1.21
-const KIGA_OHRINGEN_SCALE_MULT := 0.78
-## S04: Seuzach kigas Bachtobel/Weid/Schneckenwiese multipliers on SCHOOL_SCALE (OSM footprint ratios).
-const KIGA_BACHTOBEL_SCALE_MULT := 1.00
-const KIGA_WEID_SCALE_MULT := 0.43
-const KIGA_SCHNECKENWIESE_SCALE_MULT := 1.12
-## S05: Bahnhof + Badi multipliers on LANDMARK_SCALE (OSM footprint ratios).
-const BAHNHOF_SCALE_MULT := 0.79
-const BADI_SCALE_MULT := 1.01
+## Schema-Dorf: compact footprints (no OSM size multipliers).
+const BIRCH_A_SCALE_MULT := 1.00
+const BIRCH_B_SCALE_MULT := 1.00
+const BIRCH_TURNHALLE_SCALE_MULT := 1.00
+const RIETACKER_A_SCALE_MULT := 1.00
+const RIETACKER_B_SCALE_MULT := 1.00
+const RIETACKER_TURNHALLE_SCALE_MULT := 1.00
+const OHRINGEN_A_SCALE_MULT := 1.00
+const OHRINGEN_B_SCALE_MULT := 1.00
+const OHRINGEN_TURNHALLE_SCALE_MULT := 1.00
+const KIGA_OHRINGEN_SCALE_MULT := 0.85
+const KIGA_BACHTOBEL_SCALE_MULT := 0.85
+const KIGA_WEID_SCALE_MULT := 0.85
+const KIGA_SCHNECKENWIESE_SCALE_MULT := 0.85
+const BAHNHOF_SCALE_MULT := 0.85
+const BADI_SCALE_MULT := 0.90
 ## Ground polygons sit at z ≈ −50…−34. Actors/props share one BASE so Y-sort works
 ## while staying above ground. Godot canvas z_index max is 4096.
 const ACTOR_Z_BASE := 2000
@@ -94,10 +92,10 @@ const ROAD_DEBUG_Z := 3900
 const ROAD_DEBUG_SPACING := 900.0
 const DEBUG_GRID_SCRIPT := preload("res://scripts/debug_grid.gd")
 const DEBUG_GRID_CELL := 100.0
-const ROADS_JSON := "res://data/seuzach_roads.json"
-const RAILS_JSON := "res://data/seuzach_rails.json"
-const WATER_JSON := "res://data/seuzach_water.json"
-const FORESTS_JSON := "res://data/seuzach_forests.json"
+const ROADS_JSON := "res://data/seuzach_schema_roads.json"
+const RAILS_JSON := "res://data/seuzach_schema_rails.json"
+const WATER_JSON := "res://data/seuzach_schema_water.json"
+const FORESTS_JSON := "res://data/seuzach_schema_forests.json"
 const FOREST_FLOOR_Z := -48
 const RAIL_HW := 38.0
 const STREAM_HW := 16.0
@@ -130,6 +128,7 @@ var _housing_variants: Array[String] = []
 var _housing_landmark_positions: Array[Vector2] = []
 var _housing_stream_ready: bool = false
 var _status_debug_cell: Vector2i = Vector2i(0x7fffffff, 0x7fffffff)
+var _occupancy: Array[Rect2] = []
 
 
 func _ready() -> void:
@@ -705,17 +704,19 @@ func _add_road_marker(
 
 
 func _place_landmarks() -> void:
-	## Street map + school clusters + kindergartens + Bahnhof + Badi + corridor housing + forest silhouettes.
-	## No hub facade.
+	## Schema-Dorf: civic, shops, campuses, station, hub, housing, forest. Occupancy AABBs.
 	for child in _props.get_children():
 		child.free()
 	_prop_parent = _props
+	_occupancy.clear()
 	var t0 := Time.get_ticks_msec()
 	_add_hub_enter_zone()
+	_place_dorfkern_and_shops()
 	_place_school_clusters()
 	_place_kindergartens()
 	_place_bahnhof()
 	_place_badi()
+	_place_hub_and_tankstelle()
 	var t_landmarks := Time.get_ticks_msec()
 	print("[world_sandbox] landmarks: %d ms" % (t_landmarks - t0))
 	_place_spawn_housing()
@@ -724,6 +725,116 @@ func _place_landmarks() -> void:
 	_place_forest_silhouettes()
 	var t_forest := Time.get_ticks_msec()
 	print("[world_sandbox] forest: %d ms" % (t_forest - t_housing))
+
+
+func _occupancy_hits(rect: Rect2) -> bool:
+	for other in _occupancy:
+		if rect.intersects(other):
+			return true
+	return false
+
+
+func _register_occupancy(rect: Rect2) -> void:
+	_occupancy.append(rect)
+
+
+func _place_dorfkern_and_shops() -> void:
+	_prop_parent = _props
+	_add_building_prop(
+		"landmark_kirche_seuzach.png",
+		SchemaVillage.KIRCHE,
+		LANDMARK_SCALE,
+		{"landmark_id": "kirche_seuzach", "district": "seuzach", "poi_type": "church"},
+		"kirche_seuzach"
+	)
+	_add_building_prop(
+		"landmark_gemeindehaus_seuzach.png",
+		SchemaVillage.GEMEINDE,
+		LANDMARK_SCALE,
+		{"landmark_id": "gemeindehaus", "district": "seuzach"},
+		"gemeindehaus"
+	)
+	_add_building_prop(
+		"landmark_feuerwehr_seuzach.png",
+		SchemaVillage.FEUERWEHR,
+		LANDMARK_SCALE,
+		{"landmark_id": "feuerwehr", "district": "seuzach"},
+		"feuerwehr"
+	)
+	_add_building_prop(
+		"landmark_laden_a.png",
+		SchemaVillage.LADEN_A,
+		LANDMARK_SCALE,
+		{"landmark_id": "laden_a", "district": "seuzach"},
+		"laden_a"
+	)
+	_add_building_prop(
+		"landmark_laden_b.png",
+		SchemaVillage.LADEN_B,
+		LANDMARK_SCALE,
+		{"landmark_id": "laden_b", "district": "seuzach"},
+		"laden_b"
+	)
+	_add_building_prop(
+		"landmark_laden_c.png",
+		SchemaVillage.LADEN_C,
+		LANDMARK_SCALE,
+		{"landmark_id": "laden_c", "district": "seuzach"},
+		"laden_c"
+	)
+	_add_building_prop(
+		"landmark_restaurant_a.png",
+		SchemaVillage.RESTAURANT_A,
+		LANDMARK_SCALE,
+		{"landmark_id": "restaurant_a", "district": "seuzach"},
+		"restaurant_a"
+	)
+	_add_building_prop(
+		"landmark_restaurant_b.png",
+		SchemaVillage.RESTAURANT_B,
+		LANDMARK_SCALE,
+		{"landmark_id": "restaurant_b", "district": "seuzach"},
+		"restaurant_b"
+	)
+	_add_building_prop(
+		"landmark_sportplatz.png",
+		SchemaVillage.SPORTPLATZ,
+		LANDMARK_SCALE,
+		{"landmark_id": "sportplatz", "district": "seuzach"},
+		"sportplatz"
+	)
+	_add_building_prop(
+		"landmark_spielplatz.png",
+		SchemaVillage.SPIELPLATZ,
+		LANDMARK_SCALE,
+		{"landmark_id": "spielplatz", "district": "seuzach"},
+		"spielplatz"
+	)
+	_add_building_prop(
+		"landmark_kirche_st_martin.png",
+		SchemaVillage.ST_MARTIN,
+		LANDMARK_SCALE,
+		{"landmark_id": "kirche_st_martin", "district": "ohringen", "poi_type": "church"},
+		"kirche_st_martin"
+	)
+
+
+func _place_hub_and_tankstelle() -> void:
+	_prop_parent = _props
+	_add_building_prop(
+		"hub_station.png",
+		SchemaVillage.HUB,
+		HUB_SCALE,
+		{"landmark_id": "hub_station", "district": "forrenberg"},
+		"hub_station"
+	)
+	_add_building_prop(
+		"landmark_tankstelle_seuzach.png",
+		SchemaVillage.TANKSTELLE,
+		LANDMARK_SCALE,
+		{"landmark_id": "tankstelle", "district": "forrenberg"},
+		"tankstelle"
+	)
 
 
 func _place_spawn_housing() -> void:
@@ -981,7 +1092,7 @@ func _place_housing_along_roads(
 					continue
 				side = float(facing["side"])
 				var local_perp: Vector2 = facing["perp"]
-				bearing = str(facing["bearing"])
+				bearing = "ew"
 				variant = "%s_%s" % [base, bearing]
 				file_name = "%s.png" % variant
 				path = ART + file_name
@@ -1019,7 +1130,7 @@ func _place_housing_along_roads(
 						continue
 					side = float(facing["side"])
 					local_perp = facing["perp"]
-					var bearing_after := str(facing["bearing"])
+					var bearing_after := "ew"
 					if bearing_after != bearing:
 						bearing = bearing_after
 						variant = "%s_%s" % [base, bearing]
@@ -1065,6 +1176,9 @@ func _place_housing_along_roads(
 				}
 				if not quartier_id.is_empty():
 					meta["housing_quartier"] = quartier_id
+				var occ := _house_clear_aabb(pos, tex, HOUSE_SCALE)
+				if _occupancy_hits(occ):
+					continue
 				var spr := _add_prop(
 					file_name,
 					pos,
@@ -1075,6 +1189,7 @@ func _place_housing_along_roads(
 				)
 				if spr == null:
 					continue
+				_register_occupancy(occ)
 				placed.append(pos)
 				house_i += 1
 	return Vector2i(variant_i, house_i)
@@ -1110,13 +1225,9 @@ func _housing_facing_on_corridor(
 	}
 
 
-func _street_bearing_from_tangent(tangent: Vector2) -> String:
-	## Binary bearing from road tangent (+X east, +Y south).
-	var t := tangent
-	if t.length_squared() < 0.0001:
-		return "ew"
-	t = t.normalized()
-	return "ew" if absf(t.x) >= absf(t.y) else "ns"
+func _street_bearing_from_tangent(_tangent: Vector2) -> String:
+	## Schema-Dorf: only authored _ew façades (no _ns, no rotation).
+	return "ew"
 
 
 func _street_door_flip_h(bearing: String, toward_road: Vector2) -> bool:
@@ -1776,7 +1887,13 @@ func _add_building_prop(
 	if not _sprite_clears_named_roads(cleared, tex, scale, roads):
 		## Never place a building that still paints on RoadKit asphalt.
 		return null
-	return _add_prop(file_name, cleared, scale, metas, node_name, flip_h)
+	var occ := _building_clear_aabb(cleared, tex, scale)
+	if _occupancy_hits(occ):
+		return null
+	var spr := _add_prop(file_name, cleared, scale, metas, node_name, flip_h)
+	if spr:
+		_register_occupancy(occ)
+	return spr
 
 
 func _named_road_by_name(road_name: String, roads: Array[Dictionary], near: Vector2) -> Dictionary:
@@ -1836,7 +1953,7 @@ func _add_school_street_prop(
 	var facing := _housing_facing_on_corridor(pos, target, fallback_perp, fallback_tangent)
 	if facing.is_empty():
 		return null
-	bearing = str(facing["bearing"])
+	bearing = "ew"
 	file_name = "%s_%s.png" % [base_without_suffix, bearing]
 	tex = _load_art_texture(file_name)
 	if tex == null:
@@ -1877,12 +1994,15 @@ func _add_school_street_prop(
 		return null
 	var side := float(facing["side"])
 	var local_perp: Vector2 = facing["perp"]
-	bearing = str(facing["bearing"])
+	bearing = "ew"
 	file_name = "%s_%s.png" % [base_without_suffix, bearing]
 	tex = _load_art_texture(file_name)
 	if tex == null:
 		return null
 	if not _sprite_clears_named_roads(pos, tex, scale, roads, false, bearing):
+		return null
+	var occ := _building_clear_aabb(pos, tex, scale)
+	if _occupancy_hits(occ):
 		return null
 	var toward_road := (-local_perp * side).normalized()
 	var flip := _street_door_flip_h(bearing, toward_road)
@@ -1891,7 +2011,10 @@ func _add_school_street_prop(
 	placed_metas["street_bearing"] = bearing
 	placed_metas["faces_street"] = true
 	placed_metas["street_name"] = target_road_name
-	return _add_prop(file_name, pos, scale, placed_metas, node_name, flip)
+	var spr := _add_prop(file_name, pos, scale, placed_metas, node_name, flip)
+	if spr:
+		_register_occupancy(occ)
+	return spr
 
 
 func _place_school_clusters() -> void:
@@ -1902,7 +2025,7 @@ func _place_school_clusters() -> void:
 		SCHOOL_SCALE * BIRCH_A_SCALE_MULT,
 		{"landmark_id": "schulhaus_birch", "school_cluster": "birch", "district": "birch"},
 		"schulhaus_birch_a",
-		"Bachwiesenstrasse"
+		"Schulstrasse"
 	)
 	_add_school_street_prop(
 		"landmark_schulhaus_birch_b",
@@ -1910,7 +2033,7 @@ func _place_school_clusters() -> void:
 		SCHOOL_SCALE * BIRCH_B_SCALE_MULT,
 		{"landmark_id": "schulhaus_birch", "school_cluster": "birch", "district": "birch"},
 		"schulhaus_birch_b",
-		"Birchstrasse"
+		"Schulstrasse"
 	)
 	_add_school_street_prop(
 		"landmark_turnhalle_birch",
@@ -1918,7 +2041,7 @@ func _place_school_clusters() -> void:
 		SCHOOL_SCALE * BIRCH_TURNHALLE_SCALE_MULT,
 		{"landmark_id": "turnhalle_birch", "school_cluster": "birch", "district": "birch", "poi_type": "gym"},
 		"turnhalle_birch",
-		"Birchstrasse"
+		"Schulstrasse"
 	)
 	_add_school_street_prop(
 		"landmark_schulhaus_rietacker_a",
@@ -1926,7 +2049,7 @@ func _place_school_clusters() -> void:
 		SCHOOL_SCALE * RIETACKER_A_SCALE_MULT,
 		{"landmark_id": "schulhaus_rietacker", "school_cluster": "rietacker", "district": "rietacker"},
 		"schulhaus_rietacker_a",
-		"Ohringerstrasse"
+		"Schulstrasse"
 	)
 	## b GPS is ~1291 wu north of Ohringer (helper does not pull toward the ribbon).
 	## Target Püntenstrasse so the NE tract has a named polyline in the setback band.
@@ -1937,7 +2060,7 @@ func _place_school_clusters() -> void:
 		SCHOOL_SCALE * RIETACKER_B_SCALE_MULT,
 		{"landmark_id": "schulhaus_rietacker", "school_cluster": "rietacker", "district": "rietacker"},
 		"schulhaus_rietacker_b",
-		"Püntenstrasse"
+		"Schulstrasse"
 	)
 	_add_school_street_prop(
 		"landmark_turnhalle_rietacker",
@@ -1945,7 +2068,7 @@ func _place_school_clusters() -> void:
 		SCHOOL_SCALE * RIETACKER_TURNHALLE_SCALE_MULT,
 		{"landmark_id": "turnhalle_rietacker", "school_cluster": "rietacker", "district": "rietacker", "poi_type": "gym"},
 		"turnhalle_rietacker",
-		"Turnerstrasse"
+		"Schulstrasse"
 	)
 	var ohringen := Node2D.new()
 	ohringen.name = "DistrictOhringen"
@@ -1953,30 +2076,27 @@ func _place_school_clusters() -> void:
 	ohringen.position = Vector2.ZERO
 	_props.add_child(ohringen)
 	_prop_parent = ohringen
-	## S03: Ohringen street-aligned like Birch/Rietacker; rotation 0.
-	_add_school_street_prop(
-		"landmark_schulhaus_ohringen_a",
+	## Diagonal Ohringerstrasse: place _ew façades via building prop (no NS rotation).
+	_add_building_prop(
+		"landmark_schulhaus_ohringen_a_ew.png",
 		SeuzachGeo.ohringen_schulhaus_a_world(),
 		SCHOOL_SCALE * OHRINGEN_A_SCALE_MULT,
-		{"landmark_id": "schulhaus_ohringen", "school_cluster": "ohringen", "district": "ohringen"},
-		"schulhaus_ohringen_a",
-		"Schulstrasse"
+		{"landmark_id": "schulhaus_ohringen", "school_cluster": "ohringen", "district": "ohringen", "street_bearing": "ew"},
+		"schulhaus_ohringen_a"
 	)
-	_add_school_street_prop(
-		"landmark_schulhaus_ohringen_b",
+	_add_building_prop(
+		"landmark_schulhaus_ohringen_b_ew.png",
 		SeuzachGeo.ohringen_schulhaus_b_world(),
 		SCHOOL_SCALE * OHRINGEN_B_SCALE_MULT,
-		{"landmark_id": "schulhaus_ohringen", "school_cluster": "ohringen", "district": "ohringen"},
-		"schulhaus_ohringen_b",
-		"Schulstrasse"
+		{"landmark_id": "schulhaus_ohringen", "school_cluster": "ohringen", "district": "ohringen", "street_bearing": "ew"},
+		"schulhaus_ohringen_b"
 	)
-	_add_school_street_prop(
-		"landmark_turnhalle_ohringen",
+	_add_building_prop(
+		"landmark_turnhalle_ohringen_ew.png",
 		SeuzachGeo.ohringen_turnhalle_world(),
 		SCHOOL_SCALE * OHRINGEN_TURNHALLE_SCALE_MULT,
-		{"landmark_id": "turnhalle_ohringen", "school_cluster": "ohringen", "district": "ohringen", "poi_type": "gym"},
-		"turnhalle_ohringen",
-		"Schaffhauserstrasse"
+		{"landmark_id": "turnhalle_ohringen", "school_cluster": "ohringen", "district": "ohringen", "poi_type": "gym", "street_bearing": "ew"},
+		"turnhalle_ohringen"
 	)
 	_prop_parent = _props
 
@@ -1989,7 +2109,7 @@ func _place_kindergartens() -> void:
 		SCHOOL_SCALE * KIGA_BACHTOBEL_SCALE_MULT,
 		{"landmark_id": "kiga_bachtobel", "kindergarten_id": "kiga_bachtobel", "district": "bachtobel"},
 		"kiga_bachtobel",
-		"Bachtobelstrasse"
+		"Schulstrasse"
 	)
 	_add_school_street_prop(
 		"landmark_kiga_weid",
@@ -1997,7 +2117,7 @@ func _place_kindergartens() -> void:
 		SCHOOL_SCALE * KIGA_WEID_SCALE_MULT,
 		{"landmark_id": "kiga_weid", "kindergarten_id": "kiga_weid", "district": "weid"},
 		"kiga_weid",
-		"Weidstrasse"
+		"Schulstrasse"
 	)
 	## West of Schneckenwiesenstrasse. The 2-pt stub ended ~322 wu north of GPS (endpoint air-line);
 	## a south vertex was appended so the NS ribbon runs east of ~6995 (setback + visible asphalt).
@@ -2012,21 +2132,21 @@ func _place_kindergartens() -> void:
 			"district": "schneckenwiese",
 		},
 		"kiga_schneckenwiese",
-		"Schneckenwiesenstrasse"
+		"Schulstrasse"
 	)
 	var district := _props.get_node_or_null("DistrictOhringen")
 	_prop_parent = district if district else _props
-	_add_school_street_prop(
-		"landmark_kiga_ohringen",
+	_add_building_prop(
+		"landmark_kiga_ohringen_ew.png",
 		SeuzachGeo.kiga_ohringen_world(),
 		SCHOOL_SCALE * KIGA_OHRINGEN_SCALE_MULT,
 		{
 			"landmark_id": "kiga_ohringen",
 			"kindergarten_id": "kiga_ohringen",
 			"district": "ohringen",
+			"street_bearing": "ew",
 		},
-		"kiga_ohringen",
-		"Schulstrasse"
+		"kiga_ohringen"
 	)
 	_prop_parent = _props
 

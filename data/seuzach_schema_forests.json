@@ -1,0 +1,36 @@
+{
+  "meta": {
+    "source": "schema-village forest edge",
+    "field_m": 5.3,
+    "field_wu": 100.0,
+    "clip": [-2400.0, -2400.0, 5600.0, 3600.0]
+  },
+  "forests": [
+    {
+      "name": "Westwald",
+      "osm": "forest",
+      "points": [
+        [-2400.0, -2400.0],
+        [-2000.0, -2400.0],
+        [-2000.0, 3600.0],
+        [-2400.0, 3600.0]
+      ]
+    },
+    {
+      "name": "Suedwald",
+      "osm": "forest",
+      "points": [
+        [-2000.0, 3200.0],
+        [5600.0, 3200.0],
+        [5600.0, 3600.0],
+        [-2000.0, 3600.0]
+      ]
+    }
+  ],
+  "silhouettes": [
+    {"name": "Westwald", "art": "a", "pos": [-2200.0, -200.0]},
+    {"name": "Westwald", "art": "b", "pos": [-2200.0, 800.0]},
+    {"name": "Suedwald", "art": "a", "pos": [400.0, 3400.0]},
+    {"name": "Suedwald", "art": "b", "pos": [2200.0, 3400.0]}
+  ]
+}

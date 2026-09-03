@@ -128,7 +128,7 @@ func _test_world_hub_enter_and_collision() -> void:
 
 func _assert_hub_enter_clear_of_collision(world: Node, hub_enter: Area2D) -> void:
 	var hub_spr: Sprite2D = world.find_child("hub_station", true, false) as Sprite2D
-	_assert(hub_spr == null, "street map has no hub_station sprite")
+	_assert(hub_spr != null, "schema street map has hub_station sprite")
 
 	var spawn_cap := _player_capsule_aabb(DEFAULT_WORLD_SPAWN)
 	var enter_cap := _player_capsule_aabb(HUB_ENTER_POS)

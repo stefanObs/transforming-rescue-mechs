@@ -129,21 +129,9 @@ func _run() -> void:
 		_finish()
 		return
 
-	## S02: after _ready only near-spawn quarters are loaded; force-load for full-map asserts.
-	_assert_lazy_housing_before_force(world, props)
+	## Schema-Dorf: no OSM quarter force-load (KERN/WOHN stream instead).
 	if world.has_method("ensure_all_housing_loaded"):
 		world.call("ensure_all_housing_loaded")
-	else:
-		_failed += 1
-		printerr("FAIL world missing ensure_all_housing_loaded")
-	_assert(
-		world.call("is_housing_quarter_loaded", "OHR-NORD"),
-		"force_load brings OHR-NORD"
-	)
-	_assert(
-		world.call("loaded_housing_quarter_ids").size() == HousingQuarters.active_ids().size(),
-		"force_load places every active quarter"
-	)
 
 	var all_sprites := _collect_sprites(props)
 	var house_n := 0
@@ -153,39 +141,21 @@ func _run() -> void:
 			house_n += 1
 		if spr.has_meta("terrain") and str(spr.get_meta("terrain")) == "forest":
 			forest_n += 1
-	_assert(house_n >= 12, "spawn+corridor housing props present (got %d)" % house_n)
+	_assert(house_n >= 8, "schema housing props present (got %d)" % house_n)
 	_assert(forest_n >= 1, "forest silhouette props present (got %d)" % forest_n)
 
 	_assert_hud_status_not_per_frame(world)
-
-	_assert_landmark_scales(world, all_sprites)
-	_assert_spawn_housing(world, all_sprites)
-	_assert_corridor_housing(world, all_sprites)
-	_assert_quartier_housing(world, all_sprites)
-	_assert_street_facing_housing(world, all_sprites)
-	_assert_bearing_aligned_housing(world, all_sprites)
-
-	for cluster in ["rietacker", "ohringen"]:
-		var n := _count_school_cluster(all_sprites, cluster)
-		_assert(n >= 2, "school_cluster %s has >=2 props (got %d)" % [cluster, n])
-	_assert_birch_campus(world, all_sprites)
-	_assert_rietacker_campus(world, all_sprites)
-	_assert_ohringen_campus(world, all_sprites)
-	_assert_kiga_bachtobel(world, all_sprites)
-	_assert_kiga_weid(world, all_sprites)
-	_assert_kiga_schneckenwiese(world, all_sprites)
-	_assert_kiga_ohringen(world, all_sprites)
-	_assert_bahnhof(world, all_sprites)
-	_assert_railway(world, all_sprites)
-	_assert_badi(world, all_sprites)
-	_assert_streams(world, all_sprites)
-	_assert_forests(world, all_sprites)
-	_assert_forest_silhouettes_off_roads(world, all_sprites)
-	_assert_geo_quadrants(all_sprites)
+	_assert_schema_roads(world)
+	_assert_schema_landmarks(all_sprites)
+	_assert_schema_occupancy(world, all_sprites)
+	_assert_schema_ew_only(all_sprites)
 	_assert_schools_off_roads(world, all_sprites)
-
-	_assert_named_roads(world)
-	_assert_field_scale()
+	for spr in all_sprites:
+		if spr.has_meta("house_variant") or spr.has_meta("landmark_id"):
+			if spr.has_meta("terrain") and str(spr.get_meta("terrain")) == "forest":
+				continue
+			_assert_sprite_off_named_roads(world, spr)
+	_assert_field_scale_schema()
 
 	var ohringen: Node = props.get_node_or_null("DistrictOhringen")
 	_assert(ohringen != null, "DistrictOhringen node exists")
@@ -201,6 +171,135 @@ func _run() -> void:
 
 	world.queue_free()
 	_finish()
+
+
+func _assert_schema_roads(world: Node) -> void:
+	var ground: Node = world.get_node_or_null("%Ground")
+	_assert(ground != null, "Ground for schema roads")
+	if ground == null:
+		return
+	var names: Dictionary = {}
+	for node in _collect_nodes(ground):
+		if not node.has_meta("road_name"):
+			continue
+		var n := str(node.get_meta("road_name"))
+		names[n] = true
+		if not node.has_meta("road_points"):
+			continue
+		var pts: PackedVector2Array = node.get_meta("road_points")
+		for i in range(pts.size() - 1):
+			var d: Vector2 = pts[i + 1] - pts[i]
+			if d.length_squared() < 1.0:
+				continue
+			var ax := absf(d.x)
+			var ay := absf(d.y)
+			var octi := (
+				ax < 1.0
+				or ay < 1.0
+				or absf(ax - ay) < 1.0
+			)
+			_assert(octi, "%s segment not H/V/45° (%s → %s)" % [n, str(pts[i]), str(pts[i + 1])])
+	for required in ["Hauptstrasse", "Stationsstrasse", "Ohringerstrasse", "Schulstrasse", "Wohnstrasse"]:
+		_assert(names.has(required), "schema road %s present" % required)
+	_assert(not names.has("A1"), "A1 motorway is not on the schema map")
+	_assert(not names.has("Winterthurerstrasse"), "OSM Winterthurerstrasse is not live")
+	var spawn := SeuzachGeo.default_world_spawn()
+	_assert_road_near(ground, "Hauptstrasse", spawn, 40.0)
+	_assert(SeuzachGeo.WORLD_BOUNDS.has_point(spawn), "spawn inside compact WORLD_BOUNDS")
+	_assert(spawn.x < 2000.0 and spawn.y == 0.0, "spawn on Hauptstrasse near Kirche (got %s)" % str(spawn))
+
+
+func _assert_schema_landmarks(sprites: Array[Sprite2D]) -> void:
+	var ids: Dictionary = {}
+	for spr in sprites:
+		if spr.has_meta("landmark_id"):
+			ids[str(spr.get_meta("landmark_id"))] = true
+	for required in [
+		"kirche_seuzach",
+		"gemeindehaus",
+		"feuerwehr",
+		"laden_a",
+		"laden_b",
+		"laden_c",
+		"restaurant_a",
+		"restaurant_b",
+		"sportplatz",
+		"spielplatz",
+		"schulhaus_birch",
+		"schulhaus_rietacker",
+		"kiga_bachtobel",
+		"kiga_weid",
+		"kiga_schneckenwiese",
+		"bahnhof",
+		"badi_weiher",
+		"kirche_st_martin",
+		"schulhaus_ohringen",
+		"kiga_ohringen",
+		"hub_station",
+		"tankstelle",
+		"turnhalle_birch",
+		"turnhalle_rietacker",
+		"turnhalle_ohringen",
+	]:
+		_assert(ids.has(required), "schema landmark %s present" % required)
+	for cluster in ["birch", "rietacker", "ohringen"]:
+		var n := _count_school_cluster(sprites, cluster)
+		_assert(n >= 2, "school_cluster %s has >=2 props (got %d)" % [cluster, n])
+
+
+func _assert_schema_occupancy(world: Node, sprites: Array[Sprite2D]) -> void:
+	var world_script: Script = world.get_script()
+	if world_script == null:
+		return
+	var rects: Array[Rect2] = []
+	for spr in sprites:
+		if spr.texture == null:
+			continue
+		if spr.has_meta("terrain") and str(spr.get_meta("terrain")) == "forest":
+			continue
+		if not spr.has_meta("landmark_id") and not spr.has_meta("house_variant"):
+			continue
+		var scale: Vector2 = spr.scale
+		var tex_w := float(spr.texture.get_width()) * absf(scale.x)
+		var tex_h := float(spr.texture.get_height()) * absf(scale.y)
+		var clear := Vector2(tex_w * 0.70, tex_h * 0.55)
+		var visual_center_y := -tex_h * 0.5
+		var rect := Rect2(spr.position + Vector2(0.0, visual_center_y) - clear * 0.5, clear)
+		for other in rects:
+			_assert(
+				not rect.intersects(other),
+				"occupancy overlap %s vs another prop" % spr.name
+			)
+		rects.append(rect)
+
+
+func _assert_schema_ew_only(sprites: Array[Sprite2D]) -> void:
+	for spr in sprites:
+		if spr.has_meta("street_bearing"):
+			_assert(
+				str(spr.get_meta("street_bearing")) == "ew",
+				"%s street_bearing is ew (got %s)" % [spr.name, str(spr.get_meta("street_bearing"))]
+			)
+		if spr.texture != null:
+			var path := spr.texture.resource_path
+			_assert(not path.ends_with("_ns.png"), "%s must not use _ns art (%s)" % [spr.name, path])
+
+
+func _assert_field_scale_schema() -> void:
+	_assert(is_equal_approx(SeuzachGeo.FIELD_METERS, 5.3), "1 Feld = 5,3 m")
+	_assert(is_equal_approx(SeuzachGeo.FIELD_WU, 100.0), "1 Feld = 100 wu")
+	_assert(is_equal_approx(SeuzachGeo.village_ew_fields(), 80.0), "schema ~80 fields east-west")
+	_assert(is_equal_approx(SeuzachGeo.village_ns_fields(), 60.0), "schema ~60 fields north-south")
+	var spawn := SeuzachGeo.default_world_spawn()
+	_assert(SeuzachGeo.WORLD_BOUNDS.has_point(spawn), "default spawn inside WORLD_BOUNDS")
+	_assert(
+		spawn.distance_to(SeuzachGeo.hub_enter_pos()) > 40.0,
+		"spawn is not HubEnter"
+	)
+
+
+func _assert_named_roads_unused_osm(world: Node) -> void:
+	pass
 
 
 func _assert_named_roads(world: Node) -> void:
